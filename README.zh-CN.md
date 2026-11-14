@@ -37,7 +37,7 @@
 
 ### 新增插件到目录
 
-1. 将插件源码放入 `packages/<plugin-id>/`，提供 `package.json`、实现、测试和面向用户的 README；保留该包自己的许可证与第三方声明。
+1. 将插件源码放入 `packages/<plugin-id>/`：执行 `bun scripts/new.mjs <插件名> --kind provider|middleware|agent|page|tools` 会生成包骨架、目录条目和测试，且能直接通过 `bun scripts/check.mjs`。随后补全实现与面向用户的 README，并保留该包自己的许可证与第三方声明。
 2. 将包发布到配置的 npm registry，名称使用 `@jianmu-plugins/<package>`。发布前需要在目标仓库配置 npm trusted publisher 或发布凭据；不要从当前本地快照直接发布。
 3. 在 `registry.json` 添加一条目录记录，准确填写新包 spec、显示名称、provider ID/类型，并提供 `summary.en` 和 `summary.zh`。只有由本目录维护的条目才标记 `community: true`。
 4. 运行 `bun scripts/check.mjs` 和相关插件测试。在 PR 中附上测试命令及结果，并说明旧包 spec 或 metadata 的兼容情况。

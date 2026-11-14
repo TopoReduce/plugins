@@ -37,7 +37,7 @@ Submit a focused change covering one package or a closely related migration. Inc
 
 ### Add a plugin to the catalog
 
-1. Add the plugin source under `packages/<plugin-id>/`, with `package.json`, implementation, tests, and a user-facing README. Retain its own license and third-party notices.
+1. Add the plugin source under `packages/<plugin-id>/` — `bun scripts/new.mjs <name> --kind provider|middleware|agent|page|tools` writes the skeleton, its registry entry and a test that already passes `bun scripts/check.mjs`. Then fill in the implementation and a user-facing README, and keep its own license and third-party notices.
 2. Publish the package as `@jianmu-plugins/<package>` to the configured npm registry. Do not publish from this local snapshot; maintainers must first configure the destination repository and npm trusted publisher/credentials.
 3. Add one entry to `registry.json` with the exact new package spec, display name, provider IDs/type, and both `summary.en` and `summary.zh`. Include `community: true` only for listings maintained in this catalog.
 4. Run `bun scripts/check.mjs` and the relevant package tests. In the PR, include the test commands/results and explain any old package-spec or metadata compatibility.
