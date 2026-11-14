@@ -1,0 +1,38 @@
+# Publishes every package's version npm doesn't have yet, when a version
+# bump is merged: the NPM_TOKEN secret is a token that may publish in the
+# @jianmu-plugins scope (an automation token, or a granular token with
+# bypass 2FA allowed). A version already on npm is skipped, so the run is
+# safe to repeat and safe after a failed one.
+name: publish
+
+on:
+  push:
+    branches: [main]
+    paths: ["packages/*/package.json"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: publish
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: test
+        run: HOME=$(mktemp -d) bun test
+      - name: check
+        run: bun scripts/check.mjs
+      - name: publish
+        # publish.sh maps NPM_TOKEN to NODE_AUTH_TOKEN; setup-node's .npmrc
+        # reads that.
+        run: sh scripts/publish.sh
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

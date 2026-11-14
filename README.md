@@ -29,6 +29,33 @@ A package is considered for `registry.json` when:
 5. The registry entry's package spec, display name, type, provider IDs, replacement mapping, and English/Chinese summaries match the package and its source.
 6. It does not duplicate another listing or claim another publisher's package/provider identity.
 
+### Automatic listing
+
+A pull request that only adds entries to `registry.json` is merged without a
+person when all of these hold; the `auto-list` workflow does it:
+
+1. It changes nothing but `registry.json`, and only adds entries — no existing
+   entry is changed or removed.
+2. `bun scripts/check.mjs` passes.
+3. Every added package is published and resolvable on npm
+   (`npm view <package> version`).
+4. It comes from this repository and either from a member's account or carries
+   the `auto-list` label a maintainer set.
+
+Anything else — code under `packages/`, a changed or removed entry, a new
+scope — is reviewed by a person. Plugins run with the user's sign-ins, so code
+and permission changes are never merged automatically. GitHub's topic
+discovery is not an automatic listing: those plugins stay **Unreviewed**
+until someone lists them here.
+
+### Automatic publishing
+
+Merging a version bump in `packages/*/package.json` runs the publish workflow:
+tests, the registry check, then `scripts/publish.sh`, which publishes only
+versions npm doesn't have yet. It needs the repository secret `NPM_TOKEN` — an
+automation token, or a granular token with bypass 2FA allowed, in the
+`@jianmu-plugins` scope.
+
 Maintainers review proposed changes before merging. Automated checks validate structure; they do not certify a package as safe. Inclusion is not a security audit or a guarantee about future releases. Jianmu's automatic discovery is not an approval signal. To report a vulnerability, use a private reporting channel when available and do not disclose exploit details publicly.
 
 ## Submit a change

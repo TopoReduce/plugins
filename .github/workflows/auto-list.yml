@@ -1,0 +1,73 @@
+# Lists a plugin automatically when the pull request only adds registry
+# entries that pass the machine checks: checks clean, every added package
+# already on npm, and no existing entry changed or removed. Only a member's
+# PR, or one a maintainer labeled "auto-list", is merged this way. Anything
+# touching packages/ (code, permissions, tests) is left for a person: a
+# plugin runs with the user's sign-ins, and that is not machine-checkable.
+name: auto-list
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-list:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.pull_request.author_association == 'MEMBER' ||
+       github.event.pull_request.author_association == 'OWNER' ||
+       contains(github.event.pull_request.labels.*.name, 'auto-list'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: listing-only change
+        run: |
+          base="origin/${{ github.event.pull_request.base.ref }}"
+          git fetch -q origin "${{ github.event.pull_request.base.ref }}"
+          changed=$(git diff --name-only "$base...HEAD")
+          echo "changed: ${changed:-<none>}"
+          [ "${changed:-}" = "registry.json" ] && echo "LISTING_ONLY=1" >> "$GITHUB_ENV" || true
+      - name: the registry checks
+        if: env.LISTING_ONLY == '1'
+        run: bun scripts/check.mjs
+      - name: added packages are on npm
+        if: env.LISTING_ONLY == '1'
+        run: |
+          git show "origin/${{ github.event.pull_request.base.ref }}:registry.json" > "$RUNNER_TEMP/base.json"
+          node -e '
+            const fs = require("fs");
+            const base = new Set(JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/base.json", "utf8")).plugins.map((p) => p.package));
+            const added = JSON.parse(fs.readFileSync("registry.json", "utf8")).plugins.filter((p) => !base.has(p.package)).map((p) => p.package);
+            fs.writeFileSync(process.env.RUNNER_TEMP + "/added.txt", added.join("\n"));
+            console.log(added.length ? "new: " + added.join(" ") : "no new listing");
+          '
+          while read -r name; do
+            [ -n "$name" ] || continue
+            npm view "$name" version > /dev/null 2>&1 || { echo "not on npm: $name"; exit 1; }
+          done < "$RUNNER_TEMP/added.txt"
+      - name: existing entries are untouched
+        if: env.LISTING_ONLY == '1'
+        run: |
+          node -e '
+            const fs = require("fs");
+            const base = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + "/base.json", "utf8")).plugins;
+            const head = new Map(JSON.parse(fs.readFileSync("registry.json", "utf8")).plugins.map((p) => [p.package, JSON.stringify(p)]));
+            for (const p of base) {
+              if (!head.has(p.package) || head.get(p.package) !== JSON.stringify(p)) { console.log("changed or removed: " + p.package); process.exit(1); }
+            }
+          '
+      - name: merge
+        if: env.LISTING_ONLY == '1'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr merge "${{ github.event.pull_request.number }}" --squash --delete-branch
