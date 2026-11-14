@@ -19,7 +19,7 @@ Plugins discovered automatically from public repositories are not curated catalo
 Community plugins must meet these baseline requirements:
 
 1. **Open and attributable source.** Keep the implementation in a public source repository. Name the responsible maintainer and use a recognized open-source license; the repository and published package must identify the same project.
-2. **Jianmu package namespace.** Publish community packages under `@jianmmu/<package>`. Choose a stable, descriptive package name. Do not change an existing listing's install spec until the replacement package is published and its compatibility and migration path have been verified.
+2. **Jianmu package namespace.** Publish community packages under `@TopoReduce/<package>`. Choose a stable, descriptive package name. Do not change an existing listing's install spec until the replacement package is published and its compatibility and migration path have been verified.
 3. **Documented behavior.** Explain the plugin's purpose, supported products and platforms, required permissions, authentication flow, data sent to third parties, configuration, limitations, and how to sign out or remove it. Disclose telemetry and any background network activity.
 4. **Credential and data safety.** Never commit credentials, tokens, private keys, or user data. Request only the access needed for the documented behavior; protect credentials in storage and logs; use HTTPS and validate remote responses. Do not collect or transmit user data beyond what the feature requires and documents.
 5. **Respectful vendor integration.** Use supported sign-in and API flows. Do not bypass access controls, harvest credentials, evade usage limits, or misrepresent a vendor's service or a plugin's affiliation.
@@ -80,7 +80,7 @@ Jianmu 社区目录维护于 [`plugins/registry.json`](plugins/registry.json)。
 社区插件至少应符合以下要求：
 
 1. **源码公开且可追责。** 在公开仓库维护实现，说明责任维护者，采用公认的开源许可证；源码仓库与发布包必须对应同一项目。
-2. **使用 Jianmu 包命名空间。** 社区插件发布至 `@jianmmu/<package>`，名称应稳定且能说明用途。替换包须先发布并验证兼容性与迁移方案，之后才能修改现有条目的安装 spec。
+2. **使用 Jianmu 包命名空间。** 社区插件发布至 `@TopoReduce/<package>`，名称应稳定且能说明用途。替换包须先发布并验证兼容性与迁移方案，之后才能修改现有条目的安装 spec。
 3. **行为有文档说明。** 说明用途、支持的产品和平台、所需权限、认证方式、发送给第三方的数据、配置、限制，以及退出登录或卸载方法；披露遥测和后台网络行为。
 4. **保护凭据和数据。** 不得提交凭据、令牌、私钥或用户数据。只请求实现功能所需的权限；妥善保护存储与日志中的凭据；使用 HTTPS 并校验远程响应。不得收集或传输超出功能所需且未披露的数据。
 5. **遵守服务方规则。** 使用受支持的登录和 API 流程；不得绕过访问控制、收集凭据、规避使用限制，也不得误述服务方或插件的归属关系。
