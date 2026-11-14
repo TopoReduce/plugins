@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/gateway-aelios",
+  "name": "@jianmu-plugins/gateway-aelios",
   "version": "0.1.1",
   "description": "Aelios long-term memory for every agent behind magpie: recall before each turn, optional recording after it",
   "type": "module",

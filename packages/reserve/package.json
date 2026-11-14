@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/middleware-reserve",
+  "name": "@jianmu-plugins/middleware-reserve",
   "version": "0.1.0",
   "description": "Routings for magpie's gateway that keep something in reserve: fill accounts in order up to a ceiling, or spend subscriptions before pay-per-token keys",
   "type": "module",

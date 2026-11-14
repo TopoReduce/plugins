@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-doubao-work-auth",
+  "name": "@jianmu-plugins/opencode-doubao-work-auth",
   "version": "0.1.12",
   "type": "module",
   "main": "./opencode.mjs",

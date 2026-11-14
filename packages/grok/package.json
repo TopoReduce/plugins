@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-grok-auth",
+  "name": "@jianmu-plugins/opencode-grok-auth",
   "version": "0.2.7",
   "description": "OpenCode provider plugin: Grok (SuperGrok / X Premium+) through the Grok Build CLI's sign-in",
   "type": "module",

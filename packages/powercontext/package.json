@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/gateway-powercontext",
+  "name": "@jianmu-plugins/gateway-powercontext",
   "version": "0.2.1",
   "description": "PowerContext context recall and asynchronous conversation capture for clients behind Magpie",
   "type": "module",

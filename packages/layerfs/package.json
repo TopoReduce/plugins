@@ -42,7 +42,7 @@
     }
   },
   "main": "./index.mjs",
-  "name": "@jianmu/tools-layerfs",
+  "name": "@jianmu-plugins/tools-layerfs",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/TopoReduce/plugins.git",

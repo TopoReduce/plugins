@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-nanobot",
+  "name": "@jianmu-plugins/agent-nanobot",
   "version": "0.1.1",
   "description": "nanobot (HKUDS/nanobot) as a magpie agent: pick one of magpie's models for it on the Agents page, with Library MCP servers and skills",
   "type": "module",

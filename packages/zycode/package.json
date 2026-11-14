@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-zycode",
+  "name": "@jianmu-plugins/agent-zycode",
   "version": "0.1.0",
   "description": "zycode as a magpie agent: pick one of magpie's models for it on the Agents page",
   "type": "module",

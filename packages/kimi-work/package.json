@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-kimi-work-auth",
+  "name": "@jianmu-plugins/opencode-kimi-work-auth",
   "version": "0.1.17",
   "type": "module",
   "main": "./opencode.mjs",

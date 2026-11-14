@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-agnes-code-auth",
+  "name": "@jianmu-plugins/opencode-agnes-code-auth",
   "version": "0.1.2",
   "description": "Agnes Code desktop sign-in as an OpenCode/magpie provider: OpenAI-compatible chat gateway, live model catalog, daily check-in and points balance",
   "type": "module",

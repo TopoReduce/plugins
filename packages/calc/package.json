@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/tools-calc",
+  "name": "@jianmu-plugins/tools-calc",
   "version": "0.1.0",
   "description": "Exact arithmetic, unit conversion and calendar date math as tools for every coding agent, through magpie's MCP server",
   "type": "module",

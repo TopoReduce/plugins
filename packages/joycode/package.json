@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-joycode-auth",
+  "name": "@jianmu-plugins/opencode-joycode-auth",
   "version": "0.2.7",
   "description": "OpenCode provider plugin: JoyCode (JD Cloud JoyCoder IDE credits)",
   "type": "module",

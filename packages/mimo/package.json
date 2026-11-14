@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-mimo-auth",
+  "name": "@jianmu-plugins/opencode-mimo-auth",
   "version": "0.1.10",
   "description": "OpenCode provider plugin for Xiaomi MiMo: the MiMo app's Xiaomi-account sign-in, MiMo Pro and MiMo Flash",
   "type": "module",

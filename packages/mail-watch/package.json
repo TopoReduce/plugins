@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/hooks-mail-watch",
+  "name": "@jianmu-plugins/hooks-mail-watch",
   "version": "0.1.0",
   "description": "Email alerts from the gateway: provider errors and exhausted quotas, with your own recipients, templates and watch list",
   "type": "module",

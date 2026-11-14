@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-nowledge-mem",
+  "name": "@jianmu-plugins/agent-nowledge-mem",
   "version": "0.1.0",
   "description": "Manage Nowledge Mem Default, AI Now and Background models from Magpie",
   "type": "module",

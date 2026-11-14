@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-orcaterm-auth",
+  "name": "@jianmu-plugins/opencode-orcaterm-auth",
   "version": "0.1.8",
   "description": "OrcaTerm (Tencent Cloud 遨驰终端) AI quota as an OpenAI-compatible provider for magpie and OpenCode",
   "type": "module",

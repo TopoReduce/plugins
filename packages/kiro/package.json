@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-kiro-auth",
+  "name": "@jianmu-plugins/opencode-kiro-auth",
   "version": "0.1.38",
   "description": "Kiro subscriptions (Free, Pro, Pro+, Power) in OpenCode and magpie",
   "type": "module",

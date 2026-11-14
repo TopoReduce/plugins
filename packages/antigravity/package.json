@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-antigravity-auth",
+  "name": "@jianmu-plugins/opencode-antigravity-auth",
   "version": "0.1.13",
   "description": "Sign in to Antigravity with a Google account from OpenCode or magpie: Gemini, and the Claude and GPT-OSS models Google hosts for it",
   "type": "module",

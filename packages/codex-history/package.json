@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/middleware-codex-history",
+  "name": "@jianmu-plugins/middleware-codex-history",
   "version": "0.1.2",
   "description": "Opt-in, per-provider Codex Responses history compatibility for Magpie",
   "type": "module",

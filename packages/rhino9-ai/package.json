@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-rhino9-ai",
+  "name": "@jianmu-plugins/agent-rhino9-ai",
   "version": "0.3.2",
   "description": "Magpie-Rhino: Magpie models, custom groups and routing strategies in Rhino 9's AI panel through Rhino MCP",
   "type": "module",

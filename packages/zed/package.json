@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-zed-auth",
+  "name": "@jianmu-plugins/opencode-zed-auth",
   "version": "0.1.19",
   "description": "Sign in to a Zed subscription (Zed Pro, trial, student, business) from OpenCode or magpie",
   "type": "module",

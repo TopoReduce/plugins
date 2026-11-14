@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-devin-auth",
+  "name": "@jianmu-plugins/opencode-devin-auth",
   "version": "0.1.40",
   "description": "Devin subscriptions (the devin CLI's account) in OpenCode and magpie",
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-eta",
+  "name": "@jianmu-plugins/agent-eta",
   "version": "0.1.0",
   "description": "Connect Eta to Magpie's agent-scoped model catalog",
   "keywords": [

@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/gateway-agentcompass",
+  "name": "@jianmu-plugins/gateway-agentcompass",
   "version": "0.2.1",
   "description": "Four-category capability fit, quota-economy and session-affinity routing plugin for Magpie, powered by AgentCompass v0.6.0.",
   "type": "module",

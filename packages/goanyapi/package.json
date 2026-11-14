@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/tools-goanyapi",
+  "name": "@jianmu-plugins/tools-goanyapi",
   "version": "0.1.1",
   "description": "All GoAnyAPI SEO, ads and web intelligence tools, generated from its live MCP catalog, with OAuth or API key",
   "homepage": "https://goanyapi.com/",

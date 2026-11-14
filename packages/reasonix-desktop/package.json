@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-reasonix-desktop",
+  "name": "@jianmu-plugins/agent-reasonix-desktop",
   "version": "0.1.0",
   "description": "Reasonix 1.x Desktop and CLI as a Magpie agent, with a reversible TOML and dotenv configuration bridge",
   "type": "module",

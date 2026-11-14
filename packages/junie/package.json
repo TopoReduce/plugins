@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-junie",
+  "name": "@jianmu-plugins/agent-junie",
   "version": "0.1.0",
   "description": "Junie CLI with Magpie's full model catalog, launch defaults and ECO preferences",
   "type": "module",

@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-type4me",
+  "name": "@jianmu-plugins/agent-type4me",
   "version": "0.1.0",
   "description": "Type4Me (macOS voice input) as a magpie agent: pick one of magpie's models for its LLM post-processing on the Agents page",
   "type": "module",

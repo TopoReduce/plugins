@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-copilot-auth",
+  "name": "@jianmu-plugins/opencode-copilot-auth",
   "version": "0.1.2",
   "description": "GitHub Copilot on GitHub.com and GitHub Enterprise, with account quota and credit balances for magpie",
   "type": "module",

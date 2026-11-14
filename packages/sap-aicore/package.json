@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-sap-aicore-auth",
+  "name": "@jianmu-plugins/opencode-sap-aicore-auth",
   "version": "0.3.2",
   "description": "SAP AI Core deployments in Magpie with credential-file sign-in, account-scoped discovery and native Responses / Messages transport",
   "license": "MIT",

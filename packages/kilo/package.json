@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-kilo",
+  "name": "@jianmu-plugins/agent-kilo",
   "version": "0.1.0",
   "description": "Kilo Code (kilo.ai) as a magpie agent: pick one of magpie's models for it on the Agents page",
   "type": "module",

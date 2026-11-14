@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-kimi-desktop",
+  "name": "@jianmu-plugins/agent-kimi-desktop",
   "version": "0.1.6",
   "description": "Kimi desktop Work as a Magpie agent, using the models configured in Magpie",
   "type": "module",

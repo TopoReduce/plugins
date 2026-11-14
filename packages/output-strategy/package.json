@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/middleware-output-strategy",
+  "name": "@jianmu-plugins/middleware-output-strategy",
   "version": "0.2.3",
   "description": "Composable output-style instructions injected before the model call, with a small selection panel",
   "type": "module",

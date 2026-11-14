@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/page-amp-usage",
+  "name": "@jianmu-plugins/page-amp-usage",
   "version": "0.1.2",
   "description": "An Amp usage board in Magpie's window, with a local background service that can sync Amp usage into Magpie's usage ledger.",
   "type": "module",

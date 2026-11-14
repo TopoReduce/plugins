@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-factory-auth",
+  "name": "@jianmu-plugins/opencode-factory-auth",
   "version": "0.1.47",
   "description": "Sign in to a Factory (Droid) subscription from OpenCode or magpie",
   "type": "module",

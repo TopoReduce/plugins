@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/page-day-card",
+  "name": "@jianmu-plugins/page-day-card",
   "version": "0.3.5",
   "description": "A page in magpie's window that draws a day, week, month or all of your AI usage as a card: tokens, cost, each agent and its models, your streak and your average day. Copy it as a picture or save it as a PNG",
   "files": [

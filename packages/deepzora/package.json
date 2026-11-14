@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-deepzora",
+  "name": "@jianmu-plugins/agent-deepzora",
   "version": "0.2.0",
   "description": "Deepzora Desktop, CLI and ACP as a Magpie agent, with a reversible TOML and dotenv configuration bridge",
   "type": "module",

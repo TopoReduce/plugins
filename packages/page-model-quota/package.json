@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/page-model-quota",
+  "name": "@jianmu-plugins/page-model-quota",
   "version": "0.1.0",
   "description": "把所有账号、所有供应商的额度窗口换算成 token，按模型合并估算还剩多少。A page in Magpie's window that estimates how many tokens each model has left, merged across every account and provider, from the local usage history.",
   "type": "module",

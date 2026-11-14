@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/gateway-notify",
+  "name": "@jianmu-plugins/gateway-notify",
   "version": "0.1.4",
   "description": "A push to your phone or team chat when an agent's turn is done or an account is signed out: ntfy, Bark, Gotify, Server酱, Feishu, DingTalk, WeCom, Telegram or a webhook",
   "type": "module",

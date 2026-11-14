@@ -37,9 +37,9 @@ for dir in packages/*/; do
   fi
   if ! (cd "$dir" && npm publish --access public ${otp:+--otp="$otp"}); then
     if [ -n "$GITHUB_ACTIONS" ] && [ -n "$NPM_TOKEN" ]; then
-      echo "::error::$name@$version wasn't published with OIDC or NPM_TOKEN: the token may have expired (npm's write tokens last 90 days at most) or lost access to @magpie-community. Replace the NPM_TOKEN secret (README, Publishing)."
+      echo "::error::$name@$version wasn't published with OIDC or NPM_TOKEN: the token may have expired (npm's write tokens last 90 days at most) or lost access to @jianmu-plugins. Replace the NPM_TOKEN secret (README, Publishing)."
     elif [ -n "$GITHUB_ACTIONS" ]; then
-      echo "::error::$name@$version wasn't published: this workflow isn't its Trusted Publisher on npmjs.com, or the trust allows npm stage publish only (the default since 2026-09-03): npm trust github $name --file publish.yml --repo magpie-community/plugins --allow-publish (README, Publishing)."
+      echo "::error::$name@$version wasn't published: this workflow isn't its Trusted Publisher on npmjs.com, or the trust allows npm stage publish only (the default since 2026-09-03): npm trust github $name --file publish.yml --repo TopoReduce/plugins --allow-publish (README, Publishing)."
     fi
     refused="$refused $name"
   fi

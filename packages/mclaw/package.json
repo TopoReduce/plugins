@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-mclaw-auth",
+  "name": "@jianmu-plugins/opencode-mclaw-auth",
   "version": "0.5.3",
   "description": "OpenCode provider plugin: MClaw (中国移动云 MClaw, ai.yun.139.com)",
   "type": "module",

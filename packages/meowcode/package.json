@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-meowcode",
+  "name": "@jianmu-plugins/agent-meowcode",
   "version": "0.1.0",
   "description": "MeowCode as a magpie agent: magpie's models in MeowCode's own model list, through an overlay file MeowCode reads at start-up",
   "type": "module",

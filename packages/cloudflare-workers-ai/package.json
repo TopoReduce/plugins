@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-cloudflare-workers-ai-auth",
+  "name": "@jianmu-plugins/opencode-cloudflare-workers-ai-auth",
   "version": "0.0.5",
   "private": false,
   "type": "module",

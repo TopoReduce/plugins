@@ -10,7 +10,7 @@
 
 ## 开发要求
 
-- 新 Jianmu 插件使用 `@jianmu/` npm scope；包名应稳定且能说明用途，并使用明确的版本号。
+- 新 Jianmu 插件使用 `@jianmu-plugins/` npm scope；包名应稳定且能说明用途，并使用明确的版本号。
 - 每个包提供 README，说明用途、支持平台、安装配置、所需权限、认证方式、发送给第三方的数据、限制、支持渠道以及停用/卸载方法。
 - 精简并锁定依赖。不得提交凭据、令牌、私钥、个人数据、包含密钥的构建产物或本地配置。
 - 仅申请功能必需的权限；明确披露遥测、网络请求、文件系统访问、子进程及后台服务行为。
@@ -23,7 +23,7 @@
 符合以下条件的插件可提交至 `registry.json`：
 
 1. 源码公开，责任维护者可确认。
-2. 包已发布且可安装，使用 `@jianmu/` scope；如需例外，须由维护者明确批准并记录原因。
+2. 包已发布且可安装，使用 `@jianmu-plugins/` scope；如需例外，须由维护者明确批准并记录原因。
 3. 使用允许再分发的许可证，并有满足上述要求的用户文档。
 4. 具有明确的 Jianmu 使用场景，并提供足够的测试证据供审核核心行为。
 5. 注册表中的包 spec、显示名称、类型、provider ID、替换关系及中英文简介与包和源码一致。
@@ -38,7 +38,7 @@
 ### 新增插件到目录
 
 1. 将插件源码放入 `packages/<plugin-id>/`，提供 `package.json`、实现、测试和面向用户的 README；保留该包自己的许可证与第三方声明。
-2. 将包发布到配置的 npm registry，名称使用 `@jianmu/<package>`。发布前需要在目标仓库配置 npm trusted publisher 或发布凭据；不要从当前本地快照直接发布。
+2. 将包发布到配置的 npm registry，名称使用 `@jianmu-plugins/<package>`。发布前需要在目标仓库配置 npm trusted publisher 或发布凭据；不要从当前本地快照直接发布。
 3. 在 `registry.json` 添加一条目录记录，准确填写新包 spec、显示名称、provider ID/类型，并提供 `summary.en` 和 `summary.zh`。只有由本目录维护的条目才标记 `community: true`。
 4. 运行 `bun scripts/check.mjs` 和相关插件测试。在 PR 中附上测试命令及结果，并说明旧包 spec 或 metadata 的兼容情况。
 5. 向 Jianmu 社区仓库提交 PR。维护者会在合并前检查源码、包身份、权限与数据行为、测试、许可证兼容性和 registry 差异。

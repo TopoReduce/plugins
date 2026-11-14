@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/middleware-empty-reply",
+  "name": "@jianmu-plugins/middleware-empty-reply",
   "version": "0.1.0",
   "description": "Drop the end of a reasoning-only reply, so Claude Code and Codex retry instead of treating an empty turn as finished",
   "type": "module",

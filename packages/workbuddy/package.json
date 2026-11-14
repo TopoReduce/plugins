@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-workbuddy-auth",
+  "name": "@jianmu-plugins/opencode-workbuddy-auth",
   "version": "0.2.34",
   "description": "OpenCode provider plugins for WorkBuddy's plans: WorkBuddy (CodeBuddy, copilot.tencent.com) and WorkBuddy AI (www.workbuddy.ai)",
   "type": "module",

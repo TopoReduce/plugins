@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/page-fingerprint",
+  "name": "@jianmu-plugins/page-fingerprint",
   "version": "0.2.3",
   "description": "Check for suspected model substitution with numeric response fingerprints in Magpie, powered by lm-detector.",
   "type": "module",

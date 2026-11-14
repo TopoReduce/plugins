@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-commandcode-auth",
+  "name": "@jianmu-plugins/opencode-commandcode-auth",
   "version": "0.1.24",
   "description": "Command Code plans (Pro, GOAT, Max, Ultra, Go, Teams) in OpenCode and magpie",
   "type": "module",

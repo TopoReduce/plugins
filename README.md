@@ -10,7 +10,7 @@ A community-maintained collection of plugins for Jianmu. The catalog is [`regist
 
 ## Development
 
-- Use the `@jianmu/` npm scope for new Jianmu package names. Keep a stable descriptive package name and version.
+- Use the `@jianmu-plugins/` npm scope for new Jianmu package names. Keep a stable descriptive package name and version.
 - Include a package README describing purpose, supported platforms, setup, required permissions, authentication, data sent to third parties, limitations, support contact, and how to disable/remove the plugin.
 - Keep dependencies minimal and locked. Do not commit credentials, tokens, private keys, personal data, built secrets, or local configuration.
 - Request only the access required for the documented feature. Disclose telemetry, network calls, filesystem access, subprocesses, and background services.
@@ -23,7 +23,7 @@ A community-maintained collection of plugins for Jianmu. The catalog is [`regist
 A package is considered for `registry.json` when:
 
 1. Its public source and responsible maintainer are identifiable.
-2. The package is published and installable under `@jianmu/`, unless maintainers explicitly approve a documented exception.
+2. The package is published and installable under `@jianmu-plugins/`, unless maintainers explicitly approve a documented exception.
 3. It has a license compatible with redistribution and a user-facing README meeting the documentation requirements above.
 4. It has a clear Jianmu use case and sufficient test evidence for reviewers to assess its core behavior.
 5. The registry entry's package spec, display name, type, provider IDs, replacement mapping, and English/Chinese summaries match the package and its source.
@@ -38,7 +38,7 @@ Submit a focused change covering one package or a closely related migration. Inc
 ### Add a plugin to the catalog
 
 1. Add the plugin source under `packages/<plugin-id>/`, with `package.json`, implementation, tests, and a user-facing README. Retain its own license and third-party notices.
-2. Publish the package as `@jianmu/<package>` to the configured npm registry. Do not publish from this local snapshot; maintainers must first configure the destination repository and npm trusted publisher/credentials.
+2. Publish the package as `@jianmu-plugins/<package>` to the configured npm registry. Do not publish from this local snapshot; maintainers must first configure the destination repository and npm trusted publisher/credentials.
 3. Add one entry to `registry.json` with the exact new package spec, display name, provider IDs/type, and both `summary.en` and `summary.zh`. Include `community: true` only for listings maintained in this catalog.
 4. Run `bun scripts/check.mjs` and the relevant package tests. In the PR, include the test commands/results and explain any old package-spec or metadata compatibility.
 5. Open a PR against the Jianmu community repository. A maintainer reviews the code, package identity, permissions/data behavior, tests, license compatibility, and registry diff before merging.

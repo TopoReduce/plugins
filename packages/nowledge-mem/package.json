@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/gateway-nowledge-mem",
+  "name": "@jianmu-plugins/gateway-nowledge-mem",
   "version": "0.1.6",
   "description": "Nowledge Mem recall, Context Bundle and optional conversation capture at the Magpie gateway, for every connected harness",
   "type": "module",

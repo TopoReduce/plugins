@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/middleware-think-tags",
+  "name": "@jianmu-plugins/middleware-think-tags",
   "version": "0.1.2",
   "description": "Take a model's leading <think>, <thinking> or <thought> block out of its reply's text, or put a Chat reply's reasoning_content into it (New API's thinking_to_content), as magpie gateway middleware",
   "type": "module",

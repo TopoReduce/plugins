@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/agent-wave",
+  "name": "@jianmu-plugins/agent-wave",
   "version": "0.1.1",
   "description": "Wave Terminal (waveterm) as a magpie agent: pick one of magpie's models for it on the Agents page",
   "type": "module",

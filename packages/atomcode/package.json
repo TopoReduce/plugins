@@ -1,5 +1,5 @@
 {
-  "name": "@jianmu/opencode-atomcode-auth",
+  "name": "@jianmu-plugins/opencode-atomcode-auth",
   "version": "0.3.0",
   "description": "AtomCode (AtomGit CodingPlan) for Magpie and OpenCode: browser OAuth or local CLI sign-in, signed requests, persistent diagnostics, native plan claim, live models and quota windows",
   "type": "module",
