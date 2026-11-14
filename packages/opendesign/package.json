@@ -1,0 +1,37 @@
+{
+  "name": "@jianmu/opencode-opendesign-auth",
+  "version": "0.1.13",
+  "description": "Open Design Cloud (Design Plan) in OpenCode and magpie: the account's device sign-in, its models, and the plan's 5-hour and 7-day allowance",
+  "type": "module",
+  "main": "./opencode.mjs",
+  "files": [
+    "index.mjs",
+    "opencode.mjs",
+    "opencode2.mjs",
+    "models.mjs",
+    "rates.mjs",
+    "refresh-models.mjs",
+    "README.md"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "magpie",
+    "opendesign"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "directory": "packages/opendesign"
+  },
+  "magpie": {
+    "icon": "https://open-design.ai/favicon.svg"
+  },
+  "exports": {
+    ".": "./opencode2.mjs"
+  },
+  "jianmu": {
+    "icon": "https://open-design.ai/favicon.svg"
+  }
+}

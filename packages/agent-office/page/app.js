@@ -1,0 +1,1296 @@
+// The page: loads live.js (what the plugin's host part wrote) again every
+// second, works out each agent's status (model.js), and draws the office
+// (scene.js) or the grouped workbench. It reads nothing of magpie's but its
+// own options, and has no network: live.js is one of its own files.
+//
+// Interaction, kept calm on purpose: nothing opens because the pointer
+// passes over it. Hovering only highlights. A click on a worker, its name
+// tag, a list row or a side-rail row opens that agent's panel at the side,
+// which stays put until it's closed or another agent is clicked. The DOM is
+// updated in place: nothing is rebuilt each second unless it really changed.
+(async () => {
+  const M = globalThis.AgentOfficeModel
+  const I = globalThis.AgentOfficeIcons
+  const { Scene } = globalThis.AgentOfficeScene
+  const Scene3D = globalThis.AgentOfficeScene3D
+  const $ = (id) => document.getElementById(id)
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag)
+    if (cls) e.className = cls
+    if (text != null) e.textContent = text
+    return e
+  }
+  const theme = await magpie.ready
+  let themeLang = theme.lang
+  let opts = {}
+  try { opts = (await magpie.options.get()) || {} } catch {}
+  // ISO and 2D keep their original palette for the six original scenes; only the new ones are themed.
+  const NEW_CANVAS_THEMES = ["library", "cyberlab", "greenhouse", "arctic", "rainynight"]
+  const view = {
+    mode: opts.mode === "list" ? "list" : "office",
+    dim: ["2d", "iso", "3d"].includes(opts.dim) ? opts.dim : "3d",
+    scene: (Scene3D?.SCENE_IDS || ["office", "station", "cafe", "castle", "pirate", "graveyard"]).includes(opts.scene) ? opts.scene : "office",
+    quality: ["low", "medium", "high"].includes(opts.quality) ? opts.quality : "medium",
+    demo: opts.demo === true,
+    showDone: opts.showDone !== false,
+    remote: opts.remote === true,
+    hideAfter: M.HIDE[opts.hideAfter] !== undefined ? opts.hideAfter : M.DEFAULTS.hideAfter,
+    text: opts.text !== false,
+    approvalAfterSec: Number(opts.approvalAfterSec) > 0 ? Number(opts.approvalAfterSec) : M.DEFAULTS.approvalAfterSec,
+    showSub: opts.showSub !== false,
+    showIdle: opts.showIdle !== false,
+    agents: Array.isArray(opts.agents) ? opts.agents.filter((x) => typeof x === "string") : [],
+    // an old saved side:true predates the default-closed rail; it is
+    // ignored until this version saves the preference again
+    side: opts.side === true && Number(opts.sideV) === 2,
+    cleared: opts.cleared && typeof opts.cleared === "object" && !Array.isArray(opts.cleared) ? { ...opts.cleared } : {},
+    preferredJumpHost: typeof opts.preferredJumpHost === "string" ? opts.preferredJumpHost : "",
+  }
+  let manualLang = opts.lang === "auto" || M.LANG_NAMES[opts.lang] ? opts.lang : "auto"
+  const state = {
+    snap: null, loaded: false, all: [], list: [], open: "", hover: "", showText: true,
+    alerts: new Map(), alertsSeeded: false, scene3Failed: false,
+  }
+  let floatHome = null
+  const t = () => M.text(lang)
+  const navLangs = () => (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language])
+  // manual pick → the newest prompt's script → magpie's theme → the browser
+  function pickLang(sample) {
+    return M.detectLang({ manual: manualLang, theme: themeLang, nav: navLangs(), sample: view.text && state.snap?.text !== false ? (sample || M.sample(state.snap)) : "" })
+  }
+  let lang = pickLang()
+
+  // a status as a person reads it: the sub-state says more than the six
+  function label(a) {
+    const w = t()
+    if (a.sub === "approval") return w.approval
+    if (a.sub === "ask") return w.ask
+    if (a.sub === "stopped") return w.stopped
+    if (a.sub === "noprog") return w.noProgress
+    if (a.sub === "stuck") return M.fill(w.stuck, M.duration(Date.now() - a.at, lang))
+    // a finished session nobody has touched for a while is idling
+    if (a.idle && a.status === "done") return w.idle
+    return w[a.status]
+  }
+
+  // ---- words -----------------------------------------------------------
+  let lastLegend = ""
+  function words() {
+    document.querySelectorAll("[data-t]").forEach((e) => { e.textContent = t()[e.dataset.t] })
+    $("pip").textContent = floatHome ? t().pipOn : t().pip
+    document.documentElement.lang = lang || "en"
+    statusLegend()
+    lastLegend = ""
+    railSig = ""
+    todaySig = ""
+    syncPickers()
+    if (typeof scene2 !== "undefined") scene2.lang = lang
+  }
+
+  function statusLegend() {
+    $("statusLegend").replaceChildren(...M.STATUSES.map((s) => {
+      const e = el("span", "lg")
+      const dot = el("i")
+      dot.style.background = M.COLORS[s]
+      e.append(dot, document.createTextNode(t()[s]))
+      return e
+    }))
+  }
+
+  // the agents in the office now, each once, by its own icon
+  function brandLegend() {
+    const ids = []
+    for (const a of state.list) if (!ids.includes(a.agent)) ids.push(a.agent)
+    const sig = ids.join(",")
+    if (sig === lastLegend) return
+    lastLegend = sig
+    $("brandLegend").replaceChildren(...ids.map((id) => {
+      const b = M.brand(id)
+      const e = el("span", "lg")
+      e.append(I.mark(b, 18), document.createTextNode(b.name))
+      return e
+    }))
+  }
+
+  // ---- reading live.js ---------------------------------------------------
+  let loading = false
+  function load() {
+    if (loading) return
+    loading = true
+    const s = document.createElement("script")
+    s.src = "live.js?t=" + Date.now()
+    const done = () => { loading = false; s.remove() }
+    s.onload = () => {
+      const snap = globalThis.AgentOfficeLive || null
+      const changed = snap?.written !== state.snap?.written
+      state.snap = snap
+      state.loaded = true
+      done()
+      if (changed) refresh()
+    }
+    s.onerror = () => { const first = !state.loaded; state.loaded = true; done(); if (first) refresh() }
+    document.head.append(s)
+  }
+
+  function snapshot(now) {
+    if (!view.demo) return state.snap
+    state.demoSnap ??= M.demo(now)
+    return M.merge(state.snap, state.demoSnap)
+  }
+
+  // ---- the office ------------------------------------------------------
+  // two renderers share the stage: the canvas isometric/2D one and a real
+  // WebGL one. They cannot share a canvas context, so each has its own and
+  // only the selected one is visible and running.
+  const office2 = $("office"), office3 = $("office3d")
+  const scene2 = new Scene(office2, { dim: view.dim === "2d" ? "2d" : "3d", onFrame: (anchors) => { if (scene === scene2 && view.mode === "office" && !document.hidden) place(anchors) } })
+  let scene3 = null
+  let scene = scene2
+
+  function wants3D() { return view.mode === "office" && view.dim === "3d" && !!Scene3D && !state.scene3Failed }
+  function ensure3D() {
+    if (!wants3D()) return null
+    if (!scene3) {
+      try {
+        scene3 = new Scene3D(office3, { scene: view.scene, quality: view.quality, agents: state.list, onFrame: (anchors) => { if (scene === scene3 && view.mode === "office" && !document.hidden) place(anchors) } })
+        if (!scene3.available) { try { scene3.dispose() } catch {} ; scene3 = null; state.scene3Failed = true }
+      } catch { scene3 = null; state.scene3Failed = true }
+    }
+    if (scene3 && scene3.id !== view.scene) scene3.setScene(view.scene)
+    return scene3
+  }
+  function activateScene() {
+    office3.hidden = !wants3D()
+    const s3 = ensure3D()
+    if (s3) {
+      if (scene !== s3) { try { scene2.stop() } catch {} ; scene = s3 }
+      office2.hidden = true; office3.hidden = false
+      return s3
+    }
+    if (scene3) scene3.stop()
+    scene = scene2
+    office2.hidden = false; office3.hidden = true
+    scene2.theme = NEW_CANVAS_THEMES.includes(view.scene) ? Scene3D?.SCENES?.[view.scene] : null
+    scene2.setDim(view.dim === "2d" ? "2d" : "3d")
+    return scene2
+  }
+  const tags = new Map()
+
+  function tagFor(a) {
+    let e = tags.get(a.key)
+    if (!e) {
+      e = el("button", "tag")
+      e.type = "button"
+      e.dataset.key = a.key
+      e.addEventListener("click", (ev) => { ev.stopPropagation(); open(a.key) })
+      e.addEventListener("dblclick", (ev) => { ev.stopPropagation(); const cur = state.list.find((x) => x.key === a.key); if (cur?.target) triggerJump(cur, view.preferredJumpHost, null) })
+      e.addEventListener("mouseenter", () => highlight(a.key))
+      e.addEventListener("mouseleave", () => highlight(""))
+      $("tags").append(e)
+      tags.set(a.key, e)
+    }
+    const sig = [a.brand.icon, a.brand.name, a.title, a.status, a.sub].join("|")
+    if (e.dataset.sig !== sig) {
+      e.dataset.sig = sig
+      const name = el("span", "tn", a.title)
+      const dot = el("i", "td")
+      dot.style.background = M.COLORS[a.status]
+      e.replaceChildren(I.mark(a.brand, 15), name, dot)
+      e.dataset.status = a.status
+      e._w = 0 // measured again on the next frame
+    }
+    e.title = `${a.brand.name} · ${label(a)}`
+    return e
+  }
+
+  // each frame: the tags follow their workers; nothing else moves with them
+  function place(anchors) {
+    const seen = new Set()
+    // in the small window only the ones that need you keep a name tag
+    const few = floatHome ? new Set(state.list.filter((a) => a.status === "waiting" || a.status === "error" || a.key === state.open).map((a) => a.key)) : null
+    const shown = []
+    for (const p of anchors) {
+      const e = tags.get(p.key)
+      if (!e || p.visible === false) continue
+      // Hidden labels have zero offsetWidth: measure them invisibly so
+      // collision tests use actual text width, never a guessed 90px.
+      if (e.hidden) { e.style.visibility = "hidden"; e.hidden = false }
+      e._w = e.offsetWidth || 190
+      e.style.visibility = ""
+      shown.push({ e, p })
+    }
+    // with many agents the office can hold more name tags than it can show
+    // without turning into a wall of labels: keep the ones that need you,
+    // are working, are selected/hovered, then the rest by recency
+    const box = $("tags")
+    const W = box?.clientWidth || 0
+    const limit = floatHome ? 4 : W < 850 ? 4 : W < 1100 ? 5 : W < 1500 ? 6 : 8
+    const rank = new Map()
+    for (const a of state.list) {
+      const r = a.key === state.open || a.key === state.hover ? 0
+        : a.status === "waiting" || a.status === "error" ? 1
+        : a.status === "thinking" || a.status === "executing" || a.status === "replying" ? 2
+        : 3
+      rank.set(a.key, r)
+    }
+    shown.sort((a, b) => (rank.get(a.p.key) ?? 3) - (rank.get(b.p.key) ?? 3) || b.p.y - a.p.y)
+    const byKey = new Map(shown.map(it => [it.p.key, it]))
+    const arranged = M.layoutTags(shown.filter(it => !few || few.has(it.p.key)).map(it => ({
+      key: it.p.key, x: it.p.x, y: it.p.y, w: it.e._w, h: it.e.offsetHeight || 22,
+    })), W, box?.clientHeight || 0, limit)
+    for (const it of arranged) {
+      const e = byKey.get(it.key).e
+      seen.add(it.key)
+      const tf = `translate(${Math.round(it.x)}px, ${Math.round(it.y)}px) translate(-50%, -100%)`
+      if (e.style.transform !== tf) e.style.transform = tf
+    }
+    for (const [k, e] of tags) {
+      const hide = !seen.has(k) || (few ? !few.has(k) : false)
+      if (e.hidden !== hide) e.hidden = hide
+    }
+  }
+
+  // the pointer over a worker or its tag only highlights it
+  function highlight(key) {
+    if (state.hover === key) return
+    state.hover = key
+    scene.highlight = key
+    for (const [k, e] of tags) e.classList.toggle("hot", k === key)
+  }
+
+  function bindCanvas(canvas) {
+    let moveQueued = false
+    canvas.addEventListener("pointermove", (e) => {
+      if (moveQueued) return
+      moveQueued = true
+      const x = e.offsetX, y = e.offsetY
+      requestAnimationFrame(() => {
+        moveQueued = false
+        const k = scene.hit(x, y)
+        canvas.style.cursor = k ? "pointer" : (canvas === office3 ? "grab" : "")
+        highlight(k)
+      })
+    })
+    canvas.addEventListener("pointerleave", () => highlight(""))
+    canvas.addEventListener("click", (e) => {
+      if (scene === scene3 && scene3.dragged) { scene3.dragged = false; return }
+      const k = scene.hit(e.offsetX, e.offsetY)
+      if (k) open(k)
+      else close()
+    })
+    canvas.addEventListener("dblclick", (e) => {
+      const k = scene.hit(e.offsetX, e.offsetY)
+      if (!k) return
+      const a = state.list.find((x) => x.key === k)
+      if (a?.target) triggerJump(a, view.preferredJumpHost, null)
+    })
+  }
+  bindCanvas(office2)
+  bindCanvas(office3)
+
+  // ---- context bars ------------------------------------------------------
+  // 60% is worth noticing, 85% is nearly full; both use the same bar.
+  function ctxBar(c, name) {
+    const e = el("div", "ctx" + (c.level === "warn" || c.level === "full" ? " " + c.level : ""))
+    const bar = el("span", "bar")
+    const fill = el("i")
+    fill.style.width = c.pct + "%"
+    bar.append(fill)
+    e.append(el("span", "cn", name), bar, el("span", "cp", c.pct + "%"))
+    e.title = `${name} ${M.fmtTokens(c.used)} / ${M.fmtTokens(c.window)}`
+    return e
+  }
+
+  // ---- the panel ---------------------------------------------------------
+  // one agent, opened by a click, at the side; it doesn't move with the
+  // scene and is updated in place each second
+  const panel = $("pop")
+  const P = {}
+  ;(() => {
+    const head = el("div", "ph")
+    P.mark = el("span", "pmk")
+    P.agent = el("span", "pa")
+    P.when = el("span", "pw")
+    P.close = el("button", "px", "✕")
+    P.close.type = "button"
+    P.close.setAttribute("aria-label", "Close")
+    P.close.addEventListener("click", close)
+    head.append(P.mark, P.agent, P.when, P.close)
+    P.title = el("div", "pt")
+    P.status = el("div", "ps")
+    P.stIcon = el("span", "pi")
+    P.stText = el("span", "pst")
+    P.stMore = el("span", "pn")
+    P.status.append(P.stIcon, P.stText, P.stMore)
+    P.query = el("div", "pq")
+    P.step = el("div", "pstep")
+    P.err = el("div", "perr")
+    P.reply = el("div", "pr")
+    P.ctx = el("div", "pctx")
+    P.convoHead = el("div", "pconvo-h")
+    P.msgs = el("div", "pmsgs")
+    const foot = el("div", "pf")
+    P.meta = el("span", "pm")
+    P.jumpWrap = el("span", "pjump-wrap")
+    P.jumpWrap.hidden = true
+    P.copy = el("button", "pc")
+    P.copy.type = "button"
+    P.copy.addEventListener("click", (e) => { e.stopPropagation(); showCommand(P.copy.dataset.value, P.copy) })
+    P.clear = el("button", "pc")
+    P.clear.type = "button"
+    P.clear.addEventListener("click", (e) => { e.stopPropagation(); clearAgent(P.clear.dataset.key) })
+    foot.append(P.meta, P.jumpWrap, P.copy, P.clear)
+    P.src = el("div", "psrc")
+    panel.replaceChildren(head, P.title, P.status, P.query, P.step, P.err, P.reply, P.ctx, P.convoHead, P.msgs, foot, P.src)
+  })()
+  panel.addEventListener("click", (e) => e.stopPropagation())
+
+  const clock = (at) => {
+    const d = new Date(Number(at))
+    if (Number.isNaN(d.getTime())) return ""
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+  }
+  let msgSig = ""
+  function renderMessages(msgs) {
+    const sig = JSON.stringify(msgs)
+    if (sig === msgSig) return
+    msgSig = sig
+    P.msgs.replaceChildren(...msgs.map((m) => {
+      const role = m?.role === "assistant" ? "assistant" : m?.role === "tool" ? "tool" : "user"
+      const row = el("div", "msg " + role)
+      if (role !== "tool") row.append(el("span", "mn", m?.name || (role === "assistant" ? t().agent : role === "user" ? t().you : "")))
+      row.append(document.createTextNode(String(m?.text || "")))
+      if (m?.at) row.append(el("span", "mt", clock(m.at)))
+      return row
+    }))
+  }
+
+  const ICON = { done: "✓", error: "!", waiting: "?", thinking: "…", executing: "⟳", replying: "✎" }
+  function fillPanel(a) {
+    const w = t()
+    const setText = (node, s) => { if (node.textContent !== s) node.textContent = s }
+    if (P.mark.dataset.icon !== a.brand.icon + a.brand.name) {
+      P.mark.dataset.icon = a.brand.icon + a.brand.name
+      P.mark.replaceChildren(I.mark(a.brand, 18))
+    }
+    setText(P.agent, a.brand.name)
+    setText(P.when, M.ago(Date.now() - a.at, lang))
+    setText(P.title, a.title)
+    P.status.className = "ps " + a.status
+    setText(P.stIcon, ICON[a.status] || "")
+    setText(P.stText, label(a))
+    const more = a.sub === "noprog" || a.sub === "stuck" ? M.duration(Date.now() - a.at, lang)
+      : a.status === "executing" && a.since > 3000 ? M.fill(w.ran, M.duration(a.since, lang))
+        : a.turns ? M.fill(w.turns, a.turns) : ""
+    setText(P.stMore, more)
+    const q = a.query || (state.showText ? "" : w.quiet)
+    setText(P.query, q); P.query.hidden = !q
+    setText(P.step, a.step ? "› " + a.step : ""); P.step.hidden = !a.step
+    setText(P.err, a.error); P.err.hidden = !a.error
+    setText(P.reply, a.reply ? "← " + a.reply : ""); P.reply.hidden = !a.reply
+    // context fullness, when the agent's files carry usage
+    P.ctx.hidden = !a.ctx
+    if (a.ctx) P.ctx.replaceChildren(ctxBar(a.ctx, w.context))
+    // the conversation: only when text is on and the session has messages
+    const msgs = state.showText && !a.private && Array.isArray(a.messages) ? a.messages.slice(-8) : []
+    P.convoHead.hidden = P.msgs.hidden = !msgs.length
+    setText(P.convoHead, msgs.length ? w.recent : "")
+    renderMessages(msgs)
+    setText(P.meta, [a.model, a.project].filter(Boolean).join(" · "))
+    const target = a.target
+    const targetLabel = target?.label || target?.badge || target?.app || ""
+    if (target && targetLabel) {
+      P.jumpWrap.hidden = false
+      const paneId = target.paneId || target.herdrPane || target.tmuxPane || ""
+      const rawHosts = Array.isArray(target.hosts) && target.hosts.length > 1
+        ? target.hosts
+        : [{ id: target.hosts?.[0]?.id || target.hostId || "default", label: targetLabel }]
+      const hosts = rawHosts.map((h) => ({ id: String(h?.id || "default"), label: String(h?.label || h?.app || targetLabel) }))
+      const sig = `${a.key}|${lang}|${view.preferredJumpHost}|${paneId}|${hosts.map((h) => `${h.id}:${h.label}`).join(",")}`
+      if (P.jumpWrap.dataset.sig !== sig) {
+        P.jumpWrap.dataset.sig = sig
+        P.jumpWrap.replaceChildren(...hosts.map((h, idx) => {
+          const isPrimary = view.preferredJumpHost ? h.id === view.preferredJumpHost : idx === 0
+          const text = idx === 0 && paneId && !h.label.includes(paneId) ? `${h.label} · ${paneId}` : h.label
+          const btn = el("button", isPrimary ? "pjump" : "pjump alt", M.fill(w.jumpTo, text))
+          btn.type = "button"
+          btn.dataset.label = M.fill(w.jumpTo, text)
+          btn.title = w.jumpTip
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation()
+            if (hosts.length > 1 && h.id) view.preferredJumpHost = h.id
+            triggerJump(a, h.id, btn)
+          })
+          return btn
+        }))
+      }
+    } else {
+      P.jumpWrap.hidden = true
+      P.jumpWrap.dataset.sig = ""
+    }
+    const copy = a.resume || a.session
+    P.copy.hidden = !copy
+    const box = P.copy.nextElementSibling
+    if (box?.classList.contains("pcopy")) box.remove()
+    if (copy && P.copy.dataset.value !== copy) {
+      P.copy.dataset.value = copy
+      P.copy.dataset.label = a.resume ? w.copyResume : w.copySession
+      P.copy.textContent = P.copy.dataset.label
+    }
+    P.clear.hidden = !M.clearable(a)
+    P.clear.dataset.key = a.key
+    setText(P.clear, w.clear)
+    P.clear.title = w.clearTip
+    const baseSrc = a.source === "files" ? w.fromFiles : w.via
+    setText(P.src, targetLabel ? `${baseSrc} · ${M.fill(w.host, targetLabel)}` : baseSrc)
+  }
+
+  async function triggerJump(a, hostId, btn) {
+    const targetLabel = a?.target?.label || a?.target?.badge || a?.target?.app || ""
+    if (!targetLabel) return
+    const w = t()
+    const targetBtn = btn || (!P.jumpWrap.hidden ? P.jumpWrap.querySelector(".pjump") : null)
+    const orig = targetBtn ? (targetBtn.dataset.label || targetBtn.textContent) : ""
+    if (targetBtn) {
+      targetBtn.classList.remove("err")
+      targetBtn.textContent = M.fill(w.jumpingTo, targetLabel)
+    }
+    clearTimeout(saving)
+    saving = null
+    try {
+      const next = {
+        ...wanted(),
+        preferredJumpHost: hostId || view.preferredJumpHost || "",
+        jumpRequest: {
+          key: a.key,
+          session: a.session || "",
+          preferredHostId: hostId || view.preferredJumpHost || "",
+          at: Date.now(),
+        },
+      }
+      opts = await magpie.options.set(next)
+      saved = JSON.stringify(wanted())
+      if (targetBtn) setTimeout(() => { if (targetBtn.dataset.label) targetBtn.textContent = orig }, 900)
+    } catch {
+      if (targetBtn) {
+        targetBtn.classList.add("err")
+        targetBtn.textContent = w.jumpFail
+        setTimeout(() => {
+          targetBtn.classList.remove("err")
+          if (targetBtn.dataset.label) targetBtn.textContent = orig
+        }, 1600)
+      }
+    }
+  }
+
+  // out of the office until its session moves again; kept in options, only
+  // for sessions live.js still has
+  function clearAgent(key) {
+    const a = state.list.find((x) => x.key === key)
+    if (!a || !M.clearable(a)) return
+    const now = Date.now()
+    const known = new Set((snapshot(now)?.sessions || []).map((s) => s?.key))
+    const next = {}
+    for (const [k, at] of Object.entries(view.cleared)) if (known.has(k)) next[k] = at
+    next[key] = a.at
+    view.cleared = next
+    close()
+    refresh()
+    save()
+  }
+
+  function open(key) {
+    if (state.open === key) return close()
+    const a = state.list.find((x) => x.key === key)
+    if (!a) return
+    state.open = key
+    scene.selected = key
+    scene.setSelected?.(key)
+    msgSig = ""
+    fillPanel(a)
+    panel.hidden = false
+    positionOverlays()
+    $("rail").hidden = true
+    for (const [k, e] of tags) e.classList.toggle("on", k === key)
+    for (const tr of $("rows").children) tr.classList.toggle("on", tr.dataset.key === key)
+    for (const b of $("railGroups").querySelectorAll(".rail-row")) b.classList.toggle("on", b.dataset.key === key)
+  }
+  function clearPanelText() {
+    for (const n of [P.title, P.query, P.step, P.err, P.reply, P.convoHead, P.msgs, P.meta, P.src]) n.replaceChildren()
+    P.copy.nextElementSibling?.classList.contains("pcopy") && P.copy.nextElementSibling.remove()
+    delete P.copy.dataset.value
+    msgSig = ""
+  }
+  function close() {
+    if (!state.open) return
+    state.open = ""
+    scene.selected = ""
+    scene.setSelected?.(null)
+    panel.hidden = true
+    clearPanelText()
+    renderRail()
+    for (const e of tags.values()) e.classList.remove("on")
+    for (const tr of $("rows").children) tr.classList.remove("on")
+    for (const b of $("railGroups").querySelectorAll(".rail-row")) b.classList.remove("on")
+  }
+
+  // magpie frames a page with allow="", so a page cannot reach the
+  // clipboard. Show the command selected instead: ⌘C / Ctrl+C copies it
+  // without a step that can only fail.
+  function showCommand(s, btn) {
+    const box = el("input", "pcopy")
+    box.readOnly = true
+    box.value = s
+    box.setAttribute("aria-label", btn.dataset.label || "")
+    btn.hidden = true
+    btn.after(box)
+    box.focus()
+    box.select()
+  }
+
+  // ---- the list --------------------------------------------------------
+  // rows kept by key and updated in place, so nothing jumps under the pointer
+  const rowsByKey = new Map()
+  const groupRows = new Map()
+  function rowFor(a) {
+    let r = rowsByKey.get(a.key)
+    if (!r) {
+      const tr = el("tr")
+      tr.dataset.key = a.key
+      tr.tabIndex = 0
+      const c = () => { const td = el("td"); tr.append(td); return td }
+      r = { tr, ag: c(), task: c(), st: c(), dir: c(), model: c(), when: c() }
+      r.ag.className = "ag"; r.task.className = "task"; r.dir.className = "mono"; r.model.className = "mono"; r.when.className = "muted"
+      r.mark = el("span"); r.name = el("span"); r.ag.append(r.mark, r.name)
+      r.title = el("div", "lt"); r.sub = el("div", "ls"); r.task.append(r.title, r.sub)
+      r.badge = el("span", "badge"); r.st.append(r.badge)
+      tr.addEventListener("click", () => open(a.key))
+      tr.addEventListener("dblclick", (e) => { e.stopPropagation(); const cur = state.list.find((x) => x.key === a.key); if (cur?.target) triggerJump(cur, view.preferredJumpHost, null) })
+      tr.addEventListener("keydown", (e) => { if (e.key === "Enter") open(a.key) })
+      rowsByKey.set(a.key, r)
+    }
+    const set = (n, s) => { if (n.textContent !== s) n.textContent = s }
+    if (r.mark.dataset.icon !== a.brand.icon) { r.mark.dataset.icon = a.brand.icon; r.mark.replaceChildren(I.mark(a.brand, 16)) }
+    set(r.name, a.brand.name)
+    set(r.title, a.title)
+    const sub = a.sub === "noprog" || a.sub === "stuck" ? label(a)
+      : a.status === "waiting" || a.status === "done" || a.status === "error" ? a.error || a.reply || a.step || a.query
+        : a.step || a.query
+    set(r.sub, sub)
+    r.badge.style.setProperty("--c", M.COLORS[a.status])
+    set(r.badge, label(a))
+    set(r.dir, a.project)
+    set(r.model, a.model)
+    set(r.when, M.ago(Date.now() - a.at, lang))
+    r.tr.classList.toggle("on", a.key === state.open)
+    return r.tr
+  }
+  // a heading row per group, reused across refreshes
+  function groupRowFor(key) {
+    let r = groupRows.get(key)
+    if (!r) {
+      const tr = el("tr", "group")
+      const td = el("td")
+      td.colSpan = 6
+      r = { tr, label: el("span", "glabel"), count: el("span", "gcount") }
+      td.append(r.label, r.count)
+      tr.append(td)
+      groupRows.set(key, r)
+    }
+    return r
+  }
+  function rows() {
+    const body = $("rows")
+    const groups = M.groups(state.list)
+    const want = []
+    const usedGroups = new Set()
+    for (const g of groups) {
+      if (!g.list.length) continue
+      usedGroups.add(g.key)
+      const head = groupRowFor(g.key)
+      const name = t()[g.key]
+      if (head.label.textContent !== name) head.label.textContent = name
+      head.count.textContent = g.list.length
+      want.push(head.tr, ...g.list.map(rowFor))
+    }
+    for (const [k, r] of rowsByKey) {
+      if (!groups.some((g) => g.list.some((a) => a.key === k))) { r.tr.remove(); rowsByKey.delete(k) }
+    }
+    for (const [k, r] of groupRows) if (!usedGroups.has(k)) r.tr.remove()
+    want.forEach((tr, i) => { if (body.children[i] !== tr) body.insertBefore(tr, body.children[i] || null) })
+    while (body.children.length > want.length) body.lastElementChild.remove()
+    $("emptyList").hidden = state.list.length > 0
+    $("emptyList").textContent = emptyText()
+  }
+
+  function emptyText() {
+    if (!state.loaded || !state.snap) return t().noFile
+    return !view.remote && state.snap.dropped > 0 ? t().empty + " " + t().emptyRemote : t().empty
+  }
+
+  // ---- the side rail ----------------------------------------------------
+  // the same three groups as the list, in a compact panel over the office;
+  // a row opens the same click-only detail panel
+  let railSig = ""
+  function renderRail() {
+    const rail = $("rail")
+    const menus = ($("settings") && !$("settings").hidden) || ($("todayMenu") && !$("todayMenu").hidden)
+    const show = view.side && view.mode === "office" && !floatHome && !state.open && !menus
+    rail.hidden = !show
+    if (show) positionOverlays()
+    const btn = $("sideBtn")
+    btn.classList.toggle("on", view.side)
+    btn.setAttribute("aria-pressed", String(view.side))
+    $("railCount").textContent = state.list.length
+    const groups = M.groups(state.list)
+    const sig = JSON.stringify([lang, state.showText, groups.map(g => [g.key, g.list.map(a => [a.key, a.title, label(a), a.status, a.at])])])
+    if (sig === railSig) return
+    railSig = sig
+    const kids = []
+    for (const g of groups) {
+      if (!g.list.length) continue
+      kids.push(el("div", "rail-group", `${t()[g.key]} · ${g.list.length}`))
+      for (const a of g.list) {
+        const row = el("button", "rail-row")
+        row.type = "button"
+        row.dataset.key = a.key
+        row.classList.toggle("on", a.key === state.open)
+        row.append(I.mark(a.brand, 15))
+        row.append(el("span", "rn", a.title || a.project || a.brand.name))
+        const st = el("span", "rs", label(a))
+        st.style.color = M.COLORS[a.status]
+        row.append(st)
+        row.title = `${a.brand.name} · ${label(a)}`
+        row.addEventListener("click", (e) => { e.stopPropagation(); open(a.key) })
+        row.addEventListener("dblclick", (e) => { e.stopPropagation(); if (a.target) triggerJump(a, view.preferredJumpHost, null) })
+        kids.push(row)
+      }
+    }
+    $("railGroups").replaceChildren(...kids)
+  }
+
+  // ---- Today ------------------------------------------------------------
+  let todaySig = ""
+  function renderToday() {
+    const data = M.today(state.list)
+    $("todayTokens").textContent = data.hasUsage && data.tokens ? M.fmtTokens(data.tokens) : ""
+    const sig = lang + "|" + JSON.stringify(data)
+    if (sig === todaySig) return
+    todaySig = sig
+    const w = t()
+    const panel = $("todayMenu")
+    const kids = []
+    if (!data.hasUsage && !data.contexts.length) {
+      panel.replaceChildren(el("div", "today-note", w.noUsage))
+      return
+    }
+    const big = el("div", "today-big")
+    for (const [value, name] of [[data.turns, w.turnsL], [M.fmtTokens(data.tokens), w.tokensL], [data.agentCount, w.agentsL]]) {
+      const box = el("div")
+      box.append(el("b", null, String(value)), el("span", null, name))
+      big.append(box)
+    }
+    kids.push(big)
+    const agents = Object.values(data.byAgent).sort((a, b) => b.turns - a.turns || b.tokens - a.tokens)
+    for (const a of agents) {
+      const row = el("div", "today-row")
+      row.append(I.mark(M.brand(a.agent), 16), el("span", "trn", a.name), el("span", "n", `${a.turns} ${w.turnsL} · ${M.fmtTokens(a.tokens)}`))
+      kids.push(row)
+    }
+    if (data.projects.length) {
+      kids.push(el("div", "today-head", w.topProjects))
+      for (const p of data.projects) {
+        const row = el("div", "today-row")
+        row.append(el("span", "trn", p.project), el("span", "n", `${p.turns} ${w.turnsL} · ${M.fmtTokens(p.tokens)}`))
+        kids.push(row)
+      }
+    }
+    if (data.contexts.length) {
+      kids.push(el("div", "today-head", w.context))
+      for (const c of data.contexts) kids.push(ctxBar(c, c.name || c.agent))
+    }
+    if (!data.hasUsage) kids.push(el("div", "today-note", w.noUsage))
+    else kids.push(el("div", "today-note", w.summaryNote))
+    panel.replaceChildren(...kids)
+  }
+
+  // ---- the per-agent filter / language selector -------------------------
+  let agentFilterSig = ""
+  function renderAgentFilter() {
+    const ids = [...new Set(state.all.map((a) => a.agent))].sort()
+    for (const id of view.agents) if (!ids.includes(id)) ids.push(id)
+    const counts = ids.map((id) => `${id}:${state.all.filter((a) => a.agent === id).length}`).join(",")
+    const sig = lang + "|" + counts + "|" + view.agents.join(",")
+    if (sig === agentFilterSig) return
+    agentFilterSig = sig
+    const box = $("optAgents")
+    const kids = []
+    const allRow = el("label", "af")
+    const allBox = document.createElement("input")
+    allBox.type = "checkbox"
+    allBox.checked = view.agents.length === 0
+    allBox.addEventListener("change", () => { view.agents = []; agentFilterSig = ""; renderAgentFilter(); refresh(); save() })
+    allRow.append(allBox, el("span", "afn", t().allAgents))
+    kids.push(allRow)
+    for (const id of ids) {
+      const b = M.brand(id)
+      const row = el("label", "af")
+      const cbox = document.createElement("input")
+      cbox.type = "checkbox"
+      cbox.checked = view.agents.includes(id)
+      cbox.dataset.agent = id
+      cbox.addEventListener("change", () => {
+        const next = view.agents.filter((x) => x !== id)
+        if (cbox.checked) next.push(id)
+        view.agents = next
+        agentFilterSig = ""
+        renderAgentFilter()
+        refresh()
+        save()
+      })
+      row.append(cbox, I.mark(b, 15), el("span", "afn", b.name), el("span", "afc", String(state.all.filter((a) => a.agent === id).length)))
+      kids.push(row)
+    }
+    box.replaceChildren(...kids)
+  }
+
+  const SCENE_OPTIONS = [
+    ["office", "sceneOffice"], ["station", "sceneStation"], ["cafe", "sceneCafe"],
+    ["castle", "sceneCastle"], ["pirate", "scenePirate"], ["graveyard", "sceneGraveyard"],
+    ["library", "sceneLibrary"], ["cyberlab", "sceneCyberlab"], ["greenhouse", "sceneGreenhouse"],
+    ["arctic", "sceneArctic"], ["rainynight", "sceneRainynight"],
+  ]
+  const QUALITY_OPTIONS = [["low", "qLow"], ["medium", "qMedium"], ["high", "qHigh"]]
+  const pickers = []
+  let openPicker = null
+  let pickerOpeningFrame = 0
+  function clearPickerOpening() {
+    if (pickerOpeningFrame) { cancelAnimationFrame(pickerOpeningFrame); pickerOpeningFrame = 0 }
+  }
+  function checkIcon() {
+    const ns = "http://www.w3.org/2000/svg"
+    const s = document.createElementNS(ns, "svg")
+    s.setAttribute("class", "picker-check")
+    s.setAttribute("viewBox", "0 0 12 12")
+    s.setAttribute("width", "12")
+    s.setAttribute("height", "12")
+    s.setAttribute("aria-hidden", "true")
+    const p = document.createElementNS(ns, "path")
+    p.setAttribute("d", "M2.5 6.2L5 8.6L9.5 3.6")
+    p.setAttribute("fill", "none")
+    p.setAttribute("stroke", "currentColor")
+    p.setAttribute("stroke-width", "1.6")
+    p.setAttribute("stroke-linecap", "round")
+    p.setAttribute("stroke-linejoin", "round")
+    s.append(p)
+    return s
+  }
+  function closePicker(refocus) {
+    return openPicker ? openPicker.close(refocus) : false
+  }
+  function makePicker(btnId, getOptions, getValue, onPick) {
+    const btn = $(btnId)
+    const listId = btn.getAttribute("aria-controls")
+    const list = $(listId)
+    const valNode = btn.querySelector(".picker-val")
+    const wrap = btn.closest(".picker")
+    let sig = ""
+    let activeIdx = 0
+    function setActive(idx) {
+      const items = list.querySelectorAll(".picker-opt")
+      if (!items.length) return
+      activeIdx = (idx + items.length) % items.length
+      items.forEach((it, i) => it.classList.toggle("active", i === activeIdx))
+      const activeEl = items[activeIdx]
+      list.setAttribute("aria-activedescendant", activeEl.id)
+      const top = activeEl.offsetTop
+      const bottom = top + activeEl.offsetHeight
+      if (top < list.scrollTop) list.scrollTop = top
+      else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight
+    }
+    function sync() {
+      const optsList = getOptions()
+      const cur = getValue()
+      const found = optsList.find((o) => o.value === cur) || optsList[0]
+      valNode.textContent = found.label
+      const nextSig = cur + "|" + optsList.map((o) => o.value + ":" + o.label).join(",")
+      if (nextSig === sig) return
+      sig = nextSig
+      const kids = optsList.map((o, i) => {
+        const b = el("button", "picker-opt")
+        b.type = "button"
+        b.id = `${listId}-opt-${i}`
+        b.dataset.value = o.value
+        b.setAttribute("role", "option")
+        b.setAttribute("aria-selected", String(o.value === cur))
+        b.tabIndex = -1
+        b.append(el("span", "picker-opt-label", o.label), checkIcon())
+        b.addEventListener("pointermove", () => { if (activeIdx !== i) setActive(i) })
+        b.addEventListener("click", (e) => { e.stopPropagation(); choose(i) })
+        return b
+      })
+      list.replaceChildren(...kids)
+    }
+    function position() {
+      if (list.hidden) return
+      const r = btn.getBoundingClientRect()
+      const gap = 4, edge = 8
+      const minW = Math.min(Math.max(r.width, 160), innerWidth - edge * 2)
+      list.style.minWidth = minW + "px"
+      const naturalH = Math.min(list.scrollHeight + 2, 240)
+      const below = innerHeight - r.bottom - gap - edge
+      const above = r.top - gap - edge
+      const flipUp = below < naturalH && above > below
+      const maxH = Math.max(72, Math.min(240, flipUp ? above : below))
+      const h = Math.min(naturalH, maxH)
+      const w = list.offsetWidth
+      const top = flipUp ? Math.max(edge, r.top - gap - h) : Math.min(innerHeight - edge - h, Math.max(edge, r.bottom + gap))
+      const left = Math.max(edge, Math.min(r.left, innerWidth - w - edge))
+      list.style.left = left + "px"
+      list.style.top = top + "px"
+      list.style.maxHeight = maxH + "px"
+    }
+    function close(refocus) {
+      if (openPicker === api) {
+        openPicker = null
+        clearPickerOpening()
+      }
+      list.hidden = true
+      btn.setAttribute("aria-expanded", "false")
+      list.removeAttribute("aria-activedescendant")
+      if (refocus) btn.focus({ preventScroll: true })
+      return true
+    }
+    const api = { btn, list, wrap, sync, position, close }
+    function open(at) {
+      if (openPicker && openPicker !== api) openPicker.close(false)
+      sync()
+      const optsList = getOptions()
+      const selIdx = Math.max(0, optsList.findIndex((o) => o.value === getValue()))
+      const idx = at === "last" ? Math.max(0, optsList.length - 1) : selIdx
+      list.hidden = false
+      btn.setAttribute("aria-expanded", "true")
+      openPicker = api
+      clearPickerOpening()
+      pickerOpeningFrame = requestAnimationFrame(() => { pickerOpeningFrame = 0 })
+      position()
+      setActive(idx)
+      list.focus({ preventScroll: true })
+    }
+    function choose(idx) {
+      const chosen = getOptions()[idx]
+      if (!chosen) return
+      const prevVal = getValue()
+      close(true)
+      if (chosen.value !== prevVal) onPick(chosen.value)
+      syncPickers()
+    }
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation()
+      if (openPicker === api) close(false)
+      else open()
+    })
+    btn.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault()
+        e.stopPropagation()
+        if (openPicker === api) close(false)
+        else open(e.key === "ArrowUp" ? "last" : undefined)
+      } else if (e.key === "Escape" && openPicker === api) {
+        e.preventDefault()
+        e.stopPropagation()
+        close(true)
+      }
+    })
+    list.addEventListener("keydown", (e) => {
+      const count = list.querySelectorAll(".picker-opt").length
+      if (e.key === "ArrowDown") setActive(activeIdx + 1)
+      else if (e.key === "ArrowUp") setActive(activeIdx - 1)
+      else if (e.key === "Home") setActive(0)
+      else if (e.key === "End") setActive(Math.max(0, count - 1))
+      else if (e.key === "Enter" || e.key === " ") choose(activeIdx)
+      else if (e.key === "Escape") close(true)
+      else if (e.key === "Tab") { close(false); return }
+      else return
+      e.preventDefault()
+      e.stopPropagation()
+    })
+    pickers.push(api)
+  }
+  function syncPickers() {
+    for (const p of pickers) p.sync()
+    if (openPicker) openPicker.position()
+  }
+
+  // ---- in-page toasts ---------------------------------------------------
+  // magpie frames the page with allow="", so the browser's desktop
+  // notifications are blocked; a small in-page toast opens the agent when
+  // clicked instead.
+  function showToast(a) {
+    const box = $("toasts")
+    while (box.children.length >= 3) box.firstElementChild.remove()
+    const b = el("button", "toast" + (a.status === "error" ? " error" : ""))
+    b.type = "button"
+    b.append(I.mark(a.brand, 18))
+    const text = el("span", "tn")
+    text.append(el("b", null, a.brand.name), el("span", null, `${label(a)} · ${a.title}`))
+    b.append(text)
+    b.title = t().dismiss
+    b.addEventListener("click", (e) => { e.stopPropagation(); b.remove(); open(a.key) })
+    box.append(b)
+    setTimeout(() => b.remove(), 8000)
+  }
+  function trackAlerts() {
+    const next = new Map(state.alerts)
+    // the first snapshot with real sessions is the baseline: sessions that
+    // were already waiting when the page opened are not news
+    const seeded = state.alertsSeeded === true
+    for (const a of state.all) {
+      // sample agents are not news
+      if (String(a.key).startsWith("demo|")) continue
+      next.set(a.key, a.status)
+      const was = state.alerts.get(a.key)
+      if (seeded && (a.status === "waiting" || a.status === "error") && was !== a.status) showToast(a)
+    }
+    state.alerts = next
+    if (state.snap) state.alertsSeeded = true
+  }
+
+  // ---- everything ------------------------------------------------------
+  function refresh() {
+    const now = Date.now()
+    const wasText = state.showText
+    // text off in the page as well as the host: a stale live.js or a host
+    // that has not restarted yet must not render what the switch hid
+    state.showText = view.text && state.snap?.text !== false
+    const snap = snapshot(now)
+    // follow the newest real prompt's script while the picker is on Auto
+    // (sample agents are not the user's own prompts and must not pick a UI
+    // language for them)
+    if (manualLang === "auto") {
+      const want = pickLang(M.sample(state.snap))
+      if (want !== lang) { lang = want; words() }
+    }
+    const base = { ...view, progress: true }
+    state.all = M.agents(snap, now, { ...base, agents: [], showSub: true, showIdle: true })
+    state.list = M.agents(snap, now, base)
+    if (!state.showText) {
+      state.list = M.redact(state.list); state.all = M.redact(state.all)
+      if (wasText) $("toasts").replaceChildren()
+      if (!state.open) clearPanelText()
+    }
+    const c = M.counts(state.list)
+    const set = (id, v) => { const n = $(id); if (n.textContent !== String(v)) n.textContent = v }
+    set("nNeed", c.needYou)
+    set("nWork", c.working)
+    set("nDone", c.done)
+    $("counts").classList.toggle("alert", c.needYou > 0)
+    const active = activateScene()
+    active.setAgents(state.list)
+    if (view.mode === "office") active.start()
+    const keys = new Set(state.list.map((a) => a.key))
+    for (const [k, e] of tags) if (!keys.has(k)) { e.remove(); tags.delete(k) }
+    for (const a of state.list) tagFor(a)
+    if (state.open) {
+      const a = state.list.find((x) => x.key === state.open)
+      if (a) fillPanel(a)
+      else close()
+    }
+    $("empty").hidden = state.list.length > 0
+    if (!$("empty").hidden) $("empty").textContent = emptyText()
+    set("note", view.demo ? t().demoOn : (view.dim === "3d" && state.scene3Failed ? t().webglFallback : ""))
+    const age = state.snap?.written ? now - state.snap.written : 0
+    const live = $("live")
+    live.classList.toggle("stale", !!state.snap && age > 15000)
+    live.title = state.snap ? M.fill(t().stale, M.ago(age, lang)) : ""
+    rows()
+    brandLegend()
+    renderRail()
+    renderToday()
+    renderAgentFilter()
+    trackAlerts()
+    document.title = c.needYou ? `(${c.needYou}) ${t().title}` : t().title
+  }
+
+  function select(group, attr, value) {
+    $(group).querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset[attr] === value)))
+  }
+
+  function setMode(m) {
+    view.mode = m
+    select("modes", "mode", m)
+    $("stage").hidden = m !== "office"
+    $("listview").hidden = m !== "list"
+    $("dims").classList.toggle("off", m !== "office")
+    railSig = ""
+    if (m === "office") { const s = activateScene(); s.resize(); s.start() }
+    else { try { scene2.stop() } catch {} ; if (scene3) scene3.stop() }
+    refresh()
+  }
+
+  // saving restarts the plugin's host (magpie's options do), so a change
+  // waits until it has been left alone a moment, and only a real change is
+  // written
+  let saving = null
+  let saved = JSON.stringify(opts)
+  const textOn = () => $("optText").checked
+  function wanted() {
+    const base = { ...opts }
+    delete base.jumpRequest
+    return {
+      ...base, mode: view.mode, dim: view.dim, demo: view.demo, showDone: view.showDone, remote: view.remote, hideAfter: view.hideAfter,
+      text: textOn(), agents: view.agents.slice(), showSub: view.showSub, showIdle: view.showIdle,
+      side: view.side, sideV: 2, lang: manualLang, scene: view.scene, quality: view.quality,
+      cleared: { ...view.cleared }, preferredJumpHost: view.preferredJumpHost || "",
+    }
+  }
+  function save() {
+    clearTimeout(saving)
+    saving = setTimeout(async () => {
+      saving = null
+      const next = wanted()
+      if (JSON.stringify(next) === saved) return
+      try { opts = await magpie.options.set(next); saved = JSON.stringify(opts) } catch {}
+    }, 2500)
+  }
+
+  $("modes").addEventListener("click", (e) => {
+    const m = e.target.closest("button")?.dataset.mode
+    if (!m || m === view.mode) return
+    setMode(m)
+    save()
+  })
+  $("dims").addEventListener("click", (e) => {
+    const d = e.target.closest("button")?.dataset.dim
+    if (!d || d === view.dim) return
+    view.dim = d
+    select("dims", "dim", d)
+    const s = activateScene()
+    s.resize()
+    if (view.mode !== "office") setMode("office")
+    refresh()
+    save()
+  })
+
+  // settings and the Today panel share one menu behaviour
+  const menu = $("settings")
+  const todayMenu = $("todayMenu")
+  function positionOverlays() {
+    for (const [button, menuId] of [["settingsBtn", "settings"], ["todayBtn", "todayMenu"]]) {
+      const m = $(menuId)
+      if (m.hidden) continue
+      const anchor = $(button).getBoundingClientRect()
+      const width = Math.min(300, innerWidth - 16)
+      const top = Math.min(Math.max(8, anchor.bottom + 6), Math.max(8, innerHeight - 160))
+      Object.assign(m.style, {left: Math.max(8, Math.min(innerWidth-width-8, anchor.right-width)) + "px", top: top + "px", width: width + "px", maxHeight: Math.max(80, innerHeight-top-8) + "px"})
+    }
+    const rect = $("stage").getBoundingClientRect()
+    for (const [id, preferred] of [["pop", 400], ["rail", 256]]) {
+      const node = $(id)
+      if (node.hidden || rect.height <= 0) continue
+      const width = Math.min(preferred, Math.max(0, rect.width-20))
+      Object.assign(node.style, {position: "fixed", right: "auto", left: Math.max(8, rect.right-width-10) + "px", top: Math.max(8, rect.top+10) + "px", width: width + "px", maxHeight: Math.max(80, Math.min(rect.height-20, innerHeight-rect.top-18)) + "px"})
+    }
+  }
+  addEventListener("resize", () => { closePicker(false); positionOverlays() })
+  function closeMenus(except) {
+    closePicker(false)
+    let changed = false
+    for (const [btn, m] of [[$("settingsBtn"), menu], [$("todayBtn"), todayMenu]]) {
+      if (m === except || m.hidden) continue
+      m.hidden = true
+      btn.setAttribute("aria-expanded", "false")
+      changed = true
+    }
+    if (changed) renderRail()
+  }
+  function toggleMenu(btn, m) {
+    const willOpen = m.hidden
+    closeMenus(willOpen ? m : null)
+    m.hidden = !willOpen
+    btn.setAttribute("aria-expanded", String(willOpen))
+    positionOverlays()
+    renderRail()
+  }
+  $("settingsBtn").addEventListener("click", (e) => { e.stopPropagation(); toggleMenu($("settingsBtn"), menu) })
+  $("todayBtn").addEventListener("click", (e) => { e.stopPropagation(); toggleMenu($("todayBtn"), todayMenu) })
+  menu.addEventListener("click", (e) => e.stopPropagation())
+  // Focusing a picker button near the foot of a scrollable #settings menu
+  // queues an async scroll event on #settings for the same frame; reposition
+  // the newly opened list instead of closing it on that opening-frame scroll.
+  menu.addEventListener("scroll", () => {
+    if (pickerOpeningFrame) { if (openPicker) openPicker.position(); return }
+    closePicker(false)
+  })
+  todayMenu.addEventListener("click", (e) => e.stopPropagation())
+  addEventListener("pointerdown", (e) => {
+    if (openPicker && !openPicker.wrap.contains(e.target)) closePicker(false)
+  }, true)
+  document.addEventListener("click", (e) => {
+    if (menu.contains(e.target) || todayMenu.contains(e.target)) return
+    if (e.target === $("settingsBtn") || e.target === $("todayBtn")) return
+    closeMenus()
+  })
+  $("optDemo").checked = view.demo
+  $("optDone").checked = view.showDone
+  $("optRemote").checked = view.remote
+  $("optText").checked = opts.text !== false
+  $("optSub").checked = view.showSub
+  $("optIdle").checked = view.showIdle
+  select("optHide", "hide", view.hideAfter)
+  $("optDemo").addEventListener("change", (e) => { view.demo = e.target.checked; state.demoSnap = null; refresh(); save() })
+  $("optDone").addEventListener("change", (e) => { view.showDone = e.target.checked; refresh(); save() })
+  $("optRemote").addEventListener("change", (e) => { view.remote = e.target.checked; refresh(); save() })
+  $("optText").addEventListener("change", (e) => { view.text = e.target.checked; refresh(); save() })
+  $("optSub").addEventListener("change", (e) => { view.showSub = e.target.checked; agentFilterSig = ""; refresh(); save() })
+  $("optIdle").addEventListener("change", (e) => { view.showIdle = e.target.checked; agentFilterSig = ""; refresh(); save() })
+  $("optHide").addEventListener("click", (e) => {
+    const h = e.target.closest("button")?.dataset.hide
+    if (!h) return
+    view.hideAfter = h
+    select("optHide", "hide", h)
+    refresh()
+    save()
+  })
+
+  // the rail can be put away; the list view keeps its own groups
+  $("sideBtn").addEventListener("click", (e) => {
+    e.stopPropagation()
+    view.side = !view.side
+    railSig = ""
+    renderRail()
+    save()
+  })
+  $("railClose").addEventListener("click", (e) => {
+    e.stopPropagation()
+    view.side = false
+    railSig = ""
+    renderRail()
+    save()
+  })
+
+  // picture in picture: the office in a window of the page's own (magpie's
+  // frame refuses the browser's own floating window to a sandboxed page).
+  // Its bar moves it, its corner reshapes it, ✕ or Escape puts it back.
+  function openFloat() {
+    if (floatHome) return
+    const stage = $("stage")
+    const ph = el("div", "stage-slot", t().floating)
+    stage.parentElement.insertBefore(ph, stage)
+    floatHome = { parent: ph.parentElement, ph }
+    $("floatslot").append(stage)
+    $("float").hidden = false
+    $("float").style.cssText = ""
+    $("pip").classList.add("on")
+    $("pip").textContent = t().pipOn
+    railSig = ""
+    renderRail()
+    scene.resize()
+  }
+  function closeFloat() {
+    if (!floatHome) return
+    floatHome.parent.insertBefore($("stage"), floatHome.ph)
+    floatHome.ph.remove()
+    floatHome = null
+    $("float").hidden = true
+    $("pip").classList.remove("on")
+    $("pip").textContent = t().pip
+    railSig = ""
+    renderRail()
+    scene.resize()
+  }
+  $("floatClose").addEventListener("click", closeFloat)
+  $("floatbar").addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".fclose")) return
+    const f = $("float")
+    const box = f.getBoundingClientRect()
+    const dx = e.clientX - box.left, dy = e.clientY - box.top
+    f.setPointerCapture?.(e.pointerId)
+    const move = (m) => {
+      const x = Math.max(0, Math.min(innerWidth - box.width, m.clientX - dx))
+      const y = Math.max(0, Math.min(innerHeight - box.height, m.clientY - dy))
+      Object.assign(f.style, { left: x + "px", top: y + "px", right: "auto", bottom: "auto" })
+    }
+    const up = () => { removeEventListener("pointermove", move); removeEventListener("pointerup", up) }
+    addEventListener("pointermove", move)
+    addEventListener("pointerup", up)
+    e.preventDefault()
+  })
+  $("pip").addEventListener("click", () => {
+    if (floatHome) return closeFloat()
+    if (view.mode !== "office") setMode("office")
+    openFloat()
+  })
+
+  // the canvas is sized only when its box really changes
+  let resizeQueued = false
+  new ResizeObserver(() => {
+    if (resizeQueued) return
+    resizeQueued = true
+    requestAnimationFrame(() => { resizeQueued = false; scene.resize(); positionOverlays() })
+  }).observe($("stage"))
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return
+    if (closePicker(true)) return
+    if (!menu.hidden || !todayMenu.hidden) return closeMenus()
+    if (state.open) return close()
+    if (floatHome) closeFloat()
+  })
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) scene.stop()
+    else if (view.mode === "office") scene.start()
+  })
+  magpie.onTheme((th) => {
+    themeLang = th.lang
+    const want = pickLang()
+    if (want !== lang) { lang = want; words() }
+    refresh()
+  })
+
+  makePicker(
+    "optLang",
+    () => [{ value: "auto", label: t().auto }, ...M.LANGS.map((code) => ({ value: code, label: M.LANG_NAMES[code] }))],
+    () => manualLang,
+    (val) => {
+      manualLang = M.LANG_NAMES[val] ? val : "auto"
+      lang = pickLang()
+      words()
+      refresh()
+      save()
+    }
+  )
+  makePicker(
+    "optScene",
+    () => SCENE_OPTIONS.map(([value, name]) => ({ value, label: t()[name] })),
+    () => view.scene,
+    (val) => {
+      view.scene = val
+      // a scene belongs to the real 3D view; choosing one takes you there
+      if (view.dim !== "3d") { view.dim = "3d"; select("dims", "dim", "3d") }
+      if (scene3) scene3.setScene(view.scene)
+      activateScene()
+      refresh()
+      save()
+    }
+  )
+  makePicker(
+    "optQuality",
+    () => QUALITY_OPTIONS.map(([value, name]) => ({ value, label: t()[name] })),
+    () => view.quality,
+    (val) => {
+      view.quality = val
+      if (scene3) scene3.setQuality(view.quality)
+      save()
+    }
+  )
+  select("modes", "mode", view.mode)
+  select("dims", "dim", view.dim)
+  words()
+  setMode(view.mode)
+  load()
+  // the host writes live.js within a second and a half of a change; the
+  // page looks every second, and "N min ago" moves with its own clock
+  setInterval(load, 1000)
+  // Time-based states must move even when a stalled file never changes.
+  setInterval(() => { if (!document.hidden) refresh() }, 1000)
+})()

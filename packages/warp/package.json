@@ -1,0 +1,27 @@
+{
+  "name": "@jianmu/opencode-warp-auth",
+  "version": "0.1.0",
+  "description": "OpenCode provider plugin: Warp (the terminal) AI credits through the Warp app's sign-in",
+  "type": "module",
+  "main": "./opencode.mjs",
+  "exports": {
+    ".": "./opencode2.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "opencode.mjs",
+    "opencode2.mjs",
+    "README.md"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "warp"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "directory": "packages/warp"
+  }
+}

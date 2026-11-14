@@ -1,0 +1,93 @@
+{
+  "name": "@jianmu/gateway-nowledge-mem",
+  "version": "0.1.6",
+  "description": "Nowledge Mem recall, Context Bundle and optional conversation capture at the Magpie gateway, for every connected harness",
+  "type": "module",
+  "files": [
+    "service.mjs",
+    "probe.mjs",
+    "mem.mjs",
+    "nowledge-mem.hooks.mjs",
+    "conversation.mjs",
+    "capture-filter.mjs",
+    "CAPTURE_FILTER.md",
+    "README.md",
+    "page"
+  ],
+  "keywords": [
+    "magpie",
+    "magpie-gateway",
+    "nowledge-mem",
+    "memory",
+    "llm-gateway"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "directory": "packages/nowledge-mem"
+  },
+  "magpie": {
+    "hooks": "./nowledge-mem.hooks.mjs",
+    "options": {
+      "apiKeyEnv": "NMEM_API_KEY",
+      "recall": true,
+      "contextBundle": true,
+      "maxMemories": 5,
+      "maxBytes": 6000,
+      "requestTimeoutMs": 900,
+      "recallBackoffMs": 30000,
+      "capture": false,
+      "captureTools": true,
+      "captureFilter": "off",
+      "captureCindy": false,
+      "recallRemote": false,
+      "captureRemote": false,
+      "port": 3479
+    },
+    "page": {
+      "title": "Nowledge Mem",
+      "file": "page/settings.html",
+      "icon": "page/icon.svg",
+      "service": {
+        "port": 3479,
+        "option": "port"
+      }
+    }
+  },
+  "scripts": {
+    "check": "bun test ./*.test.mjs"
+  },
+  "engines": {
+    "bun": ">=1.4.2"
+  },
+  "main": "./service.mjs",
+  "jianmu": {
+    "hooks": "./nowledge-mem.hooks.mjs",
+    "options": {
+      "apiKeyEnv": "NMEM_API_KEY",
+      "recall": true,
+      "contextBundle": true,
+      "maxMemories": 5,
+      "maxBytes": 6000,
+      "requestTimeoutMs": 900,
+      "recallBackoffMs": 30000,
+      "capture": false,
+      "captureTools": true,
+      "captureFilter": "off",
+      "captureCindy": false,
+      "recallRemote": false,
+      "captureRemote": false,
+      "port": 3479
+    },
+    "page": {
+      "title": "Nowledge Mem",
+      "file": "page/settings.html",
+      "icon": "page/icon.svg",
+      "service": {
+        "port": 3479,
+        "option": "port"
+      }
+    }
+  }
+}

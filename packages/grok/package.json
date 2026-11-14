@@ -1,0 +1,29 @@
+{
+  "name": "@jianmu/opencode-grok-auth",
+  "version": "0.2.7",
+  "description": "OpenCode provider plugin: Grok (SuperGrok / X Premium+) through the Grok Build CLI's sign-in",
+  "type": "module",
+  "main": "./opencode.mjs",
+  "exports": {
+    ".": "./opencode2.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "opencode.mjs",
+    "opencode2.mjs",
+    "README.md"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "grok",
+    "xai",
+    "supergrok"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "directory": "packages/grok"
+  }
+}

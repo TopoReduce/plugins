@@ -1,0 +1,35 @@
+{
+  "name": "@jianmu/opencode-copilot-auth",
+  "version": "0.1.2",
+  "description": "GitHub Copilot on GitHub.com and GitHub Enterprise, with account quota and credit balances for magpie",
+  "type": "module",
+  "main": "./opencode.mjs",
+  "exports": {
+    ".": "./opencode2.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "opencode.mjs",
+    "opencode2.mjs",
+    "endpoints.mjs",
+    "usage.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "github",
+    "copilot",
+    "magpie"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TopoReduce/plugins",
+    "directory": "packages/copilot"
+  },
+  "scripts": {
+    "test": "bun test"
+  }
+}

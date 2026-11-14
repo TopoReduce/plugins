@@ -1,0 +1,13 @@
+Jianmu Plugin Community Notice
+
+Maintained by Jianmu. Contact: DamonZS (1032428220@qq.com).
+
+The root LICENSE covers Jianmu-authored repository-level material. Individual
+packages and vendored components may retain their own authors, copyright
+notices, licenses, and third-party notices. Those package-level notices remain
+applicable to the corresponding material and are not replaced by the root
+license. Consult the LICENSE, NOTICE, and THIRD-PARTY-NOTICES files included
+with each package before redistribution.
+
+Jianmu compatibility metadata and branding changes do not claim authorship of
+third-party plugin implementations.

@@ -1,0 +1,38 @@
+{
+  "name": "@jianmu/opencode-river-auth",
+  "version": "0.1.1",
+  "description": "River (api.river.ai) with your API key in OpenCode and magpie: chat completions, streaming, tools and images",
+  "type": "module",
+  "main": "./opencode.mjs",
+  "exports": {
+    ".": "./opencode2.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "opencode.mjs",
+    "opencode2.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "magpie",
+    "river"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TopoReduce/plugins",
+    "directory": "packages/river"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "magpie": {
+    "icon": "https://river.ai/favicon.ico"
+  },
+  "jianmu": {
+    "icon": "https://river.ai/favicon.ico"
+  }
+}

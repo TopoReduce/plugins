@@ -1,0 +1,42 @@
+{
+  "name": "@jianmu/opencode-gumloop-auth",
+  "version": "0.1.1",
+  "description": "Gumloop (gumloop.com) with your API key and user id in OpenCode and magpie: per-account models, and a credit estimate Gumloop's API doesn't give",
+  "homepage": "https://www.gumloop.com/",
+  "type": "module",
+  "main": "./opencode.mjs",
+  "exports": {
+    ".": "./opencode2.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "gumloop.mjs",
+    "opencode.mjs",
+    "opencode2.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "magpie",
+    "gumloop"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TopoReduce/plugins",
+    "directory": "packages/gumloop"
+  },
+  "scripts": {
+    "test": "bun test"
+  },
+  "magpie": {
+    "icon": "https://www.gumloop.com/favicon.ico",
+    "maxConcurrency": 4
+  },
+  "jianmu": {
+    "icon": "https://www.gumloop.com/favicon.ico",
+    "maxConcurrency": 4
+  }
+}

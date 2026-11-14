@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Office</title>
+<link rel="stylesheet" href="style.css?v=e2ef03f6ddcd">
+<script src="_magpie/bridge.js"></script>
+<script src="agents.js?v=27b4181f490e"></script>
+<script src="model.js?v=b04e2020da2a"></script>
+<script src="icons.js?v=e918b44d46c2"></script>
+<script src="scene.js?v=097cc0a3eec6"></script>
+<script src="three.min.js?v=5b5a0ae404b6"></script>
+<script src="scene3d.js?v=b666062a087d"></script>
+<script src="app.js?v=a9ae93b3acc1" defer></script>
+</head>
+<body>
+<main class="card" id="card">
+  <header class="top">
+    <h1><span class="eyes" aria-hidden="true"><i></i><i></i></span><span data-t="title">What are my agents doing</span><span class="live" id="live"><i></i><span data-t="live">live</span></span></h1>
+    <div class="counts" id="counts">
+      <span class="count need"><i></i><span data-t="needYou">Need you</span> <b id="nNeed">0</b></span>
+      <span class="count work"><i></i><span data-t="working">Working</span> <b id="nWork">0</b></span>
+      <span class="count done"><i></i><span data-t="doneN">Done</span> <b id="nDone">0</b></span>
+    </div>
+  </header>
+  <nav class="bar">
+    <div class="seg dark" role="tablist" id="modes">
+      <button type="button" role="tab" data-mode="office" data-t="office">Office</button>
+      <button type="button" role="tab" data-mode="list" data-t="list">List</button>
+    </div>
+    <div class="seg plain" role="tablist" id="dims">
+      <button type="button" role="tab" data-dim="2d">2D</button>
+      <button type="button" role="tab" data-dim="iso">ISO</button>
+      <button type="button" role="tab" data-dim="3d">3D</button>
+    </div>
+    <span class="note" id="note"></span>
+    <span class="grow"></span>
+    <div class="tools">
+    <div class="menu-wrap">
+      <button type="button" class="btn" id="todayBtn" aria-haspopup="true" aria-expanded="false"><span data-t="today">Today</span> <span class="today-tokens" id="todayTokens"></span></button>
+      <div class="menu today-panel" id="todayMenu" hidden></div>
+    </div>
+    <button type="button" class="btn" id="sideBtn" aria-pressed="true"><span data-t="panel">Panel</span></button>
+    <button type="button" class="btn" id="pip" data-t="pip">Picture in picture</button>
+    <div class="menu-wrap">
+      <button type="button" class="btn" id="settingsBtn" aria-haspopup="true" aria-expanded="false"><span data-t="settings">Settings</span><svg class="chev" viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><path d="M1.25 1.25L5 4.75L8.75 1.25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="menu wide" id="settings" hidden>
+        <label class="row"><input type="checkbox" id="optDemo"> <span data-t="demo">Sample agents</span></label>
+        <label class="row"><input type="checkbox" id="optDone"> <span data-t="showDone">Show finished agents</span></label>
+        <label class="row"><input type="checkbox" id="optRemote"> <span data-t="remote">Include agents from other computers and gateway keys</span></label>
+        <label class="row"><input type="checkbox" id="optText"> <span data-t="showText">Show prompts and replies</span></label>
+        <label class="row"><input type="checkbox" id="optSub"> <span data-t="showSub">Show subagents</span></label>
+        <label class="row"><input type="checkbox" id="optIdle"> <span data-t="showIdle">Show idle agents</span></label>
+        <div class="row col">
+          <span data-t="agents">Agents</span>
+          <div class="agent-filter" id="optAgents"></div>
+        </div>
+        <div class="row col">
+          <span id="lblLang" data-t="language">Language</span>
+          <div class="picker">
+            <button type="button" class="lang-select" id="optLang" aria-labelledby="lblLang optLang" aria-haspopup="listbox" aria-expanded="false" aria-controls="optLangList"><span class="picker-val"></span><svg class="chev" viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><path d="M1.25 1.25L5 4.75L8.75 1.25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="picker-list" id="optLangList" role="listbox" aria-labelledby="lblLang" tabindex="-1" hidden></div>
+          </div>
+        </div>
+        <div class="row col">
+          <span id="lblScene" data-t="scene">Scene</span>
+          <div class="picker">
+            <button type="button" class="lang-select" id="optScene" aria-labelledby="lblScene optScene" aria-haspopup="listbox" aria-expanded="false" aria-controls="optSceneList"><span class="picker-val"></span><svg class="chev" viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><path d="M1.25 1.25L5 4.75L8.75 1.25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="picker-list" id="optSceneList" role="listbox" aria-labelledby="lblScene" tabindex="-1" hidden></div>
+          </div>
+        </div>
+        <div class="row col">
+          <span id="lblQuality" data-t="quality">Quality</span>
+          <div class="picker">
+            <button type="button" class="lang-select" id="optQuality" aria-labelledby="lblQuality optQuality" aria-haspopup="listbox" aria-expanded="false" aria-controls="optQualityList"><span class="picker-val"></span><svg class="chev" viewBox="0 0 10 6" width="10" height="6" aria-hidden="true"><path d="M1.25 1.25L5 4.75L8.75 1.25" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <div class="picker-list" id="optQualityList" role="listbox" aria-labelledby="lblQuality" tabindex="-1" hidden></div>
+          </div>
+        </div>
+        <div class="row col">
+          <span data-t="hideAfter">Leave the office after</span>
+          <div class="seg small" id="optHide">
+            <button type="button" data-hide="1h" data-t="h1">1 hour</button>
+            <button type="button" data-hide="6h" data-t="h6">6 hours</button>
+            <button type="button" data-hide="24h" data-t="h24">24 hours</button>
+            <button type="button" data-hide="never" data-t="never">Never</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </nav>
+  <section class="stage" id="stage">
+    <canvas id="office" tabindex="0" aria-label="Agent office"></canvas>
+    <canvas id="office3d" tabindex="0" aria-label="3D Agent office" hidden></canvas>
+    <div class="tags" id="tags"></div>
+    <div class="empty" id="empty" hidden></div>
+  </section>
+  <section class="listview" id="listview" hidden>
+    <table>
+      <thead><tr><th data-t="agent">Agent</th><th data-t="task">Task</th><th data-t="status">Status</th><th data-t="project">Folder</th><th data-t="model">Model</th><th data-t="last">Last active</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="empty-list" id="emptyList" hidden></p>
+  </section>
+  <aside class="rail" id="rail" hidden>
+    <div class="rail-head"><span data-t="agents">Agents</span> <b id="railCount">0</b><span class="grow"></span><button type="button" class="px" id="railClose" aria-label="Close">✕</button></div>
+    <div class="rail-groups" id="railGroups"></div>
+  </aside>
+  <aside class="pop" id="pop" hidden></aside>
+  <footer>
+    <div class="legend" id="statusLegend"></div>
+    <div class="legend brands" id="brandLegend"></div>
+  </footer>
+</main>
+<div class="float" id="float" hidden>
+  <div class="floatbar" id="floatbar"><span class="fdots" aria-hidden="true"><i></i><i></i></span><span data-t="pip">Picture in picture</span><button type="button" class="fclose" id="floatClose" aria-label="Close">✕</button></div>
+  <div class="floatslot" id="floatslot"></div>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+</body>
+</html>

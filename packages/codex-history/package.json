@@ -1,0 +1,39 @@
+{
+  "name": "@jianmu/middleware-codex-history",
+  "version": "0.1.2",
+  "description": "Opt-in, per-provider Codex Responses history compatibility for Magpie",
+  "type": "module",
+  "license": "MIT",
+  "files": [
+    "codex-history.middleware.js",
+    "README.md",
+    "LICENSE",
+    "PROVENANCE.json"
+  ],
+  "keywords": [
+    "magpie",
+    "magpie-middleware",
+    "codex",
+    "responses",
+    "history"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "directory": "packages/codex-history"
+  },
+  "magpie": {
+    "middleware": "./codex-history.middleware.js",
+    "options": {
+      "providers": {},
+      "aliases": {}
+    }
+  },
+  "jianmu": {
+    "middleware": "./codex-history.middleware.js",
+    "options": {
+      "providers": {},
+      "aliases": {}
+    }
+  }
+}

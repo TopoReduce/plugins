@@ -1,0 +1,34 @@
+{
+  "name": "@jianmu/agent-pig",
+  "version": "0.1.2",
+  "description": "PiG as a Magpie agent: Magpie's endpoint and model catalog in models.json, and the model PiG starts on in settings.json",
+  "type": "module",
+  "files": [
+    "pig.agent.js",
+    "README.md"
+  ],
+  "keywords": [
+    "magpie",
+    "magpie-agent",
+    "pig",
+    "pi-in-go",
+    "llm-gateway"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "directory": "packages/pig"
+  },
+  "scripts": {
+    "test": "bun test pig.test.mjs"
+  },
+  "magpie": {
+    "agent": "./pig.agent.js",
+    "icon": "https://pi-in-go.dev/pig-favicon.svg"
+  },
+  "jianmu": {
+    "agent": "./pig.agent.js",
+    "icon": "https://pi-in-go.dev/pig-favicon.svg"
+  }
+}

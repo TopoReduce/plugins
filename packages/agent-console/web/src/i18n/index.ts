@@ -1,0 +1,109 @@
+import { messages, type LocaleId, type MessageTree } from "./messages.js";
+
+let locale: LocaleId = "zh";
+
+/** Magpie / BCP47 → zh | en (other languages follow English for now) */
+export function normalizeLang(raw: string | null | undefined): LocaleId {
+  const s = String(raw ?? "").trim().toLowerCase();
+  if (!s) return guessFromNavigator();
+  if (s === "zh" || s.startsWith("zh-")) return "zh";
+  return "en";
+}
+
+function guessFromNavigator(): LocaleId {
+  const nav = typeof navigator !== "undefined" ? navigator.language : "";
+  return normalizeLang(nav || "zh");
+}
+
+/** Called at startup: ?lang= comes from page/boot.js (Magpie theme.lang) */
+export function initLocale(search: string): LocaleId {
+  const q = new URLSearchParams(search).get("lang");
+  locale = normalizeLang(q);
+  const htmlLang = locale === "zh" ? "zh-CN" : "en";
+  if (typeof document !== "undefined") document.documentElement.lang = htmlLang;
+  return locale;
+}
+
+/** Switch the UI language at runtime (Magpie's language changed); returns whether it changed */
+export function setLocale(raw: string | null | undefined): boolean {
+  const next = normalizeLang(raw);
+  if (next === locale) return false;
+  locale = next;
+  if (typeof document !== "undefined") document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+  return true;
+}
+
+export function getLocale(): LocaleId {
+  return locale;
+}
+
+export function getIntlLocale(): string {
+  return locale === "zh" ? "zh-CN" : "en-US";
+}
+
+function getPath(tree: MessageTree, key: string): string | undefined {
+  const parts = key.split(".");
+  let cur: string | Record<string, unknown> = tree;
+  for (const p of parts) {
+    if (typeof cur !== "object" || cur == null || !(p in cur)) return undefined;
+    cur = cur[p] as string | Record<string, unknown>;
+  }
+  return typeof cur === "string" ? cur : undefined;
+}
+
+/** Dotted key, e.g. sidebar.newProject */
+export function t(key: string): string {
+  return getPath(messages[locale], key) ?? getPath(messages.en, key) ?? key;
+}
+
+/** Replace {name} placeholders */
+export function tf(key: string, params: Record<string, string | number>): string {
+  let s = t(key);
+  for (const [k, v] of Object.entries(params)) {
+    s = s.replaceAll(`{${k}}`, String(v));
+  }
+  return s;
+}
+
+export function errMsg(e: unknown): string {
+  const err = e as Error & { code?: string };
+  const code = err?.code;
+  if (code) {
+    const mapped = t(`api.${code}`);
+    if (mapped !== `api.${code}`) return mapped;
+  }
+  const msg = String(err?.message ?? e);
+  return localizeDaemonMessage(msg);
+}
+
+/** 1.3.8: the daemon's own (already localized) message for an RPC error, falling back to the generic code text */
+export function rpcMessage(e: unknown): string {
+  const msg = (e as Error)?.message;
+  return msg ? localizeDaemonMessage(String(msg)) : errMsg(e);
+}
+
+/** 1.3.8: the file manager's name on this machine (the page runs on the daemon's machine, so the UA tells the OS) */
+export function revealLabel(ua = typeof navigator !== "undefined" ? navigator.userAgent : ""): string {
+  if (/Macintosh|Mac OS X/i.test(ua)) return t("panel.revealMac");
+  if (/Windows/i.test(ua)) return t("panel.revealWin");
+  return t("panel.revealLinux");
+}
+
+export function localizeDaemonMessage(msg: string): string {
+  if (locale === "zh") return msg;
+  if (msg === "后台已重启，本轮已中断") return "Daemon restarted — this turn was interrupted";
+  if (msg.startsWith("会话启动失败：")) return "Session start failed: " + msg.slice("会话启动失败：".length);
+  if (msg.startsWith("发送失败：")) return "Send failed: " + msg.slice("发送失败：".length);
+  if (msg === "Agent 进程意外退出") return "Agent process exited unexpectedly";
+  const att = msg.match(/^附件不存在或已失效（(.+)），请重新上传$/);
+  if (att) return `Attachment missing or expired (${att[1]}) — upload again`;
+  const img = msg.match(/^(.+) 不能直接看图片（它的 ACP 初始化未声明支持图片输入），已改为发送图片的文件路径：(.+)$/s);
+  if (img) return `${img[1]} can't see images directly (its ACP initialize doesn't advertise image input); sent the image file path instead: ${img[2]}`;
+  if (msg.startsWith("附件问题：")) return "Attachment issue: " + msg.slice("附件问题：".length);
+  return msg;
+}
+
+export function displayThreadTitle(title: string, titleAuto: boolean): string {
+  if (titleAuto && (title === "新对话" || title === "New chat")) return t("thread.new");
+  return title;
+}

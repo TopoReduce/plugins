@@ -1,0 +1,88 @@
+// Provider / ProviderSession interfaces (EXEC §7.1)
+import type { ProviderEvent } from "../timeline/types.js";
+import type { SlashCommand } from "./slash.js";
+
+export type Mode = "plan" | "default" | "acceptEdits" | "bypassPermissions" | "ask";
+
+export type Capabilities = {
+  resume: boolean;
+  interrupt: boolean;
+  steer: boolean;
+  /** The Agent takes images in a prompt (sees them itself). For ACP Agents: what initialize advertised, false until known */
+  images: boolean;
+  /** false while an ACP Agent's image support is not known yet (before its probe or first session); absent = known */
+  imagesKnown?: boolean;
+  plan: boolean;
+  questions: boolean;
+  cost: boolean;
+  effort: string[];
+  modes: Mode[];
+  /** Each mode's name in this Agent (like Paseo, show the Agent's own naming); our default names are used when absent */
+  modeLabels?: Partial<Record<Mode, string>>;
+  /** The Agent only streams text deltas and never sends the complete message (ACP): the manager saves each text segment itself */
+  deltasOnly?: boolean;
+};
+
+export type ThinkingOption = { id: string; label: string };
+
+export type ModelInfo = {
+  id: string;
+  name: string;
+  /** @deprecated use thinkingOptions */
+  efforts?: string[];
+  thinkingOptions?: ThinkingOption[];
+  defaultThinking?: string | null;
+  isDefault?: boolean;
+  /** Parameter name when the level is sent as a model parameter (Cursor: effort / reasoning_effort / reasoning) */
+  thinkingParam?: string;
+};
+export type DetectResult = { available: boolean; bin?: string; version?: string; reason?: string; installHint?: string };
+/** Custom launch (Settings › Launch command). args are appended after the built-in arguments; prefixArgs (internal) go before them. */
+export type LaunchCommand = { cmd: string; prefixArgs?: string[]; args?: string[] };
+export type HistoryItem = { provider: string; sessionId: string; title: string; updatedAt: number; messageCount: number; imported: boolean };
+/** text already carries the "Referenced files" section for mentions; mentions is there for Agents with a native form (ACP resource_link) */
+export type SendInput = { text: string; images: { path: string; mime: string }[]; mentions?: { path: string; isDir: boolean }[] };
+export type RespondAnswer = { optionId?: string; answers?: Record<string, string>; cancelled?: boolean };
+
+export interface Provider {
+  id: string;
+  name: string;
+  capabilities: Capabilities;
+  detect(launch?: LaunchCommand): Promise<DetectResult>;
+  listModels(launch?: LaunchCommand): Promise<ModelInfo[]>;
+  createSession(o: {
+    threadId: string;
+    cwd: string;
+    model: string | null;
+    mode: Mode;
+    effort: string | null;
+    resumeId: string | null;
+    cursorFast?: boolean;
+    cursorAutoReview?: boolean;
+    launch?: LaunchCommand;
+  }): Promise<ProviderSession>;
+  listHistory?(cwd: string): Promise<HistoryItem[]>;
+  readHistory?(sessionId: string, cwd: string): Promise<ProviderEvent[]>;
+}
+
+export interface ProviderSession {
+  events: AsyncIterable<ProviderEvent>;
+  send(input: SendInput): Promise<void>;
+  steer?(input: SendInput): Promise<void>;
+  interrupt(): Promise<void>;
+  /**
+   * Resolves `false` only when the session deliberately skipped the model (ACP: not in the session's
+   * model options and not forced) — callers must not treat that model as applied. Anything else = applied.
+   */
+  setModel(model: string | null, opts?: { force?: boolean }): Promise<boolean | void>;
+  setMode(mode: Mode): Promise<void>;
+  setEffort(effort: string | null): Promise<void>;
+  respond(requestId: string, answer: RespondAnswer): void;
+  close(): Promise<void>;
+  listCommands(): Promise<SlashCommand[]>;
+}
+
+export type { SlashCommand, SlashCommandKind } from "./slash.js";
+
+/** Name of our own "Default" placeholder model row (id "default") */
+export const PLACEHOLDER_MODEL_NAME = "Default";

@@ -1,0 +1,10989 @@
+import { createRequire } from 'module'; const require = createRequire(import.meta.url);
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res, err) => function __init() {
+  if (err) throw err[0];
+  try {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+  } catch (e) {
+    throw err = [e], e;
+  }
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// daemon/src/log.ts
+import { appendFileSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { join as join3 } from "node:path";
+function fileName(d) {
+  const p = (n) => String(n).padStart(2, "0");
+  return `daemon-${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}.log`;
+}
+function initLog(dataDir) {
+  logDir = join3(dataDir, "logs");
+  mkdirSync(logDir, { recursive: true });
+  try {
+    const keep = /* @__PURE__ */ new Set();
+    const now = /* @__PURE__ */ new Date();
+    for (let i = 0; i < 7; i++) {
+      keep.add(fileName(new Date(now.getTime() - i * 864e5)));
+    }
+    for (const f of readdirSync(logDir)) {
+      if (/^daemon-\d{4}-\d{2}-\d{2}\.log$/.test(f) && !keep.has(f)) {
+        rmSync(join3(logDir, f), { force: true });
+      }
+    }
+  } catch {
+  }
+}
+function guardConsole() {
+  if (guarded) return;
+  guarded = true;
+  for (const stream of [process.stdout, process.stderr]) {
+    stream?.on?.("error", () => {
+      consoleGone = true;
+    });
+  }
+}
+function log(level, msg, extra) {
+  const line = `[${(/* @__PURE__ */ new Date()).toISOString()}] [${level}] ${msg}${extra !== void 0 ? " " + safeJson(extra) : ""}`;
+  try {
+    const d = /* @__PURE__ */ new Date();
+    const name = fileName(d);
+    if (name !== today && logDir) {
+      today = name;
+      logFile = join3(logDir, name);
+    }
+    if (logFile) appendFileSync(logFile, line + "\n", "utf8");
+  } catch {
+  }
+  guardConsole();
+  if (consoleGone) return;
+  const stream = level === "info" ? process.stdout : process.stderr;
+  if (stream?.destroyed || stream?.writableEnded) {
+    consoleGone = true;
+    return;
+  }
+  const fn = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
+  try {
+    fn(`[agent-console] ${msg}`, extra !== void 0 ? extra : "");
+  } catch {
+    consoleGone = true;
+  }
+}
+function safeJson(v) {
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+}
+var logDir, today, logFile, consoleGone, guarded;
+var init_log = __esm({
+  "daemon/src/log.ts"() {
+    logDir = "";
+    today = "";
+    logFile = "";
+    consoleGone = false;
+    guarded = false;
+  }
+});
+
+// daemon/src/security.ts
+import { timingSafeEqual, createHash } from "node:crypto";
+function checkHost(host, port) {
+  if (!host) return { ok: false, code: 421, message: "Host \u4E0D\u5BF9" };
+  const h = host.toLowerCase();
+  if (h === `127.0.0.1:${port}` || h === `localhost:${port}`) return { ok: true };
+  return { ok: false, code: 421, message: "Host \u4E0D\u5BF9" };
+}
+function classifyOrigin(origin, port) {
+  if (origin === void 0 || origin === "") return "none";
+  if (origin === "null") return "opaque";
+  const o = origin.toLowerCase();
+  if (o === `http://127.0.0.1:${port}` || o === `http://localhost:${port}`) return "self";
+  return "foreign";
+}
+function tokenEqual(a, b) {
+  const ha = createHash("sha256").update(a).digest();
+  const hb = createHash("sha256").update(b).digest();
+  return timingSafeEqual(ha, hb);
+}
+var init_security = __esm({
+  "daemon/src/security.ts"() {
+  }
+});
+
+// daemon/src/util/i18n.ts
+function normalizeLang(raw) {
+  const s = String(raw ?? "").trim().toLowerCase();
+  if (!s) return "zh";
+  if (s === "zh" || s.startsWith("zh-")) return "zh";
+  return "en";
+}
+function setAppLocale(lang) {
+  locale = normalizeLang(lang);
+}
+function intlLocale() {
+  return locale === "zh" ? "zh-CN" : "en-US";
+}
+function tr(key, params) {
+  let s = dict[locale][key] ?? dict.en[key] ?? key;
+  if (params) {
+    for (const [k, v] of Object.entries(params)) s = s.replaceAll(`{${k}}`, String(v));
+  }
+  return s;
+}
+var locale, dict;
+var init_i18n = __esm({
+  "daemon/src/util/i18n.ts"() {
+    locale = "zh";
+    dict = {
+      zh: {
+        "thread.defaultTitle": "\u65B0\u5BF9\u8BDD",
+        "notice.daemonRestart": "\u540E\u53F0\u5DF2\u91CD\u542F\uFF0C\u672C\u8F6E\u5DF2\u4E2D\u65AD",
+        "notice.sessionStartFailed": "\u4F1A\u8BDD\u542F\u52A8\u5931\u8D25\uFF1A{detail}",
+        "notice.sendFailed": "\u53D1\u9001\u5931\u8D25\uFF1A{detail}",
+        "notice.bashMissing": "\u6CA1\u6709\u627E\u5230 Git Bash\u3002\u8FD9\u4E2A Agent \u5728 Windows \u4E0A\u8981\u7528 Git Bash \u8FD0\u884C\u547D\u4EE4\uFF08C:\\Windows\\System32\\bash.exe \u662F WSL \u542F\u52A8\u5668\uFF0C\u4E0D\u80FD\u7528\uFF09\u3002\u8BF7\u5B89\u88C5 Git for Windows\uFF1Ahttps://git-scm.com/download/win \uFF0C\u6216\u5728\u300C\u8BBE\u7F6E \u2192 Bash \u8DEF\u5F84\u300D\u91CC\u624B\u52A8\u6307\u5B9A bash.exe\u3002",
+        "notice.autoApproveUpgrade": "1.3 \u65B0\u589E\u300C\u5168\u90E8\u81EA\u52A8\u540C\u610F\u300D\uFF1A\u73B0\u5728\u5BF9 Cursor\u3001OpenCode\u3001dsh \u4E5F\u4F1A\u771F\u6B63\u81EA\u52A8\u540C\u610F\uFF081.2 \u7684\u300C\u5168\u90E8\u653E\u884C\u300D\u5BF9\u5B83\u4EEC\u4E0D\u751F\u6548\uFF0C\u4ECD\u4F1A\u8BE2\u95EE\uFF09\u3002\u4F60\u4E4B\u524D\u628A\u9ED8\u8BA4\u6743\u9650\u6A21\u5F0F\u8BBE\u6210\u4E86\u5B83\uFF0C\u4E3A\u5B89\u5168\u8D77\u89C1\u8FD9\u4E2A\u5BF9\u8BDD\u4ECD\u4ECE\u300C\u6BCF\u6B21\u8BE2\u95EE\u300D\u5F00\u59CB\uFF1B\u9700\u8981\u65F6\u8BF7\u5728\u4E0B\u65B9\u6743\u9650\u83DC\u5355\u91CC\u624B\u52A8\u5F00\u542F\uFF0C\u6216\u5728\u8BBE\u7F6E\u91CC\u91CD\u65B0\u9009\u62E9\u9ED8\u8BA4\u6743\u9650\u6A21\u5F0F\u3002",
+        "notice.autoApproveMigrated": "\u8FD9\u4E2A\u5BF9\u8BDD\u5728 1.2 \u91CC\u8BBE\u6210\u4E86\u300C\u5168\u90E8\u653E\u884C\u300D\uFF0C\u5F53\u65F6\u8FD9\u4E2A Agent \u5B9E\u9645\u4ECD\u4F1A\u8BE2\u95EE\u30021.3 \u8D77\u300C\u5168\u90E8\u81EA\u52A8\u540C\u610F\u300D\u4F1A\u771F\u6B63\u81EA\u52A8\u540C\u610F\uFF0C\u6240\u4EE5\u5DF2\u6539\u56DE\u300C\u6BCF\u6B21\u8BE2\u95EE\u300D\uFF1B\u9700\u8981\u65F6\u8BF7\u5728\u4E0B\u65B9\u6743\u9650\u83DC\u5355\u91CC\u624B\u52A8\u5F00\u542F\u3002",
+        "notice.effortNextTurn": "\u601D\u8003\u5F3A\u5EA6\u5DF2\u4FDD\u5B58\uFF0C\u5C06\u5728\u4E0B\u4E00\u8F6E\u751F\u6548",
+        "notice.effortResetOnModel": "\u5F53\u524D\u6A21\u578B\u4E0D\u652F\u6301\u8BE5\u601D\u8003\u5F3A\u5EA6\uFF0C\u5DF2\u6062\u590D\u4E3A Default",
+        "turn.agentExit": "Agent \u8FDB\u7A0B\u610F\u5916\u9000\u51FA",
+        "attachment.missing": "\u9644\u4EF6\u4E0D\u5B58\u5728\u6216\u5DF2\u5931\u6548\uFF08{ref}\uFF09\uFF0C\u8BF7\u91CD\u65B0\u4E0A\u4F20",
+        "notice.acpImageByPath": "{agent} \u4E0D\u80FD\u76F4\u63A5\u770B\u56FE\u7247\uFF08\u5B83\u7684 ACP \u521D\u59CB\u5316\u672A\u58F0\u660E\u652F\u6301\u56FE\u7247\u8F93\u5165\uFF09\uFF0C\u5DF2\u6539\u4E3A\u53D1\u9001\u56FE\u7247\u7684\u6587\u4EF6\u8DEF\u5F84\uFF1A{paths}",
+        "notice.acpImageByPathSwitched": "{agent} \u662F\u5728\u53E6\u4E00\u4E2A\u6A21\u578B\u4E0A\u542F\u52A8\u7684\uFF0C\u53EA\u5BF9\u90A3\u4E2A\u6A21\u578B\u63A5\u6536\u56FE\u7247\uFF0C\u8FD9\u6B21\u6539\u4E3A\u53D1\u9001\u56FE\u7247\u7684\u6587\u4EF6\u8DEF\u5F84\uFF08\u5F53\u524D\u6A21\u578B\u80FD\u770B\u56FE\u65F6\u5B83\u4F1A\u7528 read_image \u6253\u5F00\uFF09\uFF1A{paths}",
+        "notice.acpSessionNotRestored": "{agent} \u4E0D\u80FD\u6062\u590D\u4E0A\u4E00\u8F6E\u5BF9\u8BDD\uFF08\u5B83\u7684 ACP \u65E2\u4E0D\u652F\u6301 session/load \u4E5F\u4E0D\u652F\u6301 session/resume\uFF09\uFF0C\u5DF2\u65B0\u5F00\u4E00\u8F6E\uFF1B\u5148\u524D\u7684\u4E0A\u4E0B\u6587\u4E0D\u4F1A\u5E26\u56DE\u3002",
+        "notice.attachmentIssue": "\u9644\u4EF6\u95EE\u9898\uFF1A{detail}",
+        "notice.mentionSkipped": "\u8FD9\u4E9B\u8DEF\u5F84\u4E0D\u5728\u9879\u76EE\u91CC\u6216\u5DF2\u4E0D\u5B58\u5728\uFF0C\u6CA1\u6709\u53D1\u7ED9 Agent\uFF1A{paths}",
+        "claude.notFound": "\u627E\u4E0D\u5230 claude\uFF08{detail}\uFF09\u3002\u672C\u63D2\u4EF6\u4E0D\u9644\u5E26 Claude Code\uFF0C\u8BF7\u5148\u5B89\u88C5\uFF1A{hint}",
+        "claude.startFailed": "\u65E0\u6CD5\u542F\u52A8 claude\uFF1A{detail}",
+        "claude.exited": "claude \u8FDB\u7A0B\u610F\u5916\u9000\u51FA\uFF08{code}\uFF09",
+        "claude.notRunning": "claude \u6CA1\u6709\u5728\u8FD0\u884C\uFF0C\u6D88\u606F\u672A\u53D1\u51FA",
+        "claude.closed": "\u4F1A\u8BDD\u5DF2\u5173\u95ED",
+        "export.defaultModel": "\u9ED8\u8BA4",
+        "bin.notOnPath": "PATH \u91CC\u627E\u4E0D\u5230 {name}",
+        "bin.or": " \u6216 ",
+        "launch.notFound": "\u627E\u4E0D\u5230\u81EA\u5B9A\u4E49\u7684\u53EF\u6267\u884C\u6587\u4EF6\uFF1A{cmd}\uFF08\u8BF7\u586B\u5199\u7EDD\u5BF9\u8DEF\u5F84\uFF0C\u6216 PATH \u91CC\u80FD\u627E\u5230\u7684\u547D\u4EE4\u540D\uFF09",
+        "codex.notFound": "\u627E\u4E0D\u5230 codex\uFF08{detail}\uFF09\u3002\u8BF7\u5148\u5B89\u88C5\uFF1A{hint}",
+        "provider.disabled": "\u5DF2\u5728\u8BBE\u7F6E\u4E2D\u7981\u7528",
+        "provider.planned": "\u5C1A\u672A\u63A5\u5165",
+        "provider.disabledNamed": "{name} \u5DF2\u5728\u8BBE\u7F6E\u4E2D\u7981\u7528",
+        "provider.plannedNamed": "{name} \u5C1A\u672A\u63A5\u5165\uFF0C\u6682\u4E0D\u80FD\u65B0\u5EFA\u5BF9\u8BDD",
+        "provider.unavailable": "{name} \u672A\u5B89\u88C5\u6216\u4E0D\u53EF\u7528",
+        "provider.unknown": "\u672A\u77E5 Agent\uFF1A{id}",
+        "provider.timeout": "\u68C0\u6D4B\u8D85\u65F6",
+        "err.previewUrl": "\u9884\u89C8\u53EA\u652F\u6301\u672C\u673A\u5730\u5740\uFF08localhost\u3001127.0.0.1 \u7B49\uFF09",
+        "err.previewDenied": "\u8FD9\u4E2A\u7AEF\u53E3\u4E0D\u80FD\u9884\u89C8\uFF08\u662F Agent \u63A7\u5236\u53F0\u6216 Magpie \u81EA\u5DF1\u7684\u7AEF\u53E3\uFF09",
+        "err.previewUnavailable": "\u9884\u89C8\u4E0D\u53EF\u7528",
+        "err.projectMissing": "\u9879\u76EE\u4E0D\u5B58\u5728",
+        "err.threadMissing": "\u5BF9\u8BDD\u4E0D\u5B58\u5728",
+        "err.dirMissing": "\u76EE\u5F55\u4E0D\u5B58\u5728\u6216\u4E0D\u662F\u6587\u4EF6\u5939",
+        "err.noIde": "\u6CA1\u6709\u627E\u5230\u53EF\u7528\u7684 IDE\uFF08\u5DF2\u5C1D\u8BD5 Cursor\u3001VS Code\u3001Windsurf\u3001Zed\u3001IntelliJ IDEA\u3001WebStorm\u3001Sublime Text\uFF09",
+        "err.ideFailed": "{ide} \u542F\u52A8\u5931\u8D25\uFF1A{detail}",
+        "err.pathOutside": "\u8DEF\u5F84\u4E0D\u5728\u9879\u76EE\u76EE\u5F55\u5185",
+        "err.targetMissing": "\u6587\u4EF6\u6216\u6587\u4EF6\u5939\u4E0D\u5B58\u5728",
+        "err.revealFailed": "\u65E0\u6CD5\u6253\u5F00\u6587\u4EF6\u7BA1\u7406\u5668\uFF1A{detail}",
+        "err.projectDirGone": "\u9879\u76EE\u76EE\u5F55\u5DF2\u4E0D\u5B58\u5728",
+        "err.terminalMissing": "\u7EC8\u7AEF\u4E0D\u5B58\u5728",
+        "err.noManager": "\u4F1A\u8BDD\u7BA1\u7406\u5668\u672A\u542F\u52A8",
+        "err.badParams": "\u53C2\u6570\u4E0D\u5BF9\uFF1A{detail}",
+        "export.me": "\u6211",
+        "export.steered": "\uFF08\u63D2\u8BDD\uFF09",
+        "export.reasoning": "\u601D\u8003",
+        "export.plan": "\u8BA1\u5212",
+        "export.todo": "\u5F85\u529E",
+        "err.requestGone": "\u6388\u6743/\u63D0\u95EE\u4E0D\u5B58\u5728\u6216\u5DF2\u56DE\u5E94",
+        "err.badOption": "optionId \u975E\u6CD5\uFF1A{id}",
+        "err.cursorOnly": "\u4EC5 Cursor \u5BF9\u8BDD\u652F\u6301\u8BE5\u9009\u9879",
+        "err.busySwitch": "\u5BF9\u8BDD\u8FD0\u884C\u4E2D\uFF0C\u4E0D\u80FD\u66F4\u6362 Agent",
+        "err.hasMessages": "\u5DF2\u6709\u6D88\u606F\uFF0C\u4E0D\u80FD\u66F4\u6362 Agent",
+        "tool.read": "\u8BFB\u53D6 {x}",
+        "tool.edit": "\u7F16\u8F91 {x}",
+        "tool.multiEdit": "\u7F16\u8F91 {x}\uFF08{n} \u5904\uFF09",
+        "tool.overwrite": "\u8986\u76D6 {x}",
+        "tool.create": "\u65B0\u5EFA {x}",
+        "tool.notebook": "\u7F16\u8F91\u7B14\u8BB0\u672C {x}",
+        "tool.run": "\u8FD0\u884C {x}",
+        "tool.output": "\u67E5\u770B\u8F93\u51FA {x}",
+        "tool.kill": "\u7ED3\u675F\u8FDB\u7A0B {x}",
+        "tool.grep": '\u641C\u7D22 "{x}"',
+        "tool.glob": "\u67E5\u627E {x}",
+        "tool.fetch": "\u6253\u5F00 {x}",
+        "tool.webSearch": '\u641C\u7D22\u7F51\u9875 "{x}"',
+        "tool.todo": "\u66F4\u65B0\u5F85\u529E\uFF08{done}/{n}\uFF09",
+        "tool.task": "\u5B50\u4EFB\u52A1\uFF1A{x}",
+        "tool.generic": "\u5DE5\u5177",
+        "tool.editFiles": "\u4FEE\u6539 {n} \u4E2A\u6587\u4EF6",
+        "tool.needsApproval": "\u9700\u8981\u6388\u6743",
+        "perm.editFiles": "\u4FEE\u6539\u6587\u4EF6",
+        "perm.allow": "\u5141\u8BB8",
+        "perm.allowSession": "\u672C\u5BF9\u8BDD\u90FD\u5141\u8BB8",
+        "perm.deny": "\u62D2\u7EDD",
+        "perm.plan": "Agent \u63D0\u4EA4\u4E86\u8BA1\u5212",
+        "perm.implement": "\u5B9E\u65BD",
+        "http.internal": "\u670D\u52A1\u5185\u90E8\u9519\u8BEF",
+        "http.badOrigin": "\u6765\u6E90\u4E0D\u5141\u8BB8",
+        "http.badPreflight": "\u9884\u68C0\u4E0D\u5141\u8BB8",
+        "http.badToken": "\u4EE4\u724C\u65E0\u6548",
+        "http.noAttachment": "\u9644\u4EF6\u4E0D\u5B58\u5728",
+        "http.method": "\u65B9\u6CD5\u4E0D\u5141\u8BB8",
+        "http.noApp": "app \u8FD8\u6CA1\u6784\u5EFA\uFF08\u7F3A app/index.html\uFF09",
+        "http.badPath": "\u8DEF\u5F84\u4E0D\u5408\u6CD5",
+        "http.pathDenied": "\u8DEF\u5F84\u4E0D\u5141\u8BB8",
+        "http.noFile": "\u6587\u4EF6\u4E0D\u5B58\u5728",
+        "http.badType": "\u4E0D\u652F\u6301\u7684\u6587\u4EF6\u7C7B\u578B",
+        "http.tooLarge": "\u6587\u4EF6\u592A\u5927\uFF08\u4E0A\u9650 50MB\uFF09",
+        "http.noRoute": "\u63A5\u53E3\u4E0D\u5B58\u5728",
+        "codex.error": "Codex \u9519\u8BEF",
+        "codex.closed": "\u4F1A\u8BDD\u5DF2\u5173\u95ED",
+        "codex.noTurnSteer": "\u5F53\u524D\u8F6E\u6B21\u8FD8\u6CA1\u5F00\u59CB\uFF0C\u65E0\u6CD5\u63D2\u8BDD",
+        "acp.exited": "{name} \u8FDB\u7A0B\u9000\u51FA ({code})",
+        "notice.apiRetry": "API \u91CD\u8BD5\u4E2D\uFF08\u7B2C {n} \u6B21\uFF09",
+        "notice.compacted": "\u4E0A\u4E0B\u6587\u5DF2\u538B\u7F29",
+        "term.max": "\u6BCF\u4E2A\u9879\u76EE\u6700\u591A {n} \u4E2A\u7EC8\u7AEF",
+        "term.title": "\u7EC8\u7AEF {n}",
+        "stub.planned": "\u8BE5 Agent \u5C1A\u672A\u5728 Agent Console \u63A5\u5165\uFF0C\u656C\u8BF7\u671F\u5F85",
+        "stub.unverified": "\u5DF2\u68C0\u6D4B\u5230 CLI\uFF0C\u4F1A\u8BDD\u9A71\u52A8\u5C1A\u672A\u5B8C\u5168\u9A8C\u8BC1",
+        "stub.notFound": "\u672A\u627E\u5230 {bin}",
+        "history.untitled": "\uFF08\u65E0\u6807\u9898\uFF09",
+        "history.toolCall": "\uFF08\u5386\u53F2\uFF09\u8C03\u7528 {name}",
+        "fs.pathDenied": "\u8DEF\u5F84\u4E0D\u5141\u8BB8",
+        "fs.dirMissing": "\u76EE\u5F55\u4E0D\u5B58\u5728",
+        "fs.dirUnreadable": "\u65E0\u6CD5\u8BFB\u53D6\u76EE\u5F55",
+        "fs.fileMissing": "\u6587\u4EF6\u4E0D\u5B58\u5728",
+        "fs.notFile": "\u4E0D\u662F\u6587\u4EF6",
+        "fs.unreadable": "\u65E0\u6CD5\u8BFB\u53D6",
+        "git.missing": "\u627E\u4E0D\u5230 git\uFF08\u8BF7\u5148\u5B89\u88C5 git \u5E76\u52A0\u5165 PATH\uFF09",
+        "git.binary": "\u4E8C\u8FDB\u5236\u6216\u65E0\u6CD5\u8BFB\u53D6"
+      },
+      en: {
+        "thread.defaultTitle": "New chat",
+        "notice.daemonRestart": "Daemon restarted \u2014 this turn was interrupted",
+        "notice.sessionStartFailed": "Session start failed: {detail}",
+        "notice.sendFailed": "Send failed: {detail}",
+        "notice.bashMissing": "Git Bash was not found. On Windows this agent runs its commands with Git Bash (C:\\Windows\\System32\\bash.exe is the WSL launcher and won't work). Install Git for Windows: https://git-scm.com/download/win , or set bash.exe under Settings \u2192 Bash path.",
+        "notice.autoApproveUpgrade": "New in 1.3: Auto-approve all now really auto-approves for Cursor, OpenCode and dsh too (1.2's bypass mode did nothing for them; they still asked). Your default permission mode was set to it, so to be safe this conversation starts in Always Ask; switch it on in the permission menu below if you want it, or pick the default permission mode again in Settings.",
+        "notice.autoApproveMigrated": "This conversation was set to bypass permissions in 1.2, where this agent still asked anyway. From 1.3 Auto-approve all really auto-approves, so it was put back to Always Ask; switch it on in the permission menu below if you want it.",
+        "notice.effortNextTurn": "Reasoning effort saved \u2014 takes effect on the next turn",
+        "notice.effortResetOnModel": "This model does not support that effort level; reset to Default",
+        "turn.agentExit": "Agent process exited unexpectedly",
+        "attachment.missing": "Attachment missing or expired ({ref}) \u2014 upload again",
+        "notice.acpImageByPath": "{agent} can't see images directly (its ACP initialize doesn't advertise image input); sent the image file path instead: {paths}",
+        "notice.acpImageByPathSwitched": "{agent} was started on another model and takes image blocks only for that one, so the image went as its file path (it opens it with read_image when this model sees images): {paths}",
+        "notice.acpSessionNotRestored": "{agent} can't restore the previous conversation (its ACP advertises neither session/load nor session/resume); started a new one \u2014 prior context won't come back.",
+        "notice.attachmentIssue": "Attachment issue: {detail}",
+        "notice.mentionSkipped": "Not sent to the Agent (outside the project or gone): {paths}",
+        "claude.notFound": "claude was not found ({detail}). Claude Code is not bundled with this plugin; install it first: {hint}",
+        "claude.startFailed": "Could not start claude: {detail}",
+        "claude.exited": "claude exited unexpectedly ({code})",
+        "claude.notRunning": "claude is not running; the message was not sent",
+        "claude.closed": "The session is closed",
+        "export.defaultModel": "Default",
+        "bin.notOnPath": "{name} was not found on PATH",
+        "bin.or": " or ",
+        "launch.notFound": "Custom executable not found: {cmd} (use an absolute path or a command name on PATH)",
+        "codex.notFound": "codex was not found ({detail}). Install it first: {hint}",
+        "provider.disabled": "Disabled in Settings",
+        "provider.planned": "Not supported yet",
+        "provider.disabledNamed": "{name} is disabled in Settings",
+        "provider.plannedNamed": "{name} is not supported yet; it can't start new conversations",
+        "provider.unavailable": "{name} is not installed or not available",
+        "provider.unknown": "Unknown agent: {id}",
+        "provider.timeout": "Detection timed out",
+        "err.previewUrl": "Preview only supports local addresses (localhost, 127.0.0.1, \u2026)",
+        "err.previewDenied": "This port can't be previewed (it belongs to Agent Console or Magpie)",
+        "err.previewUnavailable": "Preview is unavailable",
+        "err.projectMissing": "Project not found",
+        "err.threadMissing": "Conversation not found",
+        "err.dirMissing": "The folder does not exist or is not a folder",
+        "err.noIde": "No IDE found (tried Cursor, VS Code, Windsurf, Zed, IntelliJ IDEA, WebStorm, Sublime Text)",
+        "err.ideFailed": "{ide} failed to start: {detail}",
+        "err.pathOutside": "The path is outside the project folder",
+        "err.targetMissing": "The file or folder does not exist",
+        "err.revealFailed": "Couldn't open the file manager: {detail}",
+        "err.projectDirGone": "The project folder no longer exists",
+        "err.terminalMissing": "Terminal not found",
+        "err.noManager": "The session manager is not running",
+        "err.badParams": "Invalid parameters: {detail}",
+        "export.me": "Me",
+        "export.steered": " (steer)",
+        "export.reasoning": "Reasoning",
+        "export.plan": "Plan",
+        "export.todo": "Todos",
+        "err.requestGone": "That approval or question no longer exists or was already answered",
+        "err.badOption": "Invalid optionId: {id}",
+        "err.cursorOnly": "Only Cursor conversations support this option",
+        "err.busySwitch": "The conversation is running; the agent can't be changed",
+        "err.hasMessages": "The conversation already has messages; the agent can't be changed",
+        "tool.read": "Read {x}",
+        "tool.edit": "Edit {x}",
+        "tool.multiEdit": "Edit {x} ({n} edits)",
+        "tool.overwrite": "Overwrite {x}",
+        "tool.create": "Create {x}",
+        "tool.notebook": "Edit notebook {x}",
+        "tool.run": "Run {x}",
+        "tool.output": "Read output {x}",
+        "tool.kill": "Stop process {x}",
+        "tool.grep": 'Search "{x}"',
+        "tool.glob": "Find {x}",
+        "tool.fetch": "Open {x}",
+        "tool.webSearch": 'Web search "{x}"',
+        "tool.todo": "Update todos ({done}/{n})",
+        "tool.task": "Subtask: {x}",
+        "tool.generic": "Tool",
+        "tool.editFiles": "Edit {n} file(s)",
+        "tool.needsApproval": "Needs approval",
+        "perm.editFiles": "Edit files",
+        "perm.allow": "Allow",
+        "perm.allowSession": "Allow for this chat",
+        "perm.deny": "Deny",
+        "perm.plan": "The agent proposed a plan",
+        "perm.implement": "Implement",
+        "http.internal": "Internal error",
+        "http.badOrigin": "Origin not allowed",
+        "http.badPreflight": "Preflight not allowed",
+        "http.badToken": "Invalid token",
+        "http.noAttachment": "Attachment not found",
+        "http.method": "Method not allowed",
+        "http.noApp": "The app is not built (app/index.html is missing)",
+        "http.badPath": "Invalid path",
+        "http.pathDenied": "Path not allowed",
+        "http.noFile": "File not found",
+        "http.badType": "Unsupported file type",
+        "http.tooLarge": "File too large (50 MB max)",
+        "http.noRoute": "No such endpoint",
+        "codex.error": "Codex error",
+        "codex.closed": "The session is closed",
+        "codex.noTurnSteer": "The turn hasn't started yet; can't steer",
+        "acp.exited": "{name} exited ({code})",
+        "notice.apiRetry": "Retrying the API (attempt {n})",
+        "notice.compacted": "Context compacted",
+        "term.max": "At most {n} terminals per project",
+        "term.title": "Terminal {n}",
+        "stub.planned": "This agent isn't supported in Agent Console yet",
+        "stub.unverified": "CLI found; its session driver isn't fully verified yet",
+        "stub.notFound": "{bin} was not found",
+        "history.untitled": "(untitled)",
+        "history.toolCall": "(history) called {name}",
+        "fs.pathDenied": "Path not allowed",
+        "fs.dirMissing": "Folder not found",
+        "fs.dirUnreadable": "Can't read the folder",
+        "fs.fileMissing": "File not found",
+        "fs.notFile": "Not a file",
+        "fs.unreadable": "Can't read the file",
+        "git.missing": "git was not found (install git and add it to PATH)",
+        "git.binary": "Binary or unreadable"
+      }
+    };
+  }
+});
+
+// daemon/src/util/paths.ts
+import { realpathSync, existsSync as existsSync3 } from "node:fs";
+import { posix, sep, win32 } from "node:path";
+function normPath(p, platform = process.platform) {
+  let r = (platform === "win32" ? win32 : posix).resolve(p);
+  try {
+    r = realpathSync.native(r);
+  } catch {
+    try {
+      r = realpathSync(r);
+    } catch {
+    }
+  }
+  if (platform === "win32") {
+    r = r.replace(/\//g, "\\").replace(/^\\\\\?\\(?!UNC\\)/i, "").replace(/^\\\\\?\\UNC\\/i, "\\\\").toLowerCase();
+  } else {
+    r = r.replace(/\\/g, "/");
+    if (platform === "darwin") r = r.normalize("NFC").toLowerCase();
+  }
+  while (r.length > 3 && (r.endsWith("/") || r.endsWith("\\"))) r = r.slice(0, -1);
+  return r;
+}
+function samePath(a, b) {
+  return normPath(a) === normPath(b);
+}
+function validId(id2) {
+  return typeof id2 === "string" && ID_RE.test(id2);
+}
+var ID_RE;
+var init_paths = __esm({
+  "daemon/src/util/paths.ts"() {
+    ID_RE = /^[\w-]{1,80}$/;
+  }
+});
+
+// daemon/src/util/queue.ts
+var AsyncQueue;
+var init_queue = __esm({
+  "daemon/src/util/queue.ts"() {
+    AsyncQueue = class {
+      buf = [];
+      waiters = [];
+      closed = false;
+      err = null;
+      push(item) {
+        if (this.closed) return;
+        const w = this.waiters.shift();
+        if (w) w({ value: item, done: false });
+        else this.buf.push(item);
+      }
+      close() {
+        if (this.closed) return;
+        this.closed = true;
+        while (this.waiters.length) {
+          const w = this.waiters.shift();
+          w({ value: void 0, done: true });
+        }
+      }
+      fail(err) {
+        if (this.closed) return;
+        this.err = err;
+        this.closed = true;
+        while (this.waiters.length) {
+          const w = this.waiters.shift();
+          w({ value: void 0, done: true });
+        }
+      }
+      get isClosed() {
+        return this.closed;
+      }
+      [Symbol.asyncIterator]() {
+        return {
+          next: () => {
+            if (this.buf.length) return Promise.resolve({ value: this.buf.shift(), done: false });
+            if (this.closed) {
+              if (this.err) return Promise.reject(this.err);
+              return Promise.resolve({ value: void 0, done: true });
+            }
+            if (this.err) return Promise.reject(this.err);
+            return new Promise((res, rej) => {
+              this.waiters.push((r) => {
+                if (this.err) {
+                  rej(this.err);
+                  return;
+                }
+                res(r);
+              });
+            });
+          }
+        };
+      }
+    };
+  }
+});
+
+// daemon/src/agents/diff.ts
+function diffLines(oldStr = "", newStr = "", { context = CONTEXT } = {}) {
+  const a = splitLines(oldStr);
+  const b = splitLines(newStr);
+  if (a.length > MAX_LINES || b.length > MAX_LINES) return coarseDiff(a, b);
+  const ops = lcsOps(a, b);
+  return buildHunks(ops, context);
+}
+function splitLines(s) {
+  s = String(s);
+  if (!s) return [];
+  return s.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+}
+function lcsOps(a, b) {
+  const n = a.length;
+  const m = b.length;
+  const dp = new Uint32Array((n + 1) * (m + 1));
+  for (let i2 = n - 1; i2 >= 0; i2--)
+    for (let j2 = m - 1; j2 >= 0; j2--)
+      dp[i2 * (m + 1) + j2] = a[i2] === b[j2] ? dp[(i2 + 1) * (m + 1) + j2 + 1] + 1 : Math.max(dp[(i2 + 1) * (m + 1) + j2], dp[i2 * (m + 1) + j2 + 1]);
+  const ops = [];
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) {
+      ops.push({ t: " ", s: a[i] });
+      i++;
+      j++;
+    } else if (dp[(i + 1) * (m + 1) + j] >= dp[i * (m + 1) + j + 1]) {
+      ops.push({ t: "-", s: a[i] });
+      i++;
+    } else {
+      ops.push({ t: "+", s: b[j] });
+      j++;
+    }
+  }
+  while (i < n) ops.push({ t: "-", s: a[i++] });
+  while (j < m) ops.push({ t: "+", s: b[j++] });
+  return ops;
+}
+function buildHunks(ops, context) {
+  const changed = [];
+  ops.forEach((op, i) => {
+    if (op.t !== " ") changed.push(i);
+  });
+  if (!changed.length) return { hunks: [], added: 0, removed: 0 };
+  let added = 0;
+  let removed = 0;
+  for (const op of ops) {
+    if (op.t === "+") added++;
+    else if (op.t === "-") removed++;
+  }
+  const ranges = [];
+  for (const idx of changed) {
+    const s = Math.max(0, idx - context);
+    const e = Math.min(ops.length, idx + context + 1);
+    const last = ranges[ranges.length - 1];
+    if (last && s <= last.e + MERGE_GAP) last.e = Math.max(last.e, e);
+    else ranges.push({ s, e });
+  }
+  const hunks = [];
+  let oldLn = 1;
+  let newLn = 1;
+  const oldNos = [];
+  const newNos = [];
+  for (const op of ops) {
+    oldNos.push(oldLn);
+    newNos.push(newLn);
+    if (op.t !== "+") oldLn++;
+    if (op.t !== "-") newLn++;
+  }
+  for (const r of ranges) {
+    hunks.push({
+      oldStart: oldNos[r.s],
+      newStart: newNos[r.s],
+      lines: ops.slice(r.s, r.e).map((op) => ({ t: op.t, s: op.s }))
+    });
+  }
+  return { hunks, added, removed };
+}
+function coarseDiff(a, b) {
+  return {
+    hunks: [
+      {
+        oldStart: 1,
+        newStart: 1,
+        lines: [...a.map((s) => ({ t: "-", s })), ...b.map((s) => ({ t: "+", s }))].slice(0, 2e3)
+      }
+    ],
+    added: b.length,
+    removed: a.length,
+    truncated: true
+  };
+}
+function editDetail(detail = {}) {
+  if (Array.isArray(detail.edits) && detail.edits.length) {
+    const hunks = [];
+    let added = 0;
+    let removed = 0;
+    for (const e of detail.edits) {
+      const d = diffLines(e.old_string ?? e.old ?? "", e.new_string ?? e.new ?? "");
+      for (const h of d.hunks) hunks.push(h);
+      added += d.added;
+      removed += d.removed;
+    }
+    return { path: detail.path, hunks, added, removed };
+  }
+  if (detail.old !== void 0 || detail.new !== void 0) {
+    const d = diffLines(String(detail.old ?? ""), String(detail.new ?? ""));
+    return { path: detail.path, hunks: d.hunks, added: d.added, removed: d.removed };
+  }
+  return detail;
+}
+var CONTEXT, MERGE_GAP, MAX_LINES;
+var init_diff = __esm({
+  "daemon/src/agents/diff.ts"() {
+    CONTEXT = 3;
+    MERGE_GAP = 6;
+    MAX_LINES = 400;
+  }
+});
+
+// daemon/src/providers/slash.ts
+function classifyClaudeSlashCommand(name) {
+  return CLAUDE_BUILTIN_COMMANDS.has(name) ? "command" : "skill";
+}
+function parseSlashInput(text) {
+  const t = text.trim();
+  if (!t.startsWith("/")) return null;
+  const body = t.slice(1).trim();
+  if (!body) return null;
+  const sp = body.indexOf(" ");
+  if (sp === -1) return { name: body, args: "", raw: t };
+  return { name: body.slice(0, sp), args: body.slice(sp + 1).trim(), raw: t };
+}
+function mapAcpAvailableCommands(cmds) {
+  return cmds.map((c) => ({
+    name: c.name,
+    description: c.description,
+    argumentHint: c.input?.hint,
+    kind: "skill"
+  }));
+}
+function sortSlashCommands(list) {
+  return [...list].sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === "command" ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+var CLAUDE_BUILTIN_COMMANDS;
+var init_slash = __esm({
+  "daemon/src/providers/slash.ts"() {
+    CLAUDE_BUILTIN_COMMANDS = /* @__PURE__ */ new Set(["clear", "compact", "context", "usage", "init", "debug"]);
+  }
+});
+
+// daemon/src/providers/mock.ts
+async function scriptDefault(ctx) {
+  const { emit } = ctx;
+  const sleepA = (ms) => sleepAbortable(ms, ctx);
+  emit({ type: "reasoning_delta", itemId: "r1", text: "\u8BA9\u6211\u770B\u770B\u9879\u76EE\u7ED3\u6784\u2026" });
+  await sleepA(500);
+  emit({ type: "reasoning", itemId: "r1", text: "\u8BA9\u6211\u770B\u770B\u9879\u76EE\u7ED3\u6784\u2026\u9700\u8981\u5148\u8BFB\u51E0\u4E2A\u6587\u4EF6\u3002" });
+  const tools = [
+    { id: "t1", name: "Read", input: { file_path: ctx.input.text.includes("abs") ? "D:/x/a.ts" : "src/index.ts" } },
+    { id: "t2", name: "Read", input: { file_path: "package.json" } }
+  ];
+  for (const t of tools) {
+    emit({ type: "tool_call", itemId: t.id, kind: "read", title: `\u8BFB\u53D6 ${t.input.file_path}`, status: "running", input: t.input });
+    if (await sleepA(300)) return;
+    emit({ type: "tool_call", itemId: t.id, kind: "read", title: `\u8BFB\u53D6 ${t.input.file_path}`, status: "ok", output: "\u2026\u6587\u4EF6\u5185\u5BB9\u2026", durationMs: 300 });
+  }
+  emit({ type: "tool_call", itemId: "t3", kind: "search", title: '\u641C\u7D22 "TODO"', status: "running", input: { pattern: "TODO" } });
+  await sleepA(200);
+  emit({ type: "tool_call", itemId: "t3", kind: "search", title: '\u641C\u7D22 "TODO"', status: "ok", output: "3 \u5904\u5339\u914D" });
+  const oldStr = "const x = 1;\nconst y = 2;\nreturn x + y;";
+  const newStr = "const x = 1;\nconst y = 2;\nconst z = 3;\nreturn x + y + z;";
+  emit({
+    type: "tool_call",
+    itemId: "t4",
+    kind: "edit",
+    title: "\u7F16\u8F91 src/index.ts",
+    status: "running",
+    input: { file_path: "src/index.ts", old_string: oldStr, new_string: newStr },
+    detail: editDetail({ path: "src/index.ts", old: oldStr, new: newStr })
+  });
+  if (await sleepA(400)) return;
+  emit({
+    type: "tool_call",
+    itemId: "t4",
+    kind: "edit",
+    title: "\u7F16\u8F91 src/index.ts",
+    status: "ok",
+    detail: editDetail({ path: "src/index.ts", old: oldStr, new: newStr }),
+    durationMs: 400
+  });
+  emit({ type: "tool_call", itemId: "t5", kind: "bash", title: "\u8FD0\u884C npm test", status: "running", input: { command: "npm test" } });
+  for (let i = 1; i <= 20; i++) {
+    if (await sleepA(60)) return;
+    emit({ type: "tool_output_delta", itemId: "t5", text: `\u7B2C ${i} \u884C\u8F93\u51FA
+` });
+  }
+  emit({ type: "tool_call", itemId: "t5", kind: "bash", title: "\u8FD0\u884C npm test", status: "ok", output: "\u2713 \u5168\u90E8\u901A\u8FC7", exitCode: 0, durationMs: 1200 });
+  emit({
+    type: "todo",
+    items: [
+      { text: "\u5206\u6790\u9700\u6C42", status: "done" },
+      { text: "\u4FEE\u6539\u4EE3\u7801", status: "done" },
+      { text: "\u8DD1\u6D4B\u8BD5", status: "done" },
+      { text: "\u5199\u6587\u6863", status: "in_progress" }
+    ]
+  });
+  await sleepA(300);
+  const reply = ctx.replyPrefix() + mockReply(ctx);
+  for (const ch of chunkText(reply, 40)) {
+    if (await sleepA(30)) return;
+    emit({ type: "assistant_delta", itemId: "m1", text: ch });
+  }
+  emit({ type: "assistant_message", itemId: "m1", text: reply });
+}
+async function scriptPerm(ctx) {
+  const { emit } = ctx;
+  const requestId = "perm-" + rid();
+  emit({
+    type: "permission_request",
+    requestId,
+    title: "\u8FD0\u884C npm test",
+    kind: "tool",
+    detail: { command: "npm test", cwd: ".", toolName: "Bash" },
+    options: [
+      { id: "accept", label: tr("perm.allow"), kind: "allow_once" },
+      { id: "acceptForSession", label: tr("perm.allowSession"), kind: "allow_always" },
+      { id: "decline", label: tr("perm.deny"), kind: "reject_once" }
+    ]
+  });
+  const ans = await ctx.waitFor(requestId);
+  if (ans.cancelled || ans.optionId === "decline") {
+    emit({ type: "tool_call", itemId: "p1", kind: "bash", title: "\u8FD0\u884C npm test", status: "failed", output: "\u5DF2\u88AB\u7528\u6237\u62D2\u7EDD", exitCode: 1 });
+    emit({ type: "assistant_message", itemId: "pm", text: "\u5DF2\u6309\u4F60\u7684\u8981\u6C42\u8DF3\u8FC7\u8BE5\u64CD\u4F5C\u3002" });
+    return;
+  }
+  emit({ type: "tool_call", itemId: "p1", kind: "bash", title: "\u8FD0\u884C npm test", status: "running", input: { command: "npm test" } });
+  if (await sleepAbortable(500, ctx)) return;
+  emit({ type: "tool_call", itemId: "p1", kind: "bash", title: "\u8FD0\u884C npm test", status: "ok", output: "\u2713 12 \u4E2A\u6D4B\u8BD5\u901A\u8FC7", exitCode: 0, durationMs: 500 });
+  emit({ type: "assistant_message", itemId: "pm", text: "\u6D4B\u8BD5\u901A\u8FC7\u4E86\u3002" });
+}
+async function scriptPermAbandon(ctx) {
+  const { emit } = ctx;
+  emit({
+    type: "permission_request",
+    requestId: "perm-" + rid(),
+    title: "\u8FD0\u884C git status",
+    kind: "execute",
+    detail: { command: "git status" },
+    options: [
+      { id: "allow-once", label: tr("perm.allow"), kind: "allow_once" },
+      { id: "reject-once", label: tr("perm.deny"), kind: "reject_once" }
+    ]
+  });
+  await sleepAbortable(200, ctx);
+  emit({ type: "assistant_message", itemId: "pa", text: "Error: RetriableError: [canceled] http/2 stream closed with error code CANCEL (0x8)" });
+}
+async function scriptPlan(ctx) {
+  const { emit } = ctx;
+  emit({
+    type: "plan",
+    itemId: "plan1",
+    markdown: "## \u5B9E\u65BD\u8BA1\u5212\n\n1. \u6539 `src/index.ts` \u5165\u53E3\n2. \u66F4\u65B0\u6D4B\u8BD5\n3. \u8DD1\u4E00\u904D e2e"
+  });
+  const requestId = "perm-" + rid();
+  emit({
+    type: "permission_request",
+    requestId,
+    title: "\u5B9E\u65BD\u8FD9\u4E2A\u8BA1\u5212\uFF1F",
+    kind: "plan",
+    detail: { markdown: "\u89C1\u4E0A\u65B9\u8BA1\u5212" },
+    options: [
+      { id: "implement", label: "\u5F00\u59CB\u5B9E\u65BD", kind: "allow_once" },
+      { id: "reject", label: tr("perm.deny"), kind: "reject_once" }
+    ]
+  });
+  const ans = await ctx.waitFor(requestId);
+  if (ans.cancelled || ans.optionId === "reject") {
+    emit({ type: "assistant_message", itemId: "pm", text: "\u597D\u7684\uFF0C\u8BF7\u544A\u8BC9\u6211\u600E\u4E48\u6539\u3002" });
+    return;
+  }
+  emit({ type: "tool_call", itemId: "pl1", kind: "edit", title: "\u7F16\u8F91 src/index.ts", status: "ok" });
+  await sleepAbortable(400, ctx);
+  emit({ type: "assistant_message", itemId: "pm", text: "\u5DF2\u6309\u8BA1\u5212\u6539\u5B8C\u5165\u53E3\u548C\u6D4B\u8BD5\u3002" });
+}
+async function scriptAsk(ctx) {
+  const { emit } = ctx;
+  const requestId = "q-" + rid();
+  emit({
+    type: "question",
+    requestId,
+    questions: [
+      {
+        id: "q1",
+        header: "\u90E8\u7F72\u76EE\u6807",
+        question: "\u8981\u90E8\u7F72\u5230\u54EA\u4E2A\u73AF\u5883\uFF1F",
+        options: [
+          { id: "staging", label: "Staging" },
+          { id: "prod", label: "\u751F\u4EA7\u73AF\u5883" }
+        ]
+      },
+      {
+        id: "q2",
+        header: "\u5907\u6CE8",
+        question: "\u8FD8\u6709\u4EC0\u4E48\u8981\u8865\u5145\u7684\uFF1F",
+        freeText: true
+      }
+    ]
+  });
+  const ans = await ctx.waitFor(requestId);
+  const env = ans.answers?.q1 ?? "\uFF08\u672A\u9009\uFF09";
+  const note = ans.answers?.q2 ?? "";
+  emit({ type: "assistant_message", itemId: "am", text: `\u6536\u5230\uFF1A\u90E8\u7F72\u5230 ${env}${note ? `\uFF0C\u5907\u6CE8\u300C${note}\u300D` : ""}\u3002` });
+}
+async function scriptSlow(ctx) {
+  const { emit } = ctx;
+  for (let i = 1; i <= 6; i++) {
+    const id2 = "s" + i;
+    emit({ type: "tool_call", itemId: id2, kind: "bash", title: `\u6B65\u9AA4 ${i}/6`, status: "running", input: { command: `step ${i}` } });
+    if (await sleepAbortable(2e3, ctx)) return;
+    emit({ type: "tool_call", itemId: id2, kind: "bash", title: `\u6B65\u9AA4 ${i}/6`, status: "ok", output: `\u6B65\u9AA4 ${i} \u5B8C\u6210`, durationMs: 2e3 });
+  }
+  emit({ type: "assistant_message", itemId: "sm", text: "6 \u4E2A\u6B65\u9AA4\u5168\u90E8\u8DD1\u5B8C\u3002" });
+}
+async function scriptError(ctx) {
+  const { emit } = ctx;
+  emit({ type: "tool_call", itemId: "e1", kind: "bash", title: "\u8FD0\u884C ./build.sh", status: "running", input: { command: "./build.sh" } });
+  await sleepAbortable(800, ctx);
+  throw new Error("\u6784\u5EFA\u5931\u8D25\uFF1A\u627E\u4E0D\u5230\u6A21\u5757 foo\uFF08\u6A21\u62DF\u9519\u8BEF\uFF09");
+}
+async function scriptLong(ctx) {
+  const { emit } = ctx;
+  emit({ type: "assistant_delta", itemId: "L1", text: "" });
+  for (let i = 0; i < 5e3; i++) {
+    if (i % 100 === 0 && ctx.interrupted()) return;
+    emit({ type: "assistant_delta", itemId: "L1", text: `\u5757${i} ` });
+    if (i % 200 === 0) await sleep(0);
+  }
+  emit({ type: "assistant_message", itemId: "L1", text: "\uFF085000 \u4E2A\u589E\u91CF\u5408\u5E76\u540E\u7684\u957F\u6587\uFF09" });
+}
+async function scriptBigReply(ctx) {
+  const { emit } = ctx;
+  const slow = ctx.input.text.includes("slow");
+  const parts = [];
+  for (let i = 1; i <= 14; i++) {
+    parts.push(`### \u7B2C ${i} \u90E8\u5206
+
+- \u8981\u70B9 ${i}.a\uFF1A\u8BF4\u660E\u4E00\u4E0B\u8FD9\u91CC\u7684\u6539\u52A8
+- \u8981\u70B9 ${i}.b\uFF1A\u4EE5\u53CA\u4E3A\u4EC0\u4E48\u8FD9\u6837\u6539
+
+`);
+    parts.push("```ts\n" + Array.from({ length: 8 }, (_, k) => `const v${i}_${k} = compute(${i}, ${k}); // line ${k}`).join("\n") + "\n```\n\n");
+  }
+  let acc = "";
+  emit({ type: "assistant_delta", itemId: "B1", text: "" });
+  for (const p of parts) {
+    if (ctx.interrupted()) return;
+    acc += p;
+    emit({ type: "assistant_delta", itemId: "B1", text: p });
+    await sleep(slow ? 220 : 5);
+  }
+  emit({ type: "assistant_message", itemId: "B1", text: acc });
+}
+async function scriptCodeStream(ctx) {
+  const { emit } = ctx;
+  let acc = "";
+  const put = (p) => {
+    acc += p;
+    emit({ type: "assistant_delta", itemId: "C1", text: p });
+  };
+  put("\u5148\u770B\u7B2C\u4E00\u6BB5\u4EE3\u7801\uFF1A\n\n```ts\n");
+  for (let b = 1; b <= 2; b++) {
+    if (b === 2) put("```\n\n\u7136\u540E\u662F\u7B2C\u4E8C\u6BB5\uFF1A\n\n```ts\n");
+    for (let k = 0; k < 22; k++) {
+      if (ctx.interrupted()) return;
+      put(`const block${b}_line${k} = computeSomethingRatherLong(${b}, ${k}, "a fairly long string literal so wrapping matters ${"x".repeat(60)}");
+`);
+      await sleep(120);
+    }
+  }
+  put("```\n\n\u5B8C\u6BD5\u3002");
+  emit({ type: "assistant_message", itemId: "C1", text: acc });
+}
+async function scriptExit(_ctx) {
+  await sleep(300);
+  throw new MockCrash();
+}
+function pickScript(text) {
+  const t = text.trim();
+  if (t.startsWith("/perm-abandon")) return scriptPermAbandon;
+  if (t.startsWith("/perm")) return scriptPerm;
+  if (t.startsWith("/plan")) return scriptPlan;
+  if (t.startsWith("/ask")) return scriptAsk;
+  if (t.startsWith("/slow")) return scriptSlow;
+  if (t.startsWith("/error")) return scriptError;
+  if (t.startsWith("/long")) return scriptLong;
+  if (t.startsWith("/exit")) return scriptExit;
+  if (t.startsWith("/bigreply")) return scriptBigReply;
+  if (t.startsWith("/codestream")) return scriptCodeStream;
+  if (t.startsWith("/serve")) return scriptServe;
+  if (t.startsWith("/tools")) return scriptTools;
+  if (t.startsWith("/bashhint")) return scriptBashHint;
+  if (t.startsWith("/winrun")) return scriptWinRun;
+  if (t.startsWith("/tasks")) return scriptTasks;
+  return scriptDefault;
+}
+async function sleepAbortable(ms, ctx) {
+  const start = Date.now();
+  while (Date.now() - start < ms) {
+    if (ctx.interrupted()) return true;
+    await sleep(Math.min(20, Math.max(1, ms - (Date.now() - start))));
+  }
+  return ctx.interrupted();
+}
+function chunkText(s, n) {
+  const out = [];
+  for (let i = 0; i < s.length; i += n) out.push(s.slice(i, i + n));
+  return out;
+}
+async function scriptTools(ctx) {
+  const { emit } = ctx;
+  const sleepA = (ms) => sleepAbortable(ms, ctx);
+  const tool = async (id2, kind, title, input, end, ms = 150) => {
+    emit({ type: "tool_call", itemId: id2, kind, title, status: "running", input });
+    if (await sleepA(ms)) return true;
+    emit({ type: "tool_call", itemId: id2, kind, title, status: "ok", durationMs: ms, ...end });
+    return false;
+  };
+  emit({ type: "reasoning", itemId: "tr1", text: "\u5148\u770B\u4E00\u4E0B\u6D4B\u8BD5\u548C\u914D\u7F6E\u3002" });
+  if (await tool("x1", "read", "\u8BFB\u53D6 package.json", { file_path: "package.json" }, { output: "{\u2026}" })) return;
+  if (await tool("x2", "search", '\u641C\u7D22 "describe("', { pattern: "describe(" }, { output: "12 \u5904\u5339\u914D" })) return;
+  emit({ type: "reasoning", itemId: "tr2", text: "" });
+  if (await tool("x3", "read", "\u8BFB\u53D6 test/app.test.ts", { file_path: "test/app.test.ts" }, { output: "\u2026" })) return;
+  if (await tool("x3b", "read", "\u8BFB\u53D6 test/server.test.ts", { file_path: "test/server.test.ts" }, { output: "\u2026" })) return;
+  if (await tool("x3c", "search", '\u641C\u7D22 "createServer"', { pattern: "createServer" }, { output: "3 \u5904\u5339\u914D" })) return;
+  emit({ type: "tool_call", itemId: "x4", kind: "bash", title: "\u8FD0\u884C npm run lint", status: "running", input: { command: "npm run lint" } });
+  if (await sleepA(200)) return;
+  emit({
+    type: "tool_call",
+    itemId: "x4",
+    kind: "bash",
+    title: "\u8FD0\u884C npm run lint",
+    status: "failed",
+    exitCode: 1,
+    durationMs: 200,
+    output: "src/app.ts:12:7  error  'unused' is assigned a value but never used  no-unused-vars\n\n\u2716 1 problem (1 error, 0 warnings)"
+  });
+  const oldStr = "const unused = 1;\nexport const app = 2;";
+  const newStr = "export const app = 2;";
+  if (await tool(
+    "x5",
+    "edit",
+    "\u7F16\u8F91 src/app.ts",
+    { file_path: "src/app.ts", old_string: oldStr, new_string: newStr },
+    { detail: editDetail({ path: "src/app.ts", old: oldStr, new: newStr }) }
+  )) return;
+  emit({ type: "reasoning", itemId: "tr3", text: "lint \u4FEE\u597D\u4E86\uFF0C\u518D\u8DD1\u4E00\u904D\u5B8C\u6574\u6D4B\u8BD5\u3002" });
+  const cmd = "npm test -- --reporter=verbose --coverage --run test/app.test.ts test/server.test.ts test/client.test.ts";
+  emit({ type: "tool_call", itemId: "x6", kind: "bash", title: `\u8FD0\u884C ${cmd}`, status: "running", input: { command: cmd } });
+  const slow = Number(process.env.AGENT_CONSOLE_MOCK_TOOLS_MS) || 2500;
+  if (await sleepA(slow)) return;
+  emit({ type: "tool_call", itemId: "x6", kind: "bash", title: `\u8FD0\u884C ${cmd}`, status: "ok", output: "\u2713 3 \u4E2A\u6D4B\u8BD5\u6587\u4EF6\u901A\u8FC7", exitCode: 0, durationMs: slow });
+  const reply = ctx.replyPrefix() + "lint \u62A5\u9519\u5DF2\u4FEE\u590D\uFF0C\u6D4B\u8BD5\u5168\u90E8\u901A\u8FC7\u3002";
+  emit({ type: "assistant_message", itemId: "tm1", text: reply });
+}
+async function scriptWinRun(ctx) {
+  const { emit } = ctx;
+  const sleepA = (ms) => sleepAbortable(ms, ctx);
+  const step = Number(process.env.AGENT_CONSOLE_MOCK_STEP_MS) || 250;
+  const think = async (id2, text) => {
+    for (const ch of chunkText(text, 6)) {
+      emit({ type: "reasoning_delta", itemId: id2, text: ch });
+      if (await sleepA(40)) return true;
+    }
+    emit({ type: "reasoning", itemId: id2, text });
+    return false;
+  };
+  const tool = async (id2, kind, title, input, ms = step) => {
+    emit({ type: "tool_call", itemId: id2, kind, title, status: "running", input });
+    if (await sleepA(ms)) return true;
+    emit({ type: "tool_call", itemId: id2, kind, title, status: "ok", durationMs: ms, output: "ok" });
+    return false;
+  };
+  const dir = "D:\\workwork\\\u6296\u97F3\u5FEB\u624B\u81EA\u52A8\u4E0A\u4F20";
+  const start = `Set-Location "${dir}"; if (Test-Path ".venv\\Scripts\\pythonw.exe") { Start-Process -FilePath ".venv\\Scripts\\pythonw.exe" -ArgumentList "-m","app.main" -WorkingDirectory "${dir}"; Write-Host "\u5DF2\u542F\u52A8\uFF08\u6E90\u7801\u6A21\u5F0F\uFF09" } else { Write-Host "venv \u4E0D\u5B58\u5728\uFF0C\u5C1D\u8BD5 exe"; Start-Process -FilePath "\u98CE\u666F\u89C6\u9891\u5DE5\u5177.exe" -WorkingDirectory "${dir}"; Write-Host "\u5DF2\u542F\u52A8\uFF08exe\uFF09" }`;
+  const ps = `Get-Process pythonw -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*\u6296\u97F3\u5FEB\u624B\u81EA\u52A8\u4E0A\u4F20*" } | Select-Object Id, Path, StartTime | Format-Table -AutoSize`;
+  if (await think("w1", "\u5148\u68C0\u67E5\u662F\u5426\u5DF2\u6709\u5B9E\u4F8B\u5728\u8DD1\u3002")) return;
+  emit({ type: "assistant_message", itemId: "wm1", text: "\u5148\u68C0\u67E5\u662F\u5426\u5DF2\u6709\u5B9E\u4F8B\u5728\u8DD1\uFF0C\u518D\u542F\u52A8\u5E94\u7528\u3002" });
+  if (await tool("s1", "search", "\u641C\u7D22 pythonw", { pattern: "pythonw" })) return;
+  if (await tool("s2", "search", "\u641C\u7D22 app.main", { pattern: "app.main" })) return;
+  if (await think("w2", "\u770B\u4E0B\u542F\u52A8\u811A\u672C\u3002")) return;
+  if (await tool("s3", "search", "\u641C\u7D22 \u542F\u52A8.bat", { pattern: "\u542F\u52A8.bat" })) return;
+  if (await tool("r1", "read", "\u8BFB\u53D6 \u542F\u52A8.bat", { file_path: `${dir}\\\u542F\u52A8.bat` })) return;
+  if (await think("w3", "")) return;
+  if (await tool("b0", "bash", `\u8FD0\u884C ${ps}`, { command: ps }, step * 2)) return;
+  if (await think("w4", "\u6CA1\u6709\u5B9E\u4F8B\u5728\u8DD1\uFF0C\u76F4\u63A5\u542F\u52A8\u3002")) return;
+  emit({ type: "tool_call", itemId: "b1", kind: "bash", title: `\u8FD0\u884C ${start}`, status: "running", input: { command: start } });
+  if (await sleepA(step)) return;
+  const requestId = "perm-" + rid();
+  emit({
+    type: "permission_request",
+    requestId,
+    title: start,
+    kind: "tool",
+    detail: { command: start, cwd: dir },
+    options: [
+      { id: "allow-once", label: "Allow once", kind: "allow_once" },
+      { id: "allow-always", label: "Allow always", kind: "allow_always" },
+      { id: "reject-once", label: "Reject", kind: "reject_once" }
+    ]
+  });
+  const ans = await ctx.waitFor(requestId);
+  if (ans.cancelled || ans.optionId === "reject-once") {
+    emit({ type: "tool_call", itemId: "b1", kind: "bash", title: `\u8FD0\u884C ${start}`, status: "failed", output: "Rejected", exitCode: 1 });
+    return;
+  }
+  emit({ type: "tool_call", itemId: "b1", kind: "bash", title: `\u8FD0\u884C ${start}`, status: "ok", output: "\u5DF2\u542F\u52A8\uFF08\u6E90\u7801\u6A21\u5F0F\uFF09", exitCode: 0, durationMs: step });
+  if (await think("w5", "\u6539\u4E09\u4E2A\u914D\u7F6E\u3002")) return;
+  for (const n of [1, 2, 3]) if (await tool(`e${n}`, "edit", `\u7F16\u8F91 config/${n}.json`, { file_path: `${dir}\\config\\${n}.json` })) return;
+  if (await think("w6", "\u786E\u8BA4\u8FDB\u7A0B\u8D77\u6765\u4E86\u3002")) return;
+  if (await tool("r2", "read", "\u8BFB\u53D6 logs/selftest.txt", { file_path: `${dir}\\logs\\selftest.txt` })) return;
+  if (await tool("b2", "bash", `\u8FD0\u884C ${ps}`, { command: ps }, Number(process.env.AGENT_CONSOLE_MOCK_TOOLS_MS) || step * 6)) return;
+  emit({ type: "assistant_message", itemId: "wm2", text: ctx.replyPrefix() + "\u5DF2\u542F\u52A8\uFF0C\u8FDB\u7A0B\u5728\u8DD1\u3002" });
+}
+async function scriptTasks(ctx) {
+  const { emit } = ctx;
+  const sleepA = (ms) => sleepAbortable(ms, ctx);
+  const steps = ["\u590D\u73B0\u5076\u53D1\u5931\u8D25", "\u627E\u5230\u7ADE\u6001", "\u4FEE\u590D\u5E76\u52A0\u56FA\u6D4B\u8BD5"];
+  const plan = (done, running) => emit({
+    type: "plan",
+    itemId: "tk-plan",
+    markdown: steps.map((s) => `- ${s}`).join("\n"),
+    entries: steps.map((step, i) => ({ step, status: i < done ? "completed" : i === done && running ? "in_progress" : "pending" }))
+  });
+  const tool = async (id2, kind, title, input, end = {}, ms = 120) => {
+    emit({ type: "tool_call", itemId: id2, kind, title, status: "running", input });
+    if (await sleepA(ms)) return true;
+    emit({ type: "tool_call", itemId: id2, kind, title, status: "ok", durationMs: ms, output: "ok", ...end });
+    return false;
+  };
+  plan(0, true);
+  if (await tool("k1", "bash", "\u8FD0\u884C npx vitest run src/checkout --repeat 50", { command: "npx vitest run src/checkout --repeat 50" })) return;
+  if (await tool("k2", "read", "\u8BFB\u53D6 src/checkout/useCheckout.ts", { file_path: "src/checkout/useCheckout.ts" })) return;
+  plan(1, true);
+  emit({ type: "reasoning", itemId: "k-th", text: "submit() \u6CA1\u6709\u7B49 confirmOrder\u3002" });
+  const oldStr = '  setStatus("pending");\n  void confirmOrder(order.id).then(setStatus);';
+  const newStr = '  setStatus("pending");\n  try {\n    setStatus(await confirmOrder(order.id));\n  } catch (error) {\n    setStatus("failed");\n    throw error;\n  }';
+  if (await tool(
+    "k3",
+    "edit",
+    "\u7F16\u8F91 src/checkout/useCheckout.ts",
+    { file_path: "src/checkout/useCheckout.ts", old_string: oldStr, new_string: newStr },
+    { detail: editDetail({ path: "src/checkout/useCheckout.ts", old: oldStr, new: newStr }) }
+  )) return;
+  plan(2, true);
+  if (await tool("k4", "search", '\u641C\u7D22 "confirmOrder"', { pattern: "confirmOrder" })) return;
+  const hold = Number(process.env.AGENT_CONSOLE_MOCK_TASKS_HOLD_MS) || 0;
+  if (await tool("k5", "bash", "\u8FD0\u884C npx tsc --noEmit", { command: "npx tsc --noEmit" }, {}, Math.max(120, hold))) return;
+  plan(3, false);
+  const reply = ctx.replyPrefix() + [
+    "**\u6839\u56E0\uFF1A** `submit()` \u4E22\u6389\u4E86\u786E\u8BA4\u8BF7\u6C42\u7684 Promise\uFF0C\u8BA2\u5355\u786E\u8BA4\u524D\u5C31\u8FD4\u56DE\u4E86\u3002",
+    "",
+    "```ts",
+    "async function submit() {",
+    '  setStatus("pending");',
+    "  const order = await createOrder(cart);",
+    "  setStatus(await confirmOrder(order.id));",
+    "}",
+    "```",
+    "",
+    "\u91CD\u590D\u8DD1 50 \u6B21\u90FD\u901A\u8FC7\u4E86\u3002"
+  ].join("\n");
+  emit({ type: "assistant_message", itemId: "k-msg", text: reply });
+}
+async function scriptBashHint(ctx) {
+  ctx.emit({ type: "notice", level: "warn", code: "bash_missing", message: tr("notice.bashMissing") });
+  await sleepAbortable(100, ctx);
+  ctx.emit({ type: "assistant_message", itemId: "bh1", text: ctx.replyPrefix() + "\uFF08\u6A21\u62DF\uFF09" });
+}
+async function scriptServe(ctx) {
+  const emit = (e) => ctx.emit(e);
+  const reply = [
+    "\u5F00\u53D1\u670D\u52A1\u5668\u5DF2\u7ECF\u542F\u52A8\uFF1Ahttp://localhost:5173/ \uFF0C\u63A5\u53E3\u5728 127.0.0.1:5173/api.json\u3002",
+    "",
+    "- \u5728\u9884\u89C8\u91CC\u6253\u5F00 [\u9996\u9875](http://localhost:5173/) \u6216 [about](http://localhost:5173/about.html)",
+    "- \u6587\u6863\uFF1A[Vite](https://vite.dev/guide/)",
+    "",
+    "```",
+    "  VITE v5.4.21  ready in 139 ms",
+    "  \u279C  Local:   http://localhost:5173/",
+    "```"
+  ].join("\n");
+  for (const ch of chunkText(reply, 40)) {
+    if (await sleepAbortable(20, ctx)) return;
+    emit({ type: "assistant_delta", itemId: "sv", text: ch });
+  }
+  emit({ type: "assistant_message", itemId: "sv", text: reply });
+}
+function mockReply(ctx) {
+  const base = [
+    "\u597D\u7684\uFF0C\u6211\u5DF2\u7ECF\u6309\u4F60\u7684\u8981\u6C42\u6539\u597D\u4E86\u3002",
+    "",
+    "## \u6539\u52A8",
+    "- `src/index.ts`\uFF1A\u628A\u8FD4\u56DE\u903B\u8F91\u8865\u6210\u4E09\u53D8\u91CF\u6C42\u548C",
+    "- \u65B0\u589E\u4E00\u884C\u5E38\u91CF `z`",
+    "",
+    "```ts",
+    "const z = 3;",
+    "return x + y + z;",
+    "```",
+    "",
+    "| \u6587\u4EF6 | \u53D8\u66F4 |",
+    "|---|---|",
+    "| src/index.ts | +2/-1 |",
+    "",
+    "\u6D4B\u8BD5\u5168\u90E8\u901A\u8FC7\u3002"
+  ].join("\n");
+  return ctx.steerText() ? base + `
+
+> \u63D2\u8BDD\uFF1A${ctx.steerText()}` : base;
+}
+function createMockProvider() {
+  return {
+    id: "mock",
+    name: "Mock\uFF08\u6F14\u793A\uFF09",
+    capabilities: mockCapabilities,
+    async detect() {
+      const d = Number(process.env.AGENT_CONSOLE_MOCK_DETECT_MS) || 0;
+      if (d > 0) await sleep(d);
+      return { available: true, bin: "mock", version: "demo" };
+    },
+    async listModels() {
+      return [
+        { id: "demo-fast", name: "\u6F14\u793A\xB7\u5FEB", isDefault: true, efforts: ["low", "medium", "high"] },
+        { id: "demo-pro", name: "\u6F14\u793A\xB7\u5F3A", efforts: ["low", "medium", "high"] }
+      ];
+    },
+    async createSession(o) {
+      mockProviderMetrics.createSessionCalls++;
+      const d = Number(process.env.AGENT_CONSOLE_MOCK_START_MS) || 0;
+      if (d > 0) await sleep(d);
+      return new MockSession(o);
+    }
+  };
+}
+var mockCapabilities, rid, sleep, MockCrash, MockSession, mockProviderMetrics;
+var init_mock = __esm({
+  "daemon/src/providers/mock.ts"() {
+    init_i18n();
+    init_queue();
+    init_diff();
+    init_slash();
+    mockCapabilities = {
+      resume: true,
+      interrupt: true,
+      steer: true,
+      images: true,
+      plan: true,
+      questions: true,
+      cost: true,
+      effort: ["low", "medium", "high"],
+      modes: ["plan", "default", "acceptEdits", "bypassPermissions"]
+    };
+    rid = () => Math.random().toString(36).slice(2, 10);
+    sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    MockCrash = class extends Error {
+      constructor() {
+        super("__mock_crash__");
+      }
+    };
+    MockSession = class {
+      constructor(o) {
+        this.o = o;
+        this.sessionId = o.resumeId ?? "mock-" + rid();
+        this.resumed = o.resumeId !== null;
+        this.events = this.q;
+        this.q.push({ type: "provider_session_id", id: this.sessionId });
+      }
+      o;
+      events;
+      q = new AsyncQueue();
+      sessionId;
+      turnId = null;
+      turnNum = 0;
+      interruptFlag = false;
+      closed = false;
+      pendingReq = /* @__PURE__ */ new Map();
+      steered = [];
+      resumed = false;
+      emit(ev) {
+        ev.turnId ??= this.turnId ?? void 0;
+        this.q.push(ev);
+      }
+      async send(input) {
+        if (this.closed) throw new Error("mock session closed");
+        this.turnNum++;
+        this.turnId = "u_" + Date.now().toString(36) + "_" + this.turnNum;
+        this.interruptFlag = false;
+        this.steered = [];
+        this.emit({
+          type: "turn_started",
+          turnId: this.turnId,
+          model: this.o.model ?? "demo-fast",
+          mode: this.o.mode,
+          effort: this.o.effort
+        });
+        void this.runTurn(input);
+      }
+      async runTurn(input) {
+        const p = "i" + rid() + "_";
+        const ctx = {
+          emit: (ev) => {
+            const e = ev;
+            if (e.itemId) e.itemId = p + e.itemId;
+            this.emit(ev);
+          },
+          waitFor: (id2) => this.waitFor(id2),
+          interrupted: () => this.interruptFlag || this.closed,
+          steerText: () => this.steered.join("\uFF1B"),
+          replyPrefix: () => this.resumePrefix(),
+          input
+        };
+        try {
+          const script = pickScript(input.text);
+          await script(ctx);
+          if (this.interruptFlag || this.closed) {
+            this.emit({ type: "turn_ended", turnId: this.turnId, status: "interrupted", durationMs: 0 });
+          } else {
+            this.emit({ type: "usage", inputTokens: 1200, outputTokens: 340, cacheReadTokens: 800, costUsd: 0.0123 });
+            this.emit({ type: "turn_ended", turnId: this.turnId, status: "completed", durationMs: 6e3, filesChanged: 1 });
+          }
+        } catch (e) {
+          if (e instanceof MockCrash) {
+            this.q.close();
+            return;
+          }
+          if (this.interruptFlag || this.closed) {
+            this.emit({ type: "turn_ended", turnId: this.turnId, status: "interrupted", durationMs: 0 });
+          } else {
+            this.emit({ type: "turn_ended", turnId: this.turnId, status: "failed", error: String(e?.message ?? e) });
+          }
+        }
+      }
+      respond(requestId, answer) {
+        const resolve4 = this.pendingReq.get(requestId);
+        if (resolve4) {
+          this.pendingReq.delete(requestId);
+          resolve4(answer);
+        }
+      }
+      waitFor(requestId) {
+        return new Promise((resolve4) => {
+          this.pendingReq.set(requestId, resolve4);
+        });
+      }
+      async interrupt() {
+        this.interruptFlag = true;
+        for (const [id2, resolve4] of this.pendingReq) {
+          resolve4({ cancelled: true });
+          this.pendingReq.delete(id2);
+        }
+        await sleep(120);
+      }
+      async steer(input) {
+        this.steered.push(input.text);
+      }
+      async setModel(model) {
+        this.o.model = model;
+      }
+      async setMode(mode2) {
+        this.o.mode = mode2;
+      }
+      async setEffort(effort) {
+        this.o.effort = effort;
+      }
+      async listCommands() {
+        return sortSlashCommands([
+          { name: "perm", description: "\u6F14\u793A\u6388\u6743\u5F39\u7A97", kind: "command" },
+          { name: "plan", description: "\u6F14\u793A\u8BA1\u5212\u5BA1\u6279", kind: "command" },
+          { name: "ask", description: "\u6F14\u793A\u63D0\u95EE", kind: "command" },
+          { name: "slow", description: "\u6162\u901F\u591A\u6B65\u5DE5\u5177", kind: "skill" },
+          { name: "error", description: "\u6A21\u62DF\u5931\u8D25", kind: "skill" }
+        ]);
+      }
+      async close() {
+        this.closed = true;
+        for (const [, resolve4] of this.pendingReq) resolve4({ cancelled: true });
+        this.pendingReq.clear();
+        this.q.close();
+      }
+      // With resumeId the first reply gets a "（已续接）" prefix
+      resumePrefix() {
+        if (this.resumed && this.turnNum === 1) return "\uFF08\u5DF2\u7EED\u63A5\uFF09";
+        return "";
+      }
+    };
+    mockProviderMetrics = { createSessionCalls: 0 };
+  }
+});
+
+// lib/pathscan.mjs
+import { accessSync, constants, statSync as statSync2 } from "node:fs";
+import { homedir as homedir2 } from "node:os";
+import path from "node:path";
+function defaultExists(file, platform) {
+  try {
+    if (!statSync2(file).isFile()) return false;
+    if (platform !== "win32") accessSync(file, constants.X_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+function envGet(env, name) {
+  if (env[name] !== void 0) return env[name];
+  const lower = name.toLowerCase();
+  for (const key of Object.keys(env)) if (key.toLowerCase() === lower) return env[key];
+  return void 0;
+}
+function extraBinDirs({ platform = process.platform, env = process.env, home = homedir2() } = {}) {
+  const p = platform === "win32" ? path.win32 : path.posix;
+  const dirs = [];
+  if (platform === "win32") {
+    const appData = envGet(env, "APPDATA");
+    const localAppData = envGet(env, "LOCALAPPDATA");
+    const programFiles = envGet(env, "ProgramFiles") || "C:\\Program Files";
+    const nvmSymlink = envGet(env, "NVM_SYMLINK");
+    if (home) dirs.push(p.join(home, ".local", "bin"));
+    if (appData) dirs.push(p.join(appData, "npm"));
+    if (nvmSymlink) dirs.push(nvmSymlink);
+    dirs.push(p.join(programFiles, "nodejs"));
+    if (localAppData) dirs.push(p.join(localAppData, "Programs", "nodejs"));
+    if (home) {
+      dirs.push(p.join(home, ".volta", "bin"));
+      dirs.push(p.join(home, ".bun", "bin"));
+    }
+    return dirs;
+  }
+  if (home) {
+    dirs.push(p.join(home, ".local", "bin"));
+    dirs.push(p.join(home, ".npm-global", "bin"));
+    dirs.push(p.join(home, ".volta", "bin"));
+    dirs.push(p.join(home, ".bun", "bin"));
+    dirs.push(p.join(home, ".claude", "local"));
+  }
+  if (platform === "darwin") dirs.push("/opt/homebrew/bin");
+  dirs.push("/usr/local/bin", "/usr/bin", "/bin");
+  return dirs;
+}
+function searchDirs({ platform = process.platform, env = process.env, home = homedir2(), extra = true } = {}) {
+  const sep6 = platform === "win32" ? ";" : ":";
+  const raw = String(envGet(env, "PATH") ?? "").split(sep6).map((d) => d.trim().replace(/^"(.*)"$/, "$1")).filter(Boolean);
+  const all = extra ? [...raw, ...extraBinDirs({ platform, env, home })] : raw;
+  const seen = /* @__PURE__ */ new Set();
+  const out = [];
+  for (const d of all) {
+    const key = platform === "win32" ? d.toLowerCase().replace(/[\\/]+$/, "") : d.replace(/\/+$/, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(d);
+  }
+  return out;
+}
+function windowsExts(env) {
+  const list = String(envGet(env, "PATHEXT") || ".COM;.EXE;.BAT;.CMD").split(";").map((e) => e.trim().toLowerCase()).filter((e) => e.startsWith("."));
+  if (!list.includes(".ps1")) list.push(".ps1");
+  return list;
+}
+function findOnPath(name, { platform = process.platform, env = process.env, home = homedir2(), extra = true, exists } = {}) {
+  if (!name) return [];
+  const p = platform === "win32" ? path.win32 : path.posix;
+  const check = exists ?? ((file) => defaultExists(file, platform));
+  if (name.includes("/") || platform === "win32" && name.includes("\\")) {
+    return check(name) ? [name] : [];
+  }
+  let names = [name];
+  if (platform === "win32") {
+    const exts = windowsExts(env);
+    const ext = p.extname(name).toLowerCase();
+    names = ext && exts.includes(ext) ? [name] : exts.map((e) => name + e);
+  }
+  const hits = [];
+  for (const dir of searchDirs({ platform, env, home, extra })) {
+    for (const n of names) {
+      const file = p.join(dir, n);
+      if (check(file) && !hits.includes(file)) hits.push(file);
+    }
+  }
+  return hits;
+}
+function findNode(opts = {}) {
+  return findOnPath("node", opts).find((file) => isNodeExecutable(file)) ?? null;
+}
+function isNodeExecutable(file) {
+  return /^node(\.exe)?$/i.test(String(file || "").split(/[\\/]/).pop() ?? "");
+}
+var init_pathscan = __esm({
+  "lib/pathscan.mjs"() {
+  }
+});
+
+// daemon/src/util/gitBash.ts
+import path2 from "node:path";
+import { statSync as statSync3 } from "node:fs";
+import { spawn } from "node:child_process";
+function envGet2(env, name) {
+  if (env[name] !== void 0) return env[name];
+  const lower = name.toLowerCase();
+  for (const k of Object.keys(env)) if (k.toLowerCase() === lower) return env[k];
+  return void 0;
+}
+function syncIsFile(p) {
+  try {
+    return statSync3(p).isFile();
+  } catch {
+    return false;
+  }
+}
+function withTimeout(p, ms) {
+  return new Promise((resolve4) => {
+    const t = setTimeout(() => resolve4(false), ms);
+    t.unref?.();
+    p.then((v) => {
+      clearTimeout(t);
+      resolve4(v);
+    }, () => {
+      clearTimeout(t);
+      resolve4(false);
+    });
+  });
+}
+function isWslBash(p, env = {}) {
+  const n = norm(p);
+  if (/\\windowsapps\\/.test(n + "\\")) return true;
+  if (/^[a-z]:\\windows\\(system32|syswow64|sysnative)\\/.test(n)) return true;
+  const root = envGet2(env, "SystemRoot") || envGet2(env, "windir");
+  if (root) {
+    const r = norm(root);
+    for (const sub of ["system32", "syswow64", "sysnative"]) if (n.startsWith(`${r}\\${sub}\\`)) return true;
+  }
+  return false;
+}
+function cleanPath(raw) {
+  return raw.trim().replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1").trim();
+}
+function checkBashPath(raw, deps = {}) {
+  const p = cleanPath(String(raw ?? ""));
+  if (!p) return { ok: false, reason: "empty" };
+  if (!/^[A-Za-z]:[\\/]/.test(p)) return { ok: false, reason: "relative" };
+  const base = W.basename(p).toLowerCase();
+  if (base !== "bash.exe" && base !== "sh.exe") return { ok: false, reason: "notBash" };
+  const env = deps.env ?? process.env;
+  if (isWslBash(p, env)) return { ok: false, reason: "wsl" };
+  const full = W.normalize(p);
+  if (!(deps.isFile ?? syncIsFile)(full)) return { ok: false, reason: "missing" };
+  return { ok: true, path: full };
+}
+function bashForGitDir(dir) {
+  const d = W.normalize(dir).replace(/[\\/]+$/, "");
+  const base = W.basename(d).toLowerCase();
+  const parent = W.dirname(d);
+  const out = [];
+  if (base === "bin" || base === "cmd") {
+    const pb = W.basename(parent).toLowerCase();
+    if (["mingw64", "mingw32", "clangarm64", "ucrt64", "usr"].includes(pb)) out.push(W.join(W.dirname(parent), "bin", "bash.exe"));
+    out.push(W.join(parent, "bin", "bash.exe"));
+  }
+  out.push(W.join(d, "bash.exe"));
+  return [...new Set(out)];
+}
+function knownBashCandidates(env, home) {
+  const out = [];
+  for (const v of ["ProgramFiles", "ProgramW6432", "ProgramFiles(x86)"]) {
+    const d = envGet2(env, v);
+    if (d) out.push(W.join(d, "Git", "bin", "bash.exe"));
+  }
+  out.push("C:\\Program Files\\Git\\bin\\bash.exe", "C:\\Program Files (x86)\\Git\\bin\\bash.exe");
+  const local = envGet2(env, "LOCALAPPDATA");
+  if (local) out.push(W.join(local, "Programs", "Git", "bin", "bash.exe"));
+  const scoop = envGet2(env, "SCOOP") || (home ? W.join(home, "scoop") : "");
+  if (scoop) out.push(W.join(scoop, "apps", "git", "current", "bin", "bash.exe"));
+  const seen = /* @__PURE__ */ new Set();
+  return out.filter((p) => seen.has(norm(p)) ? false : (seen.add(norm(p)), true));
+}
+function driveBashCandidates(drives) {
+  const out = [];
+  for (const raw of drives) {
+    const L = raw.replace(/[:\\/]/g, "").toUpperCase();
+    if (!/^[A-Z]$/.test(L)) continue;
+    out.push(`${L}:\\Git\\bin\\bash.exe`, `${L}:\\Program Files\\Git\\bin\\bash.exe`);
+  }
+  return out;
+}
+async function findGitBash(manual, deps = {}) {
+  const env = deps.env ?? process.env;
+  const isFile = deps.isFile ?? syncIsFile;
+  const ok = (p) => !isWslBash(p, env) && isFile(p);
+  let manualError;
+  if (manual && cleanPath(manual)) {
+    const c = checkBashPath(manual, { ...deps, env });
+    if (c.ok) return { found: { path: c.path, source: "manual" } };
+    manualError = c;
+  }
+  for (const v of ["CLAUDE_CODE_GIT_BASH_PATH", "OPENCODE_GIT_BASH_PATH"]) {
+    const c = checkBashPath(envGet2(env, v), { ...deps, env });
+    if (c.ok) return { found: { path: c.path, source: "env" }, manualError };
+  }
+  for (const git of findOnPath("git.exe", { platform: "win32", env, extra: false, exists: isFile })) {
+    for (const b of bashForGitDir(W.dirname(git))) if (ok(b)) return { found: { path: b, source: "git" }, manualError };
+  }
+  for (const b of knownBashCandidates(env, deps.home)) if (ok(b)) return { found: { path: b, source: "known" }, manualError };
+  const drives = driveBashCandidates(deps.drives ?? ALL_DRIVES);
+  const ms = deps.probeTimeoutMs ?? 1500;
+  const list = drives.filter((p) => !isWslBash(p, env));
+  const hit = deps.isFileAsync ? await Promise.all(list.map((p) => withTimeout(deps.isFileAsync(p), ms))).then((h) => list[h.indexOf(true)] ?? null) : await probeInChild(list, ms);
+  if (hit) return { found: { path: hit, source: "drive" }, manualError };
+  for (const b of findOnPath("bash.exe", { platform: "win32", env, extra: false, exists: isFile })) {
+    if (!isWslBash(b, env)) return { found: { path: b, source: "path" }, manualError };
+  }
+  return { found: null, manualError };
+}
+function probeInChild(paths, ms) {
+  if (!paths.length) return Promise.resolve(null);
+  const script = "const fs=require('fs');const p=JSON.parse(process.argv[1]);p.forEach((x,i)=>fs.stat(x,(e,s)=>{if(!e&&s.isFile())process.stdout.write(i+'\\n')}));";
+  return new Promise((resolve4) => {
+    const hits = /* @__PURE__ */ new Set();
+    let out = "";
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      try {
+        child.kill();
+      } catch {
+      }
+      const first = [...hits].sort((a, b) => a - b)[0];
+      resolve4(first === void 0 ? null : paths[first] ?? null);
+    };
+    const child = spawn(process.execPath, ["-e", script, JSON.stringify(paths)], { stdio: ["ignore", "pipe", "ignore"], windowsHide: true });
+    const timer = setTimeout(finish, ms);
+    child.stdout?.setEncoding("utf8");
+    child.stdout?.on("data", (d) => {
+      out += d;
+      for (const line of out.split("\n").slice(0, -1)) if (/^\d+$/.test(line)) hits.add(Number(line));
+      out = out.slice(out.lastIndexOf("\n") + 1);
+      if (hits.has(0)) finish();
+    });
+    child.on("error", finish);
+    child.on("close", finish);
+  });
+}
+function bashPathDir(bash, isFile = syncIsFile) {
+  const dir = W.dirname(W.normalize(bash));
+  if (/\\usr\\bin$/i.test(dir)) {
+    const top = W.join(W.dirname(W.dirname(dir)), "bin");
+    if (isFile(W.join(top, "bash.exe"))) return top;
+  }
+  return dir;
+}
+function bashEnv(found, env, isFile = syncIsFile) {
+  if (!found) return {};
+  const out = {
+    CLAUDE_CODE_GIT_BASH_PATH: found.path,
+    OPENCODE_GIT_BASH_PATH: found.path
+  };
+  const dir = bashPathDir(found.path, isFile);
+  const first = findOnPath("bash.exe", { platform: "win32", env, extra: false, exists: isFile })[0];
+  if (!first || norm(first) !== norm(W.join(dir, "bash.exe"))) {
+    const key = Object.keys(env).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
+    const rest = String(env[key] ?? "").split(";").filter((d) => d && norm(d.replace(/^"(.*)"$/, "$1")) !== norm(dir));
+    out[key] = [dir, ...rest].join(";");
+  }
+  return out;
+}
+var W, GIT_FOR_WINDOWS_URL, norm, ALL_DRIVES;
+var init_gitBash = __esm({
+  "daemon/src/util/gitBash.ts"() {
+    init_pathscan();
+    W = path2.win32;
+    GIT_FOR_WINDOWS_URL = "https://git-scm.com/download/win";
+    norm = (p) => W.normalize(p).replace(/[\\/]+$/, "").toLowerCase();
+    ALL_DRIVES = "CDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  }
+});
+
+// daemon/src/util/agentShell.ts
+import { homedir as homedir3 } from "node:os";
+function refreshAgentShell(manual, o = {}) {
+  const platform = o.platform ?? process.platform;
+  const my = ++generation;
+  const m = typeof manual === "string" ? manual : "";
+  if (platform !== "win32") {
+    status = { needed: false, found: null, manual: m };
+    ready = Promise.resolve();
+    return ready;
+  }
+  const env = o.deps?.env ?? process.env;
+  ready = findGitBash(m, { home: homedir3(), ...o.deps, env }).then(({ found, manualError }) => {
+    if (my !== generation) return;
+    status = { needed: true, found, manual: m, ...manualError && !manualError.ok ? { manualError: manualError.reason } : {} };
+    isFileDep = o.deps?.isFile;
+    if (found) log("info", `Git Bash: ${found.path} (${found.source})`);
+    else log("warn", "Git Bash not found; agents that need bash (Claude Code, Pi, dsh) will show a hint");
+  }).catch((e) => {
+    log("warn", "Git Bash detection failed", { err: String(e) });
+  });
+  return ready;
+}
+function agentShellReady(ms = 3e3) {
+  return Promise.race([ready, new Promise((r) => setTimeout(r, ms).unref?.())]);
+}
+function agentShellStatus() {
+  return status;
+}
+function bashMissingFor(providerId) {
+  return status.needed && !status.found && BASH_AGENTS.has(providerId);
+}
+function withAgentShell(env) {
+  if (!status.needed || !status.found) return env;
+  const overrides = bashEnv(status.found, env, isFileDep);
+  const out = { ...env };
+  for (const [k, v] of Object.entries(overrides)) {
+    const same = Object.keys(out).find((x) => x.toUpperCase() === k.toUpperCase() && x !== k);
+    if (same && k.toUpperCase() === "PATH") delete out[same];
+    out[k] = v;
+  }
+  return out;
+}
+var status, isFileDep, ready, generation, BASH_AGENTS;
+var init_agentShell = __esm({
+  "daemon/src/util/agentShell.ts"() {
+    init_gitBash();
+    init_log();
+    status = { needed: process.platform === "win32", found: null, manual: "" };
+    ready = Promise.resolve();
+    generation = 0;
+    BASH_AGENTS = /* @__PURE__ */ new Set(["claude", "pi", "dsh"]);
+  }
+});
+
+// daemon/src/util/bin.ts
+import { execFileSync, spawn as spawn2 } from "node:child_process";
+import { readFile as readFile3 } from "node:fs/promises";
+import { existsSync as existsSync4 } from "node:fs";
+import path3 from "node:path";
+function which(name) {
+  return findOnPath(name);
+}
+function escapeCmdCommand(cmd) {
+  return cmd.replace(CMD_META, "^$1");
+}
+function escapeCmdArgument(arg, doubleEscape) {
+  let a = String(arg);
+  a = a.replace(/(\\*)"/g, '$1$1\\"');
+  a = a.replace(/(\\*)$/, "$1$1");
+  a = `"${a}"`;
+  a = a.replace(CMD_META, "^$1");
+  if (doubleEscape) a = a.replace(CMD_META, "^$1");
+  return a;
+}
+function argvFor(r, args) {
+  if (r.via === "cmd-shim" && r.shim) {
+    const line = [escapeCmdCommand(r.shim), ...args.map((a) => escapeCmdArgument(a, true))].join(" ");
+    return { cmd: r.cmd, args: ["/d", "/s", "/c", `"${line}"`], windowsVerbatimArguments: true };
+  }
+  return { cmd: r.cmd, args: [...r.prefixArgs, ...args] };
+}
+function reapOnExit() {
+  for (const pid of liveTrees) {
+    try {
+      if (IS_WIN) execFileSync("taskkill", ["/pid", String(pid), "/T", "/F"], { stdio: "ignore", windowsHide: true, timeout: 3e3 });
+      else process.kill(-pid, "SIGKILL");
+    } catch {
+    }
+  }
+  liveTrees.clear();
+}
+function trackTree(child) {
+  if (child.pid == null) return;
+  const pid = child.pid;
+  liveTrees.add(pid);
+  child.once("exit", () => liveTrees.delete(pid));
+  if (!exitHookInstalled) {
+    exitHookInstalled = true;
+    process.once("exit", reapOnExit);
+  }
+}
+function spawnBin(r, args, opts = {}) {
+  const a = argvFor(r, args);
+  const { group, ...rest } = opts;
+  const child = spawn2(a.cmd, a.args, {
+    windowsHide: true,
+    ...rest,
+    // Windows: Git Bash for the agent (CLAUDE_CODE_GIT_BASH_PATH, OPENCODE_GIT_BASH_PATH, PATH); unchanged elsewhere
+    env: withAgentShell(rest.env ?? process.env),
+    ...a.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {},
+    ...group && !IS_WIN ? { detached: true } : {}
+  });
+  if (group) trackTree(child);
+  return child;
+}
+function shimTarget(cmdText, cmdDir, deps = {}) {
+  const exists = deps.exists ?? existsSync4;
+  const P = deps.win ?? IS_WIN ? path3.win32 : path3;
+  const cands = [];
+  const re = /"([^"]+?\.(?:js|mjs|cjs|exe|cmd|bat))"/gi;
+  let m;
+  while (m = re.exec(cmdText)) cands.push(m[1]);
+  const re2 = /(?:%~?dp0%?)?[A-Za-z]:?[\\/\w.@-]*?\.(?:js|mjs|cjs|exe)\b/gi;
+  while (m = re2.exec(cmdText)) cands.push(m[0]);
+  const found = [];
+  for (const raw of cands) {
+    let p = raw.replace(/%~?dp0%?/gi, "");
+    p = p.replace(/%[A-Z_]+%/gi, "");
+    p = p.trim().replace(/^[\\/]+/, "");
+    if (!p || /%\w+%/.test(p) || !/\.(js|mjs|cjs|exe)$/i.test(p)) continue;
+    if (!P.isAbsolute(p)) {
+      if (!cmdDir) continue;
+      p = P.join(cmdDir, p);
+    }
+    if (exists(p)) found.push(P.resolve(p));
+  }
+  return found.find((f) => /\.(js|mjs|cjs)$/i.test(f)) ?? found.find((f) => /\.exe$/i.test(f) && !isNodeExecutable(P.basename(f))) ?? null;
+}
+function findNode2() {
+  if (isNodeExecutable(process.execPath)) return process.execPath;
+  return findNode() ?? "node";
+}
+async function resolveBin(name) {
+  const hit = cache.get(name);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.out;
+  const out = await resolveBinUncached(name);
+  cache.set(name, { out, at: Date.now() });
+  return out;
+}
+async function resolveFirstBin(names) {
+  const uniq = [...new Set(names.filter(Boolean))];
+  for (const binName of uniq) {
+    const r = await resolveBin(binName);
+    if (r.ok) return { ...r, binName };
+  }
+  const label = uniq[0] ?? "cli";
+  return { ok: false, reason: tr("bin.notOnPath", { name: uniq.length > 1 ? uniq.join(tr("bin.or")) : label }) };
+}
+function clearBinCache(name) {
+  if (name) cache.delete(name);
+  else cache.clear();
+}
+function resolveBinUncached(name) {
+  return resolveBinWith(name);
+}
+async function resolveBinWith(name, deps = {}) {
+  const platform = deps.platform ?? process.platform;
+  const win = platform === "win32";
+  const P = win ? path3.win32 : path3.posix;
+  const exists = deps.exists ?? existsSync4;
+  const hits = (deps.find ?? which)(name);
+  if (!hits.length) return { ok: false, reason: tr("bin.notOnPath", { name }) };
+  const first = hits[0];
+  if (!win) return { ok: true, cmd: first, prefixArgs: [], display: first, via: "path" };
+  const ext = P.extname(first).toLowerCase();
+  if (ext === ".exe" || ext === ".com") return { ok: true, cmd: first, prefixArgs: [], display: first, via: "exe" };
+  if (ext === ".ps1") {
+    return {
+      ok: true,
+      cmd: "powershell.exe",
+      prefixArgs: ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", first],
+      display: first,
+      via: "ps1"
+    };
+  }
+  const dir = P.dirname(first);
+  if (name.toLowerCase() === "npx") {
+    const node = P.join(dir, "node.exe");
+    const cli = P.join(dir, "node_modules", "npm", "bin", "npx-cli.js");
+    if (exists(node) && exists(cli))
+      return { ok: true, cmd: node, prefixArgs: [cli], display: `${node} ${cli}`, via: "npx-shim" };
+  }
+  const text = await (deps.readText ?? ((f) => readFile3(f, "utf8")))(first).catch(() => "");
+  const target = shimTarget(text, dir, { exists, win: true });
+  if (target && /\.(js|mjs|cjs)$/i.test(target)) {
+    const node = (deps.node ?? findNode2)();
+    return { ok: true, cmd: node, prefixArgs: [target], display: `${node} ${target}`, via: "shim-js" };
+  }
+  if (target && /\.exe$/i.test(target)) {
+    return { ok: true, cmd: target, prefixArgs: [], display: target, via: "shim-exe" };
+  }
+  const comspec = deps.comspec ?? (process.env.ComSpec || "cmd.exe");
+  return { ok: true, cmd: comspec, prefixArgs: [], display: first, via: "cmd-shim", shim: first };
+}
+function killTree(child, { graceMs = 3e3 } = {}) {
+  if (!child || child.pid == null) return Promise.resolve();
+  const pid = child.pid;
+  if (IS_WIN) {
+    return new Promise((resolvePromise) => {
+      const tk = spawn2("taskkill", ["/pid", String(pid), "/T", "/F"], { windowsHide: true });
+      tk.on("error", () => {
+        try {
+          child.kill();
+        } catch {
+        }
+        resolvePromise();
+      });
+      tk.on("close", () => resolvePromise());
+      setTimeout(resolvePromise, graceMs + 2e3);
+    });
+  }
+  return new Promise((resolvePromise) => {
+    let done = false;
+    const finish = () => {
+      if (!done) {
+        done = true;
+        resolvePromise();
+      }
+    };
+    try {
+      process.kill(-pid, "SIGTERM");
+    } catch {
+      try {
+        child.kill("SIGTERM");
+      } catch {
+      }
+    }
+    if (child.exitCode !== null || child.signalCode !== null) {
+      finish();
+      return;
+    }
+    const t = setTimeout(() => {
+      try {
+        process.kill(-pid, "SIGKILL");
+      } catch {
+        try {
+          child.kill("SIGKILL");
+        } catch {
+        }
+      }
+      finish();
+    }, graceMs);
+    t.unref?.();
+    child.on("close", () => {
+      clearTimeout(t);
+      finish();
+    });
+  });
+}
+var IS_WIN, cache, CACHE_MS, CMD_META, liveTrees, exitHookInstalled;
+var init_bin = __esm({
+  "daemon/src/util/bin.ts"() {
+    init_pathscan();
+    init_i18n();
+    init_agentShell();
+    IS_WIN = process.platform === "win32";
+    cache = /* @__PURE__ */ new Map();
+    CACHE_MS = 60 * 1e3;
+    CMD_META = /([()\][%!^"`<>&|;, *?])/g;
+    liveTrees = /* @__PURE__ */ new Set();
+    exitHookInstalled = false;
+  }
+});
+
+// daemon/src/agents/kinds.ts
+import { existsSync as existsSync5 } from "node:fs";
+import { isAbsolute, resolve as resolve2 } from "node:path";
+function relPath(p, cwd) {
+  if (!p) return "";
+  const s = String(p);
+  if (!cwd) return s;
+  const norm2 = (x) => x.replace(/\\/g, "/").replace(/\/+$/, "");
+  const a = norm2(s);
+  const b = norm2(cwd);
+  if (a.toLowerCase().startsWith(b.toLowerCase() + "/")) return a.slice(b.length + 1);
+  if (a.toLowerCase() === b.toLowerCase()) return ".";
+  return s;
+}
+function targetExists(input, cwd = "") {
+  const p = String(input.file_path ?? input.path ?? "");
+  if (!p) return false;
+  try {
+    return existsSync5(isAbsolute(p) || !cwd ? p : resolve2(cwd, p));
+  } catch {
+    return false;
+  }
+}
+function callInfo(name, input = {}, cwd = "") {
+  const t = String(name || "");
+  const f = (kind, title, detail) => ({ kind, title, detail });
+  const file = String(input.file_path ?? input.path ?? input.notebook_path ?? "");
+  switch (t) {
+    case "Read":
+      return f("read", tr("tool.read", { x: relPath(file, cwd) }), { path: file, offset: input.offset, limit: input.limit });
+    case "Edit":
+      return f("edit", tr("tool.edit", { x: relPath(file, cwd) }), { path: file, old: input.old_string, new: input.new_string });
+    case "MultiEdit":
+      return f("edit", tr("tool.multiEdit", { x: relPath(file, cwd), n: (input.edits || []).length }), { path: file, edits: input.edits ?? [] });
+    case "Write":
+      return f("write", tr(input._exists ? "tool.overwrite" : "tool.create", { x: relPath(file, cwd) }), { path: file, content: input.content });
+    case "NotebookEdit":
+      return f("edit", tr("tool.notebook", { x: relPath(String(input.notebook_path || file), cwd) }), { path: input.notebook_path ?? file });
+    case "Bash":
+      return f("bash", tr("tool.run", { x: trunc(String(input.command ?? "")) }), { command: input.command, description: input.description });
+    case "BashOutput":
+      return f("bash", tr("tool.output", { x: String(input.bash_id ?? "") }), { bashId: input.bash_id });
+    case "KillShell":
+      return f("bash", tr("tool.kill", { x: String(input.shell_id ?? "") }), { shellId: input.shell_id });
+    case "Grep":
+      return f("search", tr("tool.grep", { x: trunc(String(input.pattern ?? ""), 40) }), { pattern: input.pattern, path: input.path, glob: input.glob });
+    case "Glob":
+    case "LS":
+      return f("glob", tr("tool.glob", { x: trunc(String(input.pattern ?? input.path ?? ""), 40) }), { pattern: input.pattern, path: input.path });
+    case "WebFetch":
+      return f("web", tr("tool.fetch", { x: hostOf(String(input.url ?? "")) }), { url: input.url });
+    case "WebSearch":
+      return f("web", tr("tool.webSearch", { x: trunc(String(input.query ?? ""), 40) }), { query: input.query });
+    case "TodoWrite": {
+      const items = todoItems(input.todos ?? []);
+      const done = items.filter((x) => x.status === "done").length;
+      return f("todo", tr("tool.todo", { done, n: items.length }), { items });
+    }
+    case "Task":
+    case "Agent":
+      return f("task", tr("tool.task", { x: trunc(String(input.description ?? input.prompt ?? ""), 40) }), { description: input.description });
+    default:
+      break;
+  }
+  const m = /^mcp__([^_]+)__(.+)$/.exec(t);
+  if (m) return f("mcp", `${m[1]} \xB7 ${m[2]}`, { server: m[1], tool: m[2] });
+  return f("other", t || tr("tool.generic"), {});
+}
+function hostOf(url) {
+  try {
+    return new URL(url).host;
+  } catch {
+    return String(url || "").slice(0, 40);
+  }
+}
+function todoItems(todos = []) {
+  return todos.map((x) => ({
+    text: x.content || x.text || "",
+    status: x.status === "completed" ? "done" : x.status === "in_progress" ? "in_progress" : "pending"
+  }));
+}
+var MAX_CMD, trunc;
+var init_kinds = __esm({
+  "daemon/src/agents/kinds.ts"() {
+    init_i18n();
+    MAX_CMD = 80;
+    trunc = (s, n = MAX_CMD) => s.length > n ? s.slice(0, n - 1) + "\u2026" : s;
+  }
+});
+
+// daemon/src/providers/claude/map.ts
+function newMapState() {
+  return { blocks: /* @__PURE__ */ new Map(), msgId: "", itemIdByBlock: /* @__PURE__ */ new Map(), typeSeq: /* @__PURE__ */ new Map(), sawInterrupt: false };
+}
+function itemIdFor(st, blockIdx, blkType) {
+  const k = blockKind(blkType);
+  const n = st.typeSeq.get(k) ?? 0;
+  st.typeSeq.set(k, n + 1);
+  const id2 = `${st.msgId}:${k}${n}`;
+  st.itemIdByBlock.set(blockIdx, id2);
+  return id2;
+}
+function costIsReal(modelUsage) {
+  if (!modelUsage || typeof modelUsage !== "object") return true;
+  const names = Object.keys(modelUsage);
+  return names.every((n) => /claude|opus|sonnet|haiku/i.test(n));
+}
+function mapSdkMessage(m, st, cwd) {
+  const out = [];
+  if (!m || typeof m !== "object") return out;
+  const r = m;
+  if (r.type === "system") {
+    if (r.subtype === "init") {
+      const sid = str(r.session_id) ?? "";
+      if (sid) out.push({ type: "provider_session_id", id: sid });
+    }
+    if (r.subtype === "api_retry") {
+      out.push({ type: "notice", level: "warn", message: tr("notice.apiRetry", { n: String(r.attempt ?? "?") }) });
+    }
+    if (r.subtype === "compact_boundary") {
+      out.push({ type: "notice", level: "info", message: tr("notice.compacted") });
+    }
+    return out;
+  }
+  if (r.type === "stream_event") {
+    const e = rec(r.event);
+    if (e.type === "message_start") {
+      const mid = str(rec(e.message).id);
+      if (mid) st.msgId = mid;
+      st.blocks.clear();
+      st.itemIdByBlock.clear();
+      st.typeSeq.clear();
+      return out;
+    }
+    if (e.type === "content_block_start") {
+      const idx = typeof e.index === "number" ? e.index : 0;
+      const bt = str(rec(e.content_block).type) ?? "";
+      st.blocks.set(idx, bt);
+      itemIdFor(st, idx, bt);
+      return out;
+    }
+    if (e.type === "content_block_delta") {
+      const idx = typeof e.index === "number" ? e.index : 0;
+      const d = rec(e.delta);
+      const itemId = st.itemIdByBlock.get(idx) ?? itemIdFor(st, idx, d.type === "thinking_delta" ? "thinking" : "text");
+      if (d.type === "text_delta" && typeof d.text === "string" && d.text) {
+        out.push({ type: "assistant_delta", itemId, text: d.text });
+      } else if (d.type === "thinking_delta") {
+        const t = str(d.thinking) ?? str(d.text);
+        if (t) out.push({ type: "reasoning_delta", itemId, text: t });
+      }
+    }
+    return out;
+  }
+  if (r.type === "assistant") {
+    const mid = str(rec(r.message).id) ?? st.msgId ?? "";
+    const content = rec(r.message).content;
+    const parts = Array.isArray(content) ? content : [];
+    const seqs = /* @__PURE__ */ new Map();
+    parts.forEach((p) => {
+      const blk = rec(p);
+      const t = str(blk.type) ?? "";
+      const k = blockKind(t);
+      const n = seqs.get(k) ?? 0;
+      seqs.set(k, n + 1);
+      const itemId = `${mid}:${k}${n}`;
+      if (blk.type === "text" && typeof blk.text === "string" && blk.text) {
+        out.push({ type: "assistant_message", itemId, text: blk.text });
+      } else if (blk.type === "thinking" || blk.type === "redacted_thinking") {
+        const t2 = str(blk.thinking) ?? str(blk.text);
+        if (t2) out.push({ type: "reasoning", itemId, text: t2 });
+      } else if (blk.type === "tool_use") {
+        out.push(...mapToolUse(blk, cwd));
+      }
+    });
+    return out;
+  }
+  if (r.type === "user") {
+    const content = rec(r.message).content;
+    const parts = Array.isArray(content) ? content : [];
+    for (const p of parts) {
+      const blk = rec(p);
+      if (blk.type === "tool_result") {
+        const output = clean(contentText(blk.content));
+        out.push({
+          type: "tool_call",
+          itemId: str(blk.tool_use_id) ?? "",
+          kind: "other",
+          title: "",
+          status: blk.is_error ? "failed" : "ok",
+          output: output.length > MAX_OUTPUT ? output.slice(0, MAX_OUTPUT) : output
+        });
+      }
+    }
+    return out;
+  }
+  if (r.type === "result") {
+    const usage = rec(r.usage);
+    const num = (k) => typeof usage[k] === "number" ? usage[k] : 0;
+    out.push({
+      type: "usage",
+      inputTokens: num("input_tokens"),
+      outputTokens: num("output_tokens"),
+      cacheReadTokens: num("cache_read_input_tokens"),
+      costUsd: typeof r.total_cost_usd === "number" && costIsReal(r.modelUsage) ? r.total_cost_usd : 0
+    });
+    const subtype = str(r.subtype) ?? "";
+    const interrupted = st.sawInterrupt || /interrupt/i.test(subtype);
+    const isError = r.is_error === true;
+    out.push({
+      type: "turn_ended",
+      turnId: "",
+      // The session fills in the current turnId
+      status: interrupted ? "interrupted" : isError ? "failed" : "completed",
+      durationMs: typeof r.duration_ms === "number" ? r.duration_ms : void 0,
+      error: isError && !interrupted ? str(r.result) ?? subtype : void 0,
+      filesChanged: typeof r.num_turns === "number" ? void 0 : void 0
+    });
+    st.sawInterrupt = false;
+    return out;
+  }
+  return out;
+}
+function mapToolUse(blk, cwd) {
+  const input = rec(blk.input);
+  const name = str(blk.name) ?? "tool";
+  const id2 = str(blk.id) ?? "";
+  const info = callInfo(name, { ...input, _exists: name === "Write" ? targetExists(input, cwd) : true }, cwd);
+  let detail = info.detail;
+  if (info.kind === "edit" && (input.old_string !== void 0 || Array.isArray(input.edits))) {
+    detail = editDetail({ path: info.detail.path, old: input.old_string, new: input.new_string, edits: input.edits });
+  }
+  if (info.kind === "write" && typeof input.content === "string") {
+    const lines = input.content.split("\n");
+    detail = { path: info.detail.path, lines: lines.slice(0, 200), totalLines: lines.length };
+  }
+  const out = [
+    {
+      type: "tool_call",
+      itemId: id2,
+      kind: info.kind,
+      title: info.title,
+      status: "running",
+      input,
+      detail
+    }
+  ];
+  if (name === "TodoWrite") {
+    out.push({ type: "todo", items: todoItems(input.todos ?? []) });
+  }
+  return out;
+}
+function contentText(content) {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) return content.map((p) => str(rec(p).text) ?? "").join("");
+  return "";
+}
+var MAX_OUTPUT, ANSI_RE, clean, blockKind, rec, str;
+var init_map = __esm({
+  "daemon/src/providers/claude/map.ts"() {
+    init_kinds();
+    init_diff();
+    init_i18n();
+    MAX_OUTPUT = 20 * 1024;
+    ANSI_RE = /\x1b\[[0-9;]*[a-zA-Z]|\x1b\][^\x07]*\x07/g;
+    clean = (s) => String(s ?? "").replace(ANSI_RE, "");
+    blockKind = (t) => t === "thinking" || t === "redacted_thinking" ? "k" : t === "text" ? "t" : "x";
+    rec = (v) => v && typeof v === "object" ? v : {};
+    str = (v) => typeof v === "string" ? v : void 0;
+  }
+});
+
+// daemon/src/util/attachmentRefs.ts
+var attachmentRefs_exports = {};
+__export(attachmentRefs_exports, {
+  bindAttachmentStore: () => bindAttachmentStore,
+  resolveAttachmentRefs: () => resolveAttachmentRefs,
+  resolveImagePath: () => resolveImagePath
+});
+import { existsSync as existsSync6 } from "node:fs";
+function bindAttachmentStore(store) {
+  globalAttachmentStore = store;
+}
+async function lookupAttachmentPath(ref) {
+  const store = globalAttachmentStore;
+  if (!store || !validId(ref)) return null;
+  const att = await store.get(ref);
+  return att?.path ?? null;
+}
+async function resolveAttachmentRefs(store, refs) {
+  const out = [];
+  for (const a of refs) {
+    const att = validId(a.path) ? await store.get(a.path) : null;
+    if (att) {
+      out.push({ path: att.path, mime: att.mime || a.mime });
+      continue;
+    }
+    const viaGlobal = await lookupAttachmentPath(a.path);
+    if (viaGlobal) {
+      out.push({ path: viaGlobal, mime: a.mime });
+      continue;
+    }
+    if (existsSync6(a.path)) {
+      out.push(a);
+      continue;
+    }
+    throw new Error(tr("attachment.missing", { ref: a.path }));
+  }
+  return out;
+}
+async function resolveImagePath(ref) {
+  if (existsSync6(ref)) return ref;
+  const p = await lookupAttachmentPath(ref);
+  if (p) return p;
+  throw new Error(tr("attachment.missing", { ref }));
+}
+var globalAttachmentStore;
+var init_attachmentRefs = __esm({
+  "daemon/src/util/attachmentRefs.ts"() {
+    init_paths();
+    init_i18n();
+    globalAttachmentStore = null;
+  }
+});
+
+// daemon/src/util/attachmentKinds.ts
+function baseMime(mime) {
+  return String(mime ?? "").split(";")[0].trim().toLowerCase();
+}
+function attachmentKind(mime) {
+  const m = baseMime(mime);
+  if (MODEL_IMAGE_MIMES.has(m)) return "image";
+  if (m.startsWith("text/") || TEXT_APP.has(m)) return "text";
+  return "other";
+}
+function pathNote(kind, file) {
+  return `${kind === "image" ? "Attached image" : "Attached file"}: ${file}`;
+}
+var MODEL_IMAGE_MIMES, TEXT_APP;
+var init_attachmentKinds = __esm({
+  "daemon/src/util/attachmentKinds.ts"() {
+    MODEL_IMAGE_MIMES = /* @__PURE__ */ new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+    TEXT_APP = /* @__PURE__ */ new Set(["application/json", "application/xml", "application/yaml", "application/x-yaml", "application/toml", "application/javascript"]);
+  }
+});
+
+// daemon/src/providers/claude/content.ts
+import { readFile as readFile4, stat as stat3 } from "node:fs/promises";
+import { basename } from "node:path";
+async function buildClaudeContent(text, attachments) {
+  const media = [];
+  const notes = [];
+  const warnings = [];
+  for (const a of attachments) {
+    let file;
+    let size;
+    try {
+      file = await resolveImagePath(a.path);
+      size = (await stat3(file)).size;
+    } catch (e) {
+      warnings.push(`${a.path}: ${String(e?.message ?? e)}`);
+      continue;
+    }
+    const kind = attachmentKind(a.mime);
+    try {
+      if (kind === "image" && size <= CLAUDE_MAX_IMAGE_BYTES) {
+        const data = (await readFile4(file)).toString("base64");
+        media.push({ type: "image", source: { type: "base64", media_type: baseMime(a.mime), data } });
+        continue;
+      }
+      if (kind === "text" && size <= CLAUDE_MAX_TEXT_BYTES) {
+        const data = await readFile4(file, "utf8");
+        media.push({ type: "document", source: { type: "text", media_type: "text/plain", data }, title: basename(file), context: file });
+        continue;
+      }
+    } catch (e) {
+      warnings.push(`${basename(file)}: ${String(e?.message ?? e)}`);
+    }
+    notes.push(pathNote(kind, file));
+    if (kind === "other") warnings.push(`${basename(file)} (${baseMime(a.mime) || "unknown type"}) is not an image or a text file; sent its path`);
+    else if (kind === "image" && size > CLAUDE_MAX_IMAGE_BYTES) warnings.push(`${basename(file)}: ${(size / 1024 / 1024).toFixed(1)} MB, over Claude's 5 MB image limit; sent its path`);
+    else if (kind === "text" && size > CLAUDE_MAX_TEXT_BYTES) warnings.push(`${basename(file)}: ${(size / 1024 / 1024).toFixed(1)} MB, too large to attach inline; sent its path`);
+  }
+  const fullText = [text, ...notes.length ? [notes.join("\n")] : []].filter(Boolean).join("\n\n");
+  return { blocks: [...media, { type: "text", text: fullText }], warnings };
+}
+var CLAUDE_MAX_IMAGE_BYTES, CLAUDE_MAX_TEXT_BYTES;
+var init_content = __esm({
+  "daemon/src/providers/claude/content.ts"() {
+    init_attachmentRefs();
+    init_attachmentKinds();
+    CLAUDE_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    CLAUDE_MAX_TEXT_BYTES = 1024 * 1024;
+  }
+});
+
+// daemon/src/providers/launch.ts
+function launchFromSettings(settings, providerId) {
+  const c = settings.providerCommand?.[providerId];
+  const cmd = typeof c?.executable === "string" ? c.executable.trim() : "";
+  if (!cmd) return void 0;
+  const args = Array.isArray(c?.args) ? c.args.filter((a) => typeof a === "string") : [];
+  return { cmd, args };
+}
+function launchArgv(builtin, launch) {
+  return [...launch?.prefixArgs ?? [], ...builtin, ...launch?.args ?? []];
+}
+async function resolveLaunch(launch) {
+  const r = await resolveBin(launch.cmd);
+  if (r.ok) return r;
+  return { ok: false, reason: tr("launch.notFound", { cmd: launch.cmd }) };
+}
+function launchKey(launch) {
+  return launch ? `${launch.cmd}\0${(launch.prefixArgs ?? []).join("\0")}\0\0${(launch.args ?? []).join("\0")}` : "";
+}
+var init_launch = __esm({
+  "daemon/src/providers/launch.ts"() {
+    init_bin();
+    init_i18n();
+  }
+});
+
+// daemon/src/util/decode.ts
+import { spawnSync } from "node:child_process";
+function codePageLabel(cp3) {
+  const label = CP[cp3];
+  if (!label) return null;
+  try {
+    new TextDecoder(label);
+    return label;
+  } catch {
+    return null;
+  }
+}
+function labelForLocale(locale2) {
+  const l = locale2.toLowerCase();
+  if (/^zh[-_](tw|hk|mo|hant)/.test(l)) return codePageLabel(950);
+  if (l.startsWith("zh")) return codePageLabel(936);
+  if (l.startsWith("ja")) return codePageLabel(932);
+  if (l.startsWith("ko")) return codePageLabel(949);
+  return null;
+}
+function parseCodePage(out) {
+  const m = /ACP\s+REG_SZ\s+(\d{3,5})/i.exec(out) ?? /:\s*(\d{3,5})\s*$/m.exec(out.trim());
+  return m ? Number(m[1]) : null;
+}
+function systemLegacyEncoding(platform = process.platform) {
+  if (systemLabel !== void 0) return systemLabel;
+  if (platform !== "win32") return null;
+  let cp3 = null;
+  try {
+    const r = spawnSync("reg", ["query", "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage", "/v", "ACP"], { encoding: "latin1", timeout: 2e3, windowsHide: true });
+    cp3 = parseCodePage(String(r.stdout ?? ""));
+  } catch {
+  }
+  if (cp3 === 65001) return systemLabel = null;
+  systemLabel = cp3 && codePageLabel(cp3) || labelForLocale(Intl.DateTimeFormat().resolvedOptions().locale);
+  return systemLabel;
+}
+function utf8Tail(b) {
+  for (let k = 1; k <= Math.min(3, b.length); k++) {
+    const c = b[b.length - k];
+    if ((c & 192) === 128) continue;
+    const need = c >= 240 ? 4 : c >= 224 ? 3 : c >= 192 ? 2 : 1;
+    return need > k ? k : 0;
+  }
+  return 0;
+}
+function legacyTail(b, label) {
+  const dbcs = label === "gbk" || label === "gb18030" || label === "big5" || label === "euc-kr" || label === "shift_jis";
+  if (!dbcs) return 0;
+  const gb = label === "gbk" || label === "gb18030";
+  let i = 0;
+  while (i < b.length) {
+    const c = b[i];
+    let n = 1;
+    if (label === "shift_jis") n = c >= 129 && c <= 159 || c >= 224 && c <= 252 ? 2 : 1;
+    else if (c >= 129 && c <= 254) n = gb && i + 1 < b.length && b[i + 1] >= 48 && b[i + 1] <= 57 ? 4 : 2;
+    if (i + n > b.length) return b.length - i;
+    i += n;
+  }
+  return 0;
+}
+function hasLongUtf8(b) {
+  for (const c of b) if (c >= 224) return true;
+  return false;
+}
+function isAscii(b) {
+  for (const c of b) if (c >= 128) return false;
+  return true;
+}
+function decodeOutput(buf, legacy) {
+  const d = new OutputDecoder(legacy === void 0 ? systemLegacyEncoding() : legacy);
+  return d.write(buf) + d.end();
+}
+var CP, systemLabel, OutputDecoder;
+var init_decode = __esm({
+  "daemon/src/util/decode.ts"() {
+    CP = {
+      936: "gbk",
+      54936: "gb18030",
+      950: "big5",
+      932: "shift_jis",
+      949: "euc-kr",
+      866: "ibm866",
+      874: "windows-874",
+      1250: "windows-1250",
+      1251: "windows-1251",
+      1252: "windows-1252",
+      1253: "windows-1253",
+      1254: "windows-1254",
+      1255: "windows-1255",
+      1256: "windows-1256",
+      1257: "windows-1257",
+      1258: "windows-1258"
+      // 437/850 (OEM, Western) have no WHATWG decoder; output there is almost always ASCII or already UTF-8
+    };
+    OutputDecoder = class {
+      pending = new Uint8Array(0);
+      legacyLast = false;
+      utf8 = new TextDecoder("utf-8", { fatal: true });
+      lenient = new TextDecoder("utf-8");
+      legacy;
+      /** legacy: encoding label for non-UTF-8 chunks; default = the system code page on Windows, none elsewhere */
+      constructor(legacy = systemLegacyEncoding()) {
+        let d = null;
+        if (legacy) try {
+          d = new TextDecoder(legacy);
+        } catch {
+        }
+        this.legacy = d;
+      }
+      write(chunk) {
+        if (typeof chunk === "string") return chunk;
+        let b = chunk;
+        if (this.pending.length) {
+          const m = new Uint8Array(this.pending.length + chunk.length);
+          m.set(this.pending);
+          m.set(chunk, this.pending.length);
+          b = m;
+          this.pending = new Uint8Array(0);
+        }
+        if (!b.length) return "";
+        const ut = utf8Tail(b);
+        const head = b.subarray(0, b.length - ut);
+        let text = null;
+        try {
+          text = this.utf8.decode(head);
+        } catch {
+        }
+        if (text !== null) {
+          const ascii = isAscii(head);
+          if (!(this.legacy && this.legacyLast && !ascii && !hasLongUtf8(head))) {
+            if (!ascii) this.legacyLast = false;
+            this.pending = b.slice(b.length - ut);
+            return text;
+          }
+        }
+        if (!this.legacy) {
+          this.pending = b.slice(b.length - ut);
+          return this.lenient.decode(head);
+        }
+        this.legacyLast = true;
+        const lt = legacyTail(b, this.legacy.encoding);
+        this.pending = b.slice(b.length - lt);
+        return this.legacy.decode(b.subarray(0, b.length - lt));
+      }
+      /** Flush whatever is held back (a truncated character at the very end becomes U+FFFD) */
+      end() {
+        const b = this.pending;
+        this.pending = new Uint8Array(0);
+        if (!b.length) return "";
+        return (this.legacyLast && this.legacy ? this.legacy : this.lenient).decode(b);
+      }
+    };
+  }
+});
+
+// daemon/src/providers/claude/cli.ts
+function claudeArgs(o) {
+  const args = [
+    "-p",
+    "--input-format",
+    "stream-json",
+    "--output-format",
+    "stream-json",
+    "--verbose",
+    "--include-partial-messages",
+    "--permission-prompt-tool",
+    "stdio",
+    "--setting-sources",
+    "user,project,local"
+  ];
+  const put = (flag, v) => {
+    if (!v) return;
+    if (!SAFE_ARG.test(v)) throw new Error(`Refusing to pass an unexpected value to claude ${flag}: ${JSON.stringify(v).slice(0, 80)}`);
+    args.push(flag, v);
+  };
+  put("--permission-mode", o.permissionMode);
+  if (o.permissionMode === "bypassPermissions") args.push("--allow-dangerously-skip-permissions");
+  put("--model", o.model);
+  put("--effort", o.effort);
+  put("--resume", o.resume);
+  return args;
+}
+var SAFE_ARG, ClaudeCli;
+var init_cli = __esm({
+  "daemon/src/providers/claude/cli.ts"() {
+    init_launch();
+    init_bin();
+    init_queue();
+    init_decode();
+    SAFE_ARG = /^[A-Za-z0-9][A-Za-z0-9._:\[\]\/@+-]{0,199}$/;
+    ClaudeCli = class {
+      constructor(o, canUseTool) {
+        this.o = o;
+        this.canUseTool = canUseTool;
+        const args = launchArgv(claudeArgs(o), o.launch);
+        this.child = spawnBin(o.bin, args, {
+          cwd: o.cwd,
+          env: { ...o.env ?? process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
+          stdio: ["pipe", "pipe", "pipe"],
+          group: true
+        });
+        this.child.stdout?.setEncoding("utf8");
+        this.child.stdout?.on("data", (d) => this.onData(d));
+        const errDec = new OutputDecoder();
+        this.child.stderr?.on("data", (d) => {
+          this.stderrTail = (this.stderrTail + errDec.write(d)).slice(-4096);
+        });
+        this.child.stdin?.on("error", () => {
+        });
+        this.exited = new Promise((resolve4) => {
+          this.child.on("error", (e) => {
+            this.spawnError = e;
+            this.finish();
+            resolve4({ code: null, signal: null });
+          });
+          this.child.on("close", (code, signal) => {
+            this.finish();
+            resolve4({ code, signal });
+          });
+        });
+        this.initialized = this.request({ subtype: "initialize" }, 6e4).catch(() => null);
+      }
+      o;
+      canUseTool;
+      /** Conversation messages (everything that is not a control message) */
+      messages = new AsyncQueue();
+      exited;
+      /** The answer to initialize (commands, models, account …), null when it failed */
+      initialized;
+      /** Monotonic turn gen for THIS process (dies with the CLI). */
+      turnGen = 0;
+      /** Turn gens still waiting for a `result` from THIS process (dies with the CLI). */
+      awaitingResult = [];
+      /** Gens already ended locally on interrupt; their late `result` must be dropped. */
+      skipResultGens = /* @__PURE__ */ new Set();
+      child;
+      buf = "";
+      seq = 0;
+      pending = /* @__PURE__ */ new Map();
+      cancels = /* @__PURE__ */ new Map();
+      stderrTail = "";
+      dead = false;
+      spawnError = null;
+      get stderr() {
+        return this.stderrTail;
+      }
+      get failure() {
+        return this.spawnError;
+      }
+      get alive() {
+        return !this.dead;
+      }
+      finish() {
+        if (this.dead) return;
+        this.dead = true;
+        for (const [, p] of this.pending) {
+          if (p.timer) clearTimeout(p.timer);
+          p.reject(new Error("claude exited"));
+        }
+        this.pending.clear();
+        for (const [, c] of this.cancels) c.abort();
+        this.cancels.clear();
+        this.messages.close();
+      }
+      onData(d) {
+        this.buf += d;
+        let i;
+        while ((i = this.buf.indexOf("\n")) >= 0) {
+          const line = this.buf.slice(0, i).trim();
+          this.buf = this.buf.slice(i + 1);
+          if (!line) continue;
+          let m;
+          try {
+            m = JSON.parse(line);
+          } catch {
+            continue;
+          }
+          if (m && typeof m === "object") this.onMessage(m);
+        }
+      }
+      onMessage(m) {
+        if (m.type === "control_response") {
+          const r = m.response ?? {};
+          const id2 = String(r.request_id ?? "");
+          const p = this.pending.get(id2);
+          if (!p) return;
+          this.pending.delete(id2);
+          if (p.timer) clearTimeout(p.timer);
+          if (r.subtype === "success") p.resolve(r.response ?? {});
+          else p.reject(new Error(String(r.error ?? "control request failed")));
+          return;
+        }
+        if (m.type === "control_request") {
+          void this.onControlRequest(String(m.request_id ?? ""), m.request ?? {});
+          return;
+        }
+        if (m.type === "control_cancel_request") {
+          const id2 = String(m.request_id ?? "");
+          this.cancels.get(id2)?.abort();
+          this.cancels.delete(id2);
+          return;
+        }
+        if (m.type === "keep_alive") return;
+        this.messages.push(m);
+      }
+      async onControlRequest(id2, req) {
+        if (req.subtype !== "can_use_tool") {
+          this.write({ type: "control_response", response: { subtype: "error", request_id: id2, error: `Unsupported control request: ${String(req.subtype)}` } });
+          return;
+        }
+        const ac = new AbortController();
+        this.cancels.set(id2, ac);
+        try {
+          const decision = await this.canUseTool({
+            toolName: String(req.tool_name ?? ""),
+            input: req.input && typeof req.input === "object" ? req.input : {},
+            toolUseId: typeof req.tool_use_id === "string" ? req.tool_use_id : void 0,
+            signal: ac.signal
+          });
+          if (ac.signal.aborted && !this.cancels.has(id2)) return;
+          this.write({ type: "control_response", response: { subtype: "success", request_id: id2, response: decision } });
+        } catch (e) {
+          this.write({ type: "control_response", response: { subtype: "error", request_id: id2, error: String(e?.message ?? e) } });
+        } finally {
+          this.cancels.delete(id2);
+        }
+      }
+      write(o) {
+        if (this.dead || !this.child.stdin || this.child.stdin.destroyed) return false;
+        try {
+          this.child.stdin.write(JSON.stringify(o) + "\n");
+          return true;
+        } catch {
+          return false;
+        }
+      }
+      /** Send one control request and wait for its answer */
+      request(request, timeoutMs = 1e4) {
+        if (this.dead) return Promise.reject(new Error("claude is not running"));
+        const id2 = `ac_${++this.seq}_${Math.random().toString(36).slice(2, 8)}`;
+        return new Promise((resolve4, reject) => {
+          const p = { resolve: resolve4, reject };
+          p.timer = setTimeout(() => {
+            if (this.pending.delete(id2)) reject(new Error(`claude did not answer ${String(request.subtype)} in ${Math.round(timeoutMs / 1e3)} s`));
+          }, timeoutMs);
+          this.pending.set(id2, p);
+          if (!this.write({ type: "control_request", request_id: id2, request })) {
+            this.pending.delete(id2);
+            clearTimeout(p.timer);
+            reject(new Error("claude is not running"));
+          }
+        });
+      }
+      /** One user message into the conversation */
+      sendUser(content, sessionId) {
+        return this.write({ type: "user", message: { role: "user", content }, parent_tool_use_id: null, session_id: sessionId ?? "" });
+      }
+      interrupt() {
+        return this.request({ subtype: "interrupt" }, 5e3);
+      }
+      setModel(model) {
+        return this.request(model ? { subtype: "set_model", model } : { subtype: "set_model" });
+      }
+      setPermissionMode(mode2) {
+        return this.request({ subtype: "set_permission_mode", mode: mode2 });
+      }
+      /** End stdin (the CLI finishes and exits), then end the process tree if it lingers */
+      async close(graceMs = 2e3) {
+        try {
+          this.child.stdin?.end();
+        } catch {
+        }
+        const done = await Promise.race([this.exited.then(() => true), new Promise((r) => setTimeout(() => r(false), graceMs))]);
+        if (!done) await killTree(this.child, { graceMs: 500 });
+        this.finish();
+      }
+    };
+  }
+});
+
+// daemon/src/providers/claude/session.ts
+var EFFORTS, MODES, rid2, ClaudeSession;
+var init_session = __esm({
+  "daemon/src/providers/claude/session.ts"() {
+    init_queue();
+    init_kinds();
+    init_diff();
+    init_map();
+    init_log();
+    init_content();
+    init_i18n();
+    init_slash();
+    init_cli();
+    EFFORTS = ["low", "medium", "high", "xhigh", "max"];
+    MODES = ["plan", "default", "acceptEdits", "bypassPermissions"];
+    rid2 = () => Math.random().toString(36).slice(2, 10);
+    ClaudeSession = class {
+      constructor(o) {
+        this.o = o;
+        this.sessionId = o.resumeId;
+        this.events = this.q;
+      }
+      o;
+      events;
+      q = new AsyncQueue();
+      cli = null;
+      sessionId;
+      turnId = null;
+      turnNum = 0;
+      st = newMapState();
+      pending = /* @__PURE__ */ new Map();
+      needsRestart = false;
+      restarting = null;
+      closed = false;
+      stopping = /* @__PURE__ */ new WeakSet();
+      pumpDone = null;
+      /** Mode the running CLI was started with (bypassPermissions has to be allowed at launch) */
+      launchedMode = null;
+      // The CLI is only started before the first send (or a command list request)
+      ensureCli() {
+        if (this.cli && !this.needsRestart) return this.cli;
+        this.st = newMapState();
+        const effort = this.o.effort && EFFORTS.includes(this.o.effort) ? this.o.effort : null;
+        const cli = new ClaudeCli(
+          {
+            bin: this.o.bin,
+            cwd: this.o.cwd,
+            model: this.o.model,
+            permissionMode: MODES.includes(this.o.mode) ? this.o.mode : "default",
+            effort,
+            resume: this.sessionId,
+            env: this.o.env,
+            launch: this.o.launch
+          },
+          (req) => this.canUseTool(req)
+        );
+        this.cli = cli;
+        this.launchedMode = this.o.mode;
+        this.needsRestart = false;
+        this.pumpDone = this.pump(cli);
+        return cli;
+      }
+      async pump(cli) {
+        for await (const m of cli.messages) {
+          if (this.cli !== cli) continue;
+          for (const ev of mapSdkMessage(m, this.st, this.o.cwd)) {
+            if (ev.type === "turn_ended") {
+              const g = cli.awaitingResult.shift();
+              if (g != null && cli.skipResultGens.delete(g)) continue;
+            }
+            this.emit(ev);
+          }
+        }
+        const exit = await cli.exited;
+        if (this.closed || this.stopping.has(cli)) return;
+        const detail = cli.failure ? tr("claude.startFailed", { detail: String(cli.failure.message) }) : tr("claude.exited", { code: String(exit.code ?? exit.signal ?? "?") });
+        const tail = cli.stderr.trim().slice(-400);
+        this.emit({ type: "notice", level: "error", message: tail ? `${detail} \u2014 stderr: ${tail}` : detail });
+        if (this.turnId) this.emit({ type: "turn_ended", turnId: this.turnId, status: "failed", error: detail });
+        this.turnId = null;
+        if (this.cli === cli) {
+          this.needsRestart = true;
+        }
+      }
+      emit(ev) {
+        if (ev.type === "turn_ended" && !ev.turnId) ev.turnId = this.turnId ?? "unknown";
+        if (ev.type === "turn_ended") this.turnId = null;
+        if (ev.type === "provider_session_id" && ev.id) this.sessionId = ev.id;
+        this.q.push(ev);
+      }
+      async send(input) {
+        if (this.closed) throw new Error(tr("claude.closed"));
+        if (this.needsRestart) await this.restart();
+        const cli = this.ensureCli();
+        this.turnNum++;
+        const gen = ++cli.turnGen;
+        cli.awaitingResult.push(gen);
+        this.turnId = "u_" + Date.now().toString(36) + "_" + this.turnNum;
+        this.st.sawInterrupt = false;
+        this.emit({
+          type: "turn_started",
+          turnId: this.turnId,
+          model: this.o.model,
+          mode: this.o.mode,
+          effort: this.o.effort
+        });
+        const built = await buildClaudeContent(input.text, input.images ?? []);
+        for (const w of built.warnings) this.emit({ type: "notice", level: "warn", message: tr("notice.attachmentIssue", { detail: w }) });
+        if (!cli.sendUser(built.blocks, this.sessionId)) throw new Error(tr("claude.notRunning"));
+      }
+      async restart() {
+        if (this.restarting) return this.restarting;
+        this.restarting = (async () => {
+          const old = this.cli;
+          this.cli = null;
+          if (old) {
+            this.stopping.add(old);
+            await old.close().catch(() => {
+            });
+          }
+          if (this.pumpDone) await this.pumpDone.catch(() => {
+          });
+          try {
+            this.ensureCli();
+          } finally {
+            this.restarting = null;
+          }
+        })();
+        return this.restarting;
+      }
+      // ---- permissions (§7.2.4) ----
+      canUseTool(req) {
+        const { toolName, input, signal } = req;
+        const requestId = "perm_" + rid2();
+        const opts = { toolUseID: req.toolUseId };
+        if (toolName === "ExitPlanMode") {
+          return this.handlePlanMode(requestId, input, signal, opts.toolUseID);
+        }
+        if (toolName === "AskUserQuestion" && Array.isArray(input.questions)) {
+          return this.handleQuestion(requestId, input, signal);
+        }
+        const info = callInfo(toolName, { ...input, _exists: toolName === "Write" ? targetExists(input, this.o.cwd) : true }, this.o.cwd);
+        let detail = { ...info.detail, toolName };
+        if (info.kind === "edit" && (input.old_string !== void 0 || Array.isArray(input.edits))) {
+          detail = { ...editDetail({ path: info.detail.path, old: input.old_string, new: input.new_string, edits: input.edits }), toolName };
+        }
+        this.emit({
+          type: "permission_request",
+          requestId,
+          title: info.title,
+          kind: "tool",
+          detail,
+          options: [
+            { id: "allow", label: tr("perm.allow"), kind: "allow_once" },
+            { id: "allow_always", label: tr("perm.allowSession"), kind: "allow_always" },
+            { id: "deny", label: tr("perm.deny"), kind: "reject_once" }
+          ]
+        });
+        return new Promise((resolve4) => {
+          this.pending.set(requestId, { kind: "permission", resolve: (a) => resolve4(this.toPermissionDecision(a, input)) });
+          signal.addEventListener("abort", () => {
+            if (this.pending.delete(requestId)) {
+              this.emit({ type: "permission_resolved", requestId, cancelled: true });
+              resolve4({ behavior: "deny", message: "Cancelled by the user", interrupt: true });
+            }
+          }, { once: true });
+        });
+      }
+      toPermissionDecision(a, input) {
+        if (a.cancelled || a.optionId === "deny") {
+          return { behavior: "deny", message: "The user denied this action", ...a.cancelled ? { interrupt: true } : {} };
+        }
+        return { behavior: "allow", updatedInput: input };
+      }
+      async handlePlanMode(requestId, input, signal, toolUseID) {
+        const planText = typeof input.plan === "string" ? input.plan : "";
+        if (planText) {
+          this.emit({ type: "plan", itemId: toolUseID ?? requestId, markdown: planText });
+        }
+        this.emit({
+          type: "permission_request",
+          requestId,
+          title: tr("perm.plan"),
+          kind: "plan",
+          detail: { plan: planText },
+          options: [
+            { id: "implement", label: tr("perm.implement"), kind: "allow_once" },
+            { id: "reject", label: tr("perm.deny"), kind: "reject_once" }
+          ]
+        });
+        const answer = await new Promise((resolve4) => {
+          this.pending.set(requestId, { kind: "permission", resolve: (a) => resolve4(a) });
+          signal.addEventListener("abort", () => {
+            if (this.pending.delete(requestId)) {
+              this.emit({ type: "permission_resolved", requestId, cancelled: true });
+              resolve4({ cancelled: true });
+            }
+          }, { once: true });
+        });
+        if (answer.cancelled || answer.optionId === "reject") {
+          return { behavior: "deny", message: "The user rejected the plan; revise it based on their feedback", ...answer.cancelled ? { interrupt: true } : {} };
+        }
+        try {
+          await this.cli?.setPermissionMode("default");
+          this.o.mode = "default";
+          this.o.onModeChange?.("default");
+        } catch (e) {
+          log("warn", "setPermissionMode(default) \u5931\u8D25", { err: String(e) });
+        }
+        return { behavior: "allow", updatedInput: input };
+      }
+      async handleQuestion(requestId, input, signal) {
+        this.emit({ type: "question", requestId, questions: input.questions });
+        const answer = await new Promise((resolve4) => {
+          this.pending.set(requestId, { kind: "question", resolve: (a) => resolve4(a) });
+          signal.addEventListener("abort", () => {
+            if (this.pending.delete(requestId)) {
+              this.emit({ type: "permission_resolved", requestId, cancelled: true });
+              resolve4({ cancelled: true });
+            }
+          }, { once: true });
+        });
+        if (answer.cancelled) {
+          return { behavior: "deny", message: "The user cancelled the question", interrupt: true };
+        }
+        const questions = input.questions ?? [];
+        const normalized = {};
+        for (const ques of questions) {
+          const text = ques.question;
+          if (!text) continue;
+          const v = answer.answers?.[text] ?? (ques.header ? answer.answers?.[ques.header] : void 0);
+          if (v) normalized[text] = v;
+        }
+        return { behavior: "allow", updatedInput: { ...input, answers: normalized } };
+      }
+      respond(requestId, answer) {
+        const p = this.pending.get(requestId);
+        if (p) {
+          this.pending.delete(requestId);
+          p.resolve(answer);
+        }
+      }
+      async interrupt() {
+        this.st.sawInterrupt = true;
+        for (const [id2, p] of this.pending) {
+          this.emit({ type: "permission_resolved", requestId: id2, cancelled: true });
+          p.resolve({ cancelled: true });
+        }
+        this.pending.clear();
+        const cli = this.cli;
+        const endLocal = () => {
+          if (this.turnId) {
+            const gen = cli?.awaitingResult.at(-1);
+            if (gen != null) cli.skipResultGens.add(gen);
+            this.emit({ type: "turn_ended", turnId: this.turnId, status: "interrupted" });
+          }
+        };
+        if (!cli || !cli.alive) {
+          endLocal();
+          return;
+        }
+        try {
+          await cli.interrupt();
+        } catch (e) {
+          log("warn", "claude interrupt failed", { err: String(e) });
+          this.stopping.add(cli);
+          this.needsRestart = true;
+          void cli.close(500);
+          if (this.turnId) {
+            this.emit({ type: "turn_ended", turnId: this.turnId, status: "interrupted" });
+          }
+          return;
+        }
+        endLocal();
+      }
+      async setModel(model) {
+        this.o.model = model;
+        if (!this.cli?.alive) return;
+        try {
+          await this.cli.setModel(model);
+        } catch (e) {
+          log("warn", "claude set_model failed", { err: String(e) });
+          this.needsRestart = true;
+        }
+      }
+      async setMode(mode2) {
+        this.o.mode = mode2;
+        if (!this.cli?.alive) return;
+        if (mode2 === "bypassPermissions" && this.launchedMode !== "bypassPermissions") {
+          this.needsRestart = true;
+          return;
+        }
+        try {
+          await this.cli.setPermissionMode(mode2);
+        } catch (e) {
+          log("warn", "claude set_permission_mode failed", { err: String(e) });
+          this.needsRestart = true;
+        }
+      }
+      async setEffort(effort) {
+        this.o.effort = effort;
+        this.needsRestart = true;
+      }
+      async listCommands() {
+        try {
+          const init = await this.ensureCli().initialized;
+          const commands = Array.isArray(init?.commands) ? init.commands : [];
+          const map = /* @__PURE__ */ new Map();
+          for (const cmd of commands) {
+            if (cmd?.name && !map.has(cmd.name)) {
+              map.set(cmd.name, {
+                name: cmd.name,
+                description: cmd.description ?? "",
+                argumentHint: cmd.argumentHint,
+                kind: classifyClaudeSlashCommand(cmd.name)
+              });
+            }
+          }
+          return sortSlashCommands([...map.values()]);
+        } catch {
+          return [];
+        }
+      }
+      async close() {
+        this.closed = true;
+        for (const [, p] of this.pending) p.resolve({ cancelled: true });
+        this.pending.clear();
+        const cli = this.cli;
+        if (cli) {
+          this.stopping.add(cli);
+          await cli.close().catch(() => {
+          });
+        }
+        if (this.pumpDone) {
+          await Promise.race([this.pumpDone.catch(() => {
+          }), new Promise((r) => setTimeout(r, 3e3))]);
+        }
+        this.q.close();
+      }
+    };
+  }
+});
+
+// daemon/src/providers/claude/models.ts
+async function listClaudeModels() {
+  return [];
+}
+var init_models = __esm({
+  "daemon/src/providers/claude/models.ts"() {
+  }
+});
+
+// daemon/src/history/import.ts
+import { readdir, readFile as readFile5, stat as stat4 } from "node:fs/promises";
+import { existsSync as existsSync7 } from "node:fs";
+import { join as join6 } from "node:path";
+import { homedir as homedir4 } from "node:os";
+function parseLine(line) {
+  let r;
+  try {
+    r = rec2(JSON.parse(line));
+  } catch {
+    return null;
+  }
+  const cwd = str2(r.cwd);
+  let userText;
+  if (r.type === "user") {
+    const content = rec2(r.message).content;
+    if (typeof content === "string") userText = content;
+    else if (Array.isArray(content)) {
+      const t = content.map((p) => rec2(p).type === "text" ? str2(rec2(p).text) : void 0).find(Boolean);
+      userText = t;
+    }
+  }
+  return { cwd, userText };
+}
+async function* linesOf(path5) {
+  const text = await readFile5(path5, "utf8").catch(() => "");
+  for (const line of text.split("\n")) {
+    if (line.trim()) yield line;
+  }
+}
+async function listClaudeHistory(cwd) {
+  const out = [];
+  const dirs = await readdir(CLAUDE_ROOT).catch(() => []);
+  for (const d of dirs) {
+    const dirPath = join6(CLAUDE_ROOT, d);
+    const files = (await readdir(dirPath).catch(() => [])).filter((f) => f.endsWith(".jsonl"));
+    for (const f of files) {
+      const path5 = join6(dirPath, f);
+      let match = false;
+      let title = "";
+      let count = 0;
+      for await (const line of linesOf(path5)) {
+        const p = parseLine(line);
+        if (!p) continue;
+        if (!match) {
+          if (!p.cwd) continue;
+          match = samePath(p.cwd, cwd);
+          if (!match) break;
+        }
+        if (p.userText && !title) title = p.userText.slice(0, 40);
+        if (p.userText) count++;
+      }
+      if (!match) continue;
+      const s = await stat4(path5).catch(() => null);
+      out.push({
+        sessionId: f.replace(/\.jsonl$/, ""),
+        title: title || tr("history.untitled"),
+        updatedAt: s ? Math.round(s.mtimeMs) : 0,
+        messageCount: count
+      });
+    }
+  }
+  out.sort((a, b) => b.updatedAt - a.updatedAt);
+  return out;
+}
+async function readClaudeHistory(sessionId, cwd) {
+  const dirs = await readdir(CLAUDE_ROOT).catch(() => []);
+  for (const d of dirs) {
+    const path5 = join6(CLAUDE_ROOT, d, `${sessionId}.jsonl`);
+    if (!existsSync7(path5)) continue;
+    const msgs = [];
+    let matched = false;
+    for await (const line of linesOf(path5)) {
+      const p = parseLine(line);
+      if (!matched) {
+        if (p?.cwd && samePath(p.cwd, cwd)) matched = true;
+        else continue;
+      }
+      let r;
+      try {
+        r = rec2(JSON.parse(line));
+      } catch {
+        continue;
+      }
+      if (r.type === "user" || r.type === "assistant") msgs.push(r);
+    }
+    return msgs;
+  }
+  return [];
+}
+var CLAUDE_ROOT, rec2, str2;
+var init_import = __esm({
+  "daemon/src/history/import.ts"() {
+    init_paths();
+    init_i18n();
+    CLAUDE_ROOT = join6(homedir4(), ".claude", "projects");
+    rec2 = (v) => v && typeof v === "object" ? v : {};
+    str2 = (v) => typeof v === "string" ? v : void 0;
+  }
+});
+
+// daemon/src/providers/claude/provider.ts
+function runVersion(r, args, timeoutMs = 5e3) {
+  return new Promise((resolvePromise, reject) => {
+    let out = "";
+    const p = spawnBin(r, args, { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" } });
+    const t = setTimeout(() => {
+      try {
+        void killTree(p, { graceMs: 500 });
+      } catch {
+      }
+      reject(new Error("timeout"));
+    }, timeoutMs);
+    const od = new OutputDecoder(), ed = new OutputDecoder();
+    p.stdout?.on("data", (c) => out += od.write(c));
+    p.stderr?.on("data", (c) => out += ed.write(c));
+    p.on("error", reject);
+    p.on("close", (code) => {
+      clearTimeout(t);
+      if (code === 0) resolvePromise(out);
+      else reject(new Error("exit " + code));
+    });
+  });
+}
+function createClaudeProvider(opts = {}) {
+  const resolve4 = opts.resolve ?? resolveBin;
+  const resolveCustom = opts.resolve ? (l) => opts.resolve(l.cmd) : resolveLaunch;
+  return {
+    id: "claude",
+    name: "Claude Code",
+    capabilities: claudeCapabilities,
+    async detect(launch) {
+      const bin = launch ? await resolveCustom(launch) : await resolve4("claude");
+      if (!bin.ok) return { available: false, reason: bin.reason, installHint: INSTALL_HINT };
+      try {
+        const version = await runVersion(bin, [...launch?.prefixArgs ?? [], "--version"]);
+        return { available: true, bin: bin.display, version: version.trim().split("\n")[0] || "" };
+      } catch {
+        return { available: true, bin: bin.display, version: "" };
+      }
+    },
+    async listModels() {
+      return listClaudeModels();
+    },
+    async createSession(o) {
+      const bin = o.launch ? await resolveCustom(o.launch) : await resolve4("claude");
+      if (!bin.ok) throw new Error(tr("claude.notFound", { detail: bin.reason, hint: INSTALL_HINT }));
+      return new ClaudeSession({
+        threadId: o.threadId,
+        cwd: o.cwd,
+        model: o.model,
+        mode: o.mode,
+        effort: o.effort,
+        resumeId: o.resumeId,
+        bin,
+        launch: o.launch
+      });
+    },
+    // §7.6: jsonl sessions under ~/.claude/projects matched by cwd
+    async listHistory(cwd) {
+      const items = await listClaudeHistory(cwd);
+      return items.map((i) => ({ provider: "claude", ...i, imported: false }));
+    },
+    async readHistory(sessionId, cwd) {
+      const msgs = await readClaudeHistory(sessionId, cwd);
+      const st = newMapState();
+      const out = [];
+      for (const m of msgs) {
+        const r = m;
+        if (r.type === "user") {
+          const content = r.message?.content;
+          const text = typeof content === "string" ? content : Array.isArray(content) ? content.filter((b) => b.type === "text").map((b) => b.text ?? "").join("") : "";
+          if (text.trim()) out.push({ type: "user_message", text });
+          else out.push(...mapSdkMessage(m, st, cwd));
+          continue;
+        }
+        out.push(...mapSdkMessage(m, st, cwd));
+      }
+      out.push({ type: "turn_ended", turnId: "", status: "completed" });
+      return out;
+    }
+  };
+}
+var INSTALL_HINT, claudeCapabilities;
+var init_provider = __esm({
+  "daemon/src/providers/claude/provider.ts"() {
+    init_bin();
+    init_session();
+    init_models();
+    init_import();
+    init_map();
+    init_i18n();
+    init_launch();
+    init_decode();
+    INSTALL_HINT = "npm i -g @anthropic-ai/claude-code";
+    claudeCapabilities = {
+      resume: true,
+      interrupt: true,
+      steer: false,
+      // Claude doesn't support real steering — the manager queues instead (§7.2.2)
+      images: true,
+      plan: true,
+      questions: true,
+      cost: true,
+      effort: ["low", "medium", "high", "xhigh", "max"],
+      modes: ["plan", "default", "acceptEdits", "bypassPermissions"]
+    };
+  }
+});
+
+// daemon/src/history/codex.ts
+import { readdir as readdir2, readFile as readFile6, stat as stat5 } from "node:fs/promises";
+import { join as join7 } from "node:path";
+import { homedir as homedir5 } from "node:os";
+function textOf(content, kind) {
+  if (!Array.isArray(content)) return "";
+  return content.filter((p) => p.type === kind || p.type === "input_text" || p.type === "output_text").map((p) => str3(p.text) ?? "").join("\n").trim();
+}
+async function* walk(dir, depth = 0) {
+  if (depth > 6) return;
+  for (const name of await readdir2(dir).catch(() => [])) {
+    const p = join7(dir, name);
+    const s = await stat5(p).catch(() => null);
+    if (!s) continue;
+    if (s.isDirectory()) yield* walk(p, depth + 1);
+    else if (/^rollout-.*\.jsonl$/.test(name)) yield p;
+  }
+}
+async function listCodexHistory(cwd) {
+  const out = [];
+  for await (const path5 of walk(CODEX_ROOT)) {
+    const m = /rollout-.*-([0-9a-f-]{36})\.jsonl$/i.exec(path5);
+    const sessionId = m?.[1];
+    if (!sessionId) continue;
+    const text = await readFile6(path5, "utf8").catch(() => "");
+    let match = false;
+    let title = "";
+    let count = 0;
+    for (const line of text.split("\n")) {
+      if (!line.trim()) continue;
+      let r;
+      try {
+        r = rec3(JSON.parse(line));
+      } catch {
+        continue;
+      }
+      if (r.type === "session_meta") {
+        const cwdInFile = str3(rec3(r.payload).cwd);
+        if (cwdInFile && samePath(cwdInFile, cwd)) match = true;
+        else break;
+        continue;
+      }
+      if (!match) continue;
+      if (r.type === "response_item") {
+        const p = rec3(r.payload);
+        if (p.type === "message" && p.role === "user") {
+          const t = textOf(p.content, "input_text");
+          if (t && !WRAPPERS.test(t)) {
+            count++;
+            if (!title) title = t.slice(0, 40);
+          }
+        }
+      }
+    }
+    if (!match) continue;
+    const s = await stat5(path5).catch(() => null);
+    out.push({ sessionId, title: title || tr("history.untitled"), updatedAt: s ? Math.round(s.mtimeMs) : 0, messageCount: count });
+  }
+  out.sort((a, b) => b.updatedAt - a.updatedAt);
+  return out;
+}
+async function readCodexHistory(sessionId, cwd) {
+  const out = [];
+  let file = null;
+  for await (const p of walk(CODEX_ROOT)) {
+    if (p.endsWith(`${sessionId}.jsonl`)) {
+      file = p;
+      break;
+    }
+  }
+  if (!file) return out;
+  const text = await readFile6(file, "utf8").catch(() => "");
+  let matched = false;
+  let aid = 0;
+  const seenText = /* @__PURE__ */ new Set();
+  const pushText = (type, t) => {
+    const key = type + ":" + t;
+    if (!t || seenText.has(key)) return;
+    seenText.add(key);
+    out.push(type === "user_message" ? { type, text: t } : { type, itemId: `imp_a${aid++}`, text: t });
+  };
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    let r;
+    try {
+      r = rec3(JSON.parse(line));
+    } catch {
+      continue;
+    }
+    if (r.type === "session_meta") {
+      const c = str3(rec3(r.payload).cwd);
+      if (c && samePath(c, cwd)) matched = true;
+      continue;
+    }
+    if (!matched) continue;
+    if (r.type === "response_item") {
+      const p = rec3(r.payload);
+      if (p.type === "message") {
+        const role = str3(p.role);
+        const phase = str3(p.phase);
+        if (role === "user") {
+          const t = textOf(p.content, "input_text");
+          if (t && !WRAPPERS.test(t)) pushText("user_message", t);
+        } else if (role === "assistant" && phase !== "commentary") {
+          const t = textOf(p.content, "output_text");
+          if (t) pushText("assistant_message", t);
+        }
+      } else if (p.type === "function_call" || p.type === "custom_tool_call") {
+        const name = str3(p.name) ?? "tool";
+        out.push({ type: "notice", level: "info", message: tr("history.toolCall", { name }) });
+      }
+      continue;
+    }
+    if (r.type === "event_msg") {
+      const p = rec3(r.payload);
+      if (p.type === "item_completed") {
+        const it = rec3(p.item);
+        if (it.type === "AgentMessage" && it.phase !== "commentary") {
+          const t = textOf(it.content, "Text");
+          if (t) pushText("assistant_message", t);
+        } else if (it.type === "UserMessage") {
+          const t = textOf(it.content, "text");
+          if (t && !WRAPPERS.test(t)) pushText("user_message", t);
+        }
+      } else if (p.type === "task_complete") {
+        const last = str3(p.last_agent_message);
+        if (last) pushText("assistant_message", last);
+      }
+      continue;
+    }
+    const p2 = rec3(r.payload);
+    if (p2.type === "function_call" || p2.type === "custom_tool_call") {
+      const name = str3(p2.name) ?? "tool";
+      out.push({ type: "notice", level: "info", message: tr("history.toolCall", { name }) });
+    }
+  }
+  out.push({ type: "turn_ended", turnId: "import", status: "completed" });
+  return out;
+}
+var CODEX_ROOT, rec3, str3, WRAPPERS;
+var init_codex = __esm({
+  "daemon/src/history/codex.ts"() {
+    init_paths();
+    init_i18n();
+    CODEX_ROOT = join7(homedir5(), ".codex", "sessions");
+    rec3 = (v) => v && typeof v === "object" ? v : {};
+    str3 = (v) => typeof v === "string" ? v : void 0;
+    WRAPPERS = /^\s*<(environment_context|user_instructions|skills_instructions|permissions instructions)>/i;
+  }
+});
+
+// daemon/src/providers/codex/rpc.ts
+import { spawn as spawn3 } from "node:child_process";
+var CodexRpcError, CodexProcessExitedError, CodexRpc;
+var init_rpc = __esm({
+  "daemon/src/providers/codex/rpc.ts"() {
+    init_log();
+    init_bin();
+    init_decode();
+    init_agentShell();
+    CodexRpcError = class extends Error {
+      code;
+      constructor(message, code) {
+        super(message);
+        this.code = code;
+      }
+    };
+    CodexProcessExitedError = class extends CodexRpcError {
+      constructor() {
+        super("Codex \u8FDB\u7A0B\u5DF2\u9000\u51FA");
+      }
+    };
+    CodexRpc = class {
+      proc;
+      nextId = 1;
+      pending = /* @__PURE__ */ new Map();
+      buf = "";
+      exited = false;
+      onServerRequest;
+      onNotification;
+      onExit;
+      constructor(argv, opts = {}) {
+        this.proc = spawn3(argv.cmd, argv.args, {
+          cwd: opts.cwd,
+          env: withAgentShell(opts.env ?? process.env),
+          stdio: ["pipe", "pipe", "pipe"],
+          windowsHide: true,
+          ...argv.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {},
+          // Non-Windows: its own process group, so after a close() timeout killTree also ends the commands codex started
+          ...process.platform !== "win32" ? { detached: true } : {}
+        });
+        trackTree(this.proc);
+        this.proc.stdout.setEncoding("utf8");
+        this.proc.stdout.on("data", (chunk) => this.onData(chunk));
+        const errDec = new OutputDecoder();
+        this.proc.stderr.on("data", (chunk) => {
+          this.stderrTail = (this.stderrTail + errDec.write(chunk)).slice(-4096);
+        });
+        this.proc.on("error", () => this.failAll());
+        this.proc.on("close", (code) => {
+          this.exited = true;
+          this.failAll();
+          this.onExit?.(code);
+        });
+      }
+      stderrTail = "";
+      get stderr() {
+        return this.stderrTail;
+      }
+      get isExited() {
+        return this.exited;
+      }
+      onData(chunk) {
+        this.buf += chunk;
+        let i;
+        while ((i = this.buf.indexOf("\n")) >= 0) {
+          const line = this.buf.slice(0, i).trim();
+          this.buf = this.buf.slice(i + 1);
+          if (!line) continue;
+          let msg;
+          try {
+            msg = JSON.parse(line);
+          } catch {
+            log("warn", "codex rpc: \u975E JSON \u884C", { line: line.slice(0, 200) });
+            continue;
+          }
+          void this.dispatch(msg);
+        }
+      }
+      async dispatch(msg) {
+        const hasId = msg.id !== void 0 && msg.id !== null;
+        if (hasId && ("result" in msg || "error" in msg)) {
+          const id2 = Number(msg.id);
+          const p = this.pending.get(id2);
+          if (p) {
+            this.pending.delete(id2);
+            if (msg.error) {
+              const e = msg.error;
+              p.reject(new CodexRpcError(e.message ?? "RPC error", e.code));
+            } else {
+              p.resolve(msg.result);
+            }
+          }
+          return;
+        }
+        if (hasId && msg.method) {
+          const id2 = Number(msg.id);
+          try {
+            const result = this.onServerRequest ? await this.onServerRequest(String(msg.method), msg.params ?? {}) : void 0;
+            this.send({ id: id2, result: result ?? null });
+          } catch (e) {
+            this.send({ id: id2, error: { code: -32603, message: String(e?.message ?? e) } });
+          }
+          return;
+        }
+        if (!hasId && msg.method) {
+          try {
+            this.onNotification?.(String(msg.method), msg.params ?? {});
+          } catch (e) {
+            log("warn", "codex rpc: \u901A\u77E5\u5904\u7406\u5931\u8D25", { method: msg.method, err: String(e) });
+          }
+        }
+      }
+      send(obj) {
+        if (this.exited) return;
+        try {
+          this.proc.stdin.write(JSON.stringify(obj) + "\n");
+        } catch {
+        }
+      }
+      request(method, params, timeoutMs = 6e4) {
+        if (this.exited) return Promise.reject(new CodexProcessExitedError());
+        const id2 = this.nextId++;
+        return new Promise((resolvePromise, reject) => {
+          const timer = setTimeout(() => {
+            this.pending.delete(id2);
+            reject(new CodexRpcError(`\u8BF7\u6C42\u8D85\u65F6\uFF1A${method}`));
+          }, timeoutMs);
+          this.pending.set(id2, {
+            resolve: (v) => {
+              clearTimeout(timer);
+              resolvePromise(v);
+            },
+            reject: (e) => {
+              clearTimeout(timer);
+              reject(e);
+            }
+          });
+          this.send({ jsonrpc: "2.0", id: id2, method, params: params ?? {} });
+        });
+      }
+      notify(method, params) {
+        this.send({ jsonrpc: "2.0", method, params: params ?? {} });
+      }
+      failAll() {
+        const err = new CodexProcessExitedError();
+        for (const [, p] of this.pending) p.reject(err);
+        this.pending.clear();
+      }
+      async close() {
+        try {
+          this.proc.stdin?.end();
+        } catch {
+        }
+        await new Promise((resolvePromise) => {
+          const t = setTimeout(() => {
+            void killTree(this.proc, { graceMs: 1500 });
+            resolvePromise();
+          }, 3e3);
+          this.proc.on("close", () => {
+            clearTimeout(t);
+            resolvePromise();
+          });
+          if (this.exited) {
+            clearTimeout(t);
+            resolvePromise();
+          }
+        });
+      }
+    };
+  }
+});
+
+// daemon/src/providers/codex/input.ts
+import { basename as basename2 } from "node:path";
+async function buildCodexInput(text, attachments) {
+  const images = [];
+  const notes = [];
+  const warnings = [];
+  for (const a of attachments) {
+    let file;
+    try {
+      file = await resolveImagePath(a.path);
+    } catch (e) {
+      warnings.push(`${a.path}: ${String(e?.message ?? e)}`);
+      continue;
+    }
+    const kind = attachmentKind(a.mime);
+    if (kind === "image") {
+      images.push({ type: "localImage", path: file });
+      continue;
+    }
+    notes.push(pathNote(kind, file));
+    if (kind === "other") warnings.push(`${basename2(file)} (${baseMime(a.mime) || "unknown type"}) is not an image or a text file; sent its path`);
+  }
+  const fullText = [text, ...notes.length ? [notes.join("\n")] : []].filter(Boolean).join("\n\n");
+  return { items: [{ type: "text", text: fullText }, ...images], warnings };
+}
+var init_input = __esm({
+  "daemon/src/providers/codex/input.ts"() {
+    init_attachmentRefs();
+    init_attachmentKinds();
+  }
+});
+
+// daemon/src/providers/codex/map.ts
+function newCodexMapState() {
+  return { currentTurnId: null, filesChanged: 0, diffText: "", fileChangesByItemId: /* @__PURE__ */ new Map(), reasoningRaw: /* @__PURE__ */ new Map() };
+}
+function mapNotification(method, params, st) {
+  const out = [];
+  const turnId = str4(params.turnId);
+  switch (method) {
+    case "turn/started": {
+      const turn = rec4(params.turn);
+      const tid = str4(turn.id);
+      if (tid) st.currentTurnId = tid;
+      st.filesChanged = 0;
+      st.diffText = "";
+      st.fileChangesByItemId.clear();
+      st.reasoningRaw.clear();
+      break;
+    }
+    case "item/agentMessage/delta": {
+      const itemId = str4(params.itemId) ?? "";
+      const delta = str4(params.delta) ?? "";
+      if (itemId && delta) out.push({ type: "assistant_delta", itemId, text: delta });
+      break;
+    }
+    case "item/plan/delta": {
+      break;
+    }
+    case "item/reasoning/summaryTextDelta":
+    case "item/reasoning/textDelta": {
+      const itemId = str4(params.itemId) ?? "";
+      const delta = str4(params.delta) ?? "";
+      if (itemId && delta) {
+        if (method === "item/reasoning/textDelta") st.reasoningRaw.set(itemId, (st.reasoningRaw.get(itemId) ?? "") + delta);
+        out.push({ type: "reasoning_delta", itemId, text: delta });
+      }
+      break;
+    }
+    case "item/commandExecution/outputDelta":
+    case "item/fileChange/outputDelta":
+    case "command/exec/outputDelta": {
+      const itemId = str4(params.itemId) ?? "";
+      const delta = str4(params.delta) ?? "";
+      if (itemId && delta) out.push({ type: "tool_output_delta", itemId, text: delta });
+      break;
+    }
+    case "item/started": {
+      const item = rec4(params.item);
+      const type = str4(item.type) ?? "";
+      const itemId = str4(item.id) ?? "";
+      if (type === "commandExecution") {
+        const cmd = str4(item.command) ?? "";
+        out.push({
+          type: "tool_call",
+          itemId,
+          kind: "bash",
+          title: tr("tool.run", { x: trunc2(cmd) }),
+          status: "running",
+          detail: { command: cmd, cwd: str4(item.cwd) }
+        });
+      } else if (type === "fileChange") {
+        const changes = Array.isArray(item.changes) ? item.changes : [];
+        if (itemId) st.fileChangesByItemId.set(itemId, changes);
+        out.push({
+          type: "tool_call",
+          itemId,
+          kind: "edit",
+          title: tr("tool.editFiles", { n: changes.length }),
+          status: "running",
+          detail: { changes }
+        });
+      } else if (type === "mcpToolCall" || type === "dynamicToolCall") {
+        const tool = str4(item.tool) ?? str4(item.name) ?? "";
+        const server = str4(item.server) ?? "";
+        out.push({
+          type: "tool_call",
+          itemId,
+          kind: "mcp",
+          title: `${server || "mcp"} \xB7 ${tool}`,
+          status: "running"
+        });
+      } else if (type === "webSearch") {
+        out.push({
+          type: "tool_call",
+          itemId,
+          kind: "web",
+          title: tr("tool.webSearch", { x: trunc2(str4(item.query) ?? "", 40) }),
+          status: "running"
+        });
+      }
+      break;
+    }
+    case "item/completed": {
+      const item = rec4(params.item);
+      const type = str4(item.type) ?? "";
+      const itemId = str4(item.id) ?? "";
+      if (type === "agentMessage") {
+        const text = str4(item.text) ?? "";
+        if (text) out.push({ type: "assistant_message", itemId, text });
+      } else if (type === "reasoning") {
+        const summary = Array.isArray(item.summary) ? item.summary : [];
+        const content = Array.isArray(item.content) ? item.content : [];
+        const strings = (a) => a.filter((s) => typeof s === "string").join("\n");
+        const text = strings(summary) || strings(content) || st.reasoningRaw.get(itemId) || "";
+        st.reasoningRaw.delete(itemId);
+        if (text) out.push({ type: "reasoning", itemId, text });
+      } else if (type === "commandExecution") {
+        const cmd = str4(item.command) ?? "";
+        const exitCode = typeof item.exitCode === "number" ? item.exitCode : void 0;
+        const output = str4(item.aggregatedOutput) ?? "";
+        out.push({
+          type: "tool_call",
+          itemId,
+          kind: "bash",
+          title: tr("tool.run", { x: trunc2(cmd) }),
+          status: exitCode === 0 ? "ok" : "failed",
+          output: output.length > MAX_OUTPUT2 ? output.slice(0, MAX_OUTPUT2) : output,
+          exitCode,
+          durationMs: typeof item.durationMs === "number" ? item.durationMs : void 0
+        });
+      } else if (type === "fileChange") {
+        const changes = Array.isArray(item.changes) ? item.changes : [];
+        if (itemId) st.fileChangesByItemId.set(itemId, changes);
+        const istatus = str4(item.status);
+        st.filesChanged += changes.length;
+        out.push({
+          type: "tool_call",
+          itemId,
+          kind: "edit",
+          title: tr("tool.editFiles", { n: changes.length }),
+          status: istatus === "failed" ? "failed" : "ok",
+          detail: { changes }
+        });
+      } else if (type === "mcpToolCall" || type === "dynamicToolCall") {
+        const tool = str4(item.tool) ?? str4(item.name) ?? "";
+        const server = str4(item.server) ?? "";
+        const istatus = str4(item.status);
+        const err = str4(item.error);
+        out.push({
+          type: "tool_call",
+          itemId,
+          kind: "mcp",
+          title: `${server || "mcp"} \xB7 ${tool}`,
+          status: istatus === "failed" || err ? "failed" : "ok",
+          output: err ?? void 0
+        });
+      } else if (type === "webSearch") {
+        out.push({
+          type: "tool_call",
+          itemId,
+          kind: "web",
+          title: tr("tool.webSearch", { x: trunc2(str4(item.query) ?? "", 40) }),
+          status: "ok"
+        });
+      } else if (type === "plan") {
+        const text = str4(item.text) ?? "";
+        if (text) out.push({ type: "plan", itemId, markdown: text });
+      }
+      break;
+    }
+    case "turn/plan/updated": {
+      const steps = Array.isArray(params.plan) ? params.plan : [];
+      const items = steps.map((s) => {
+        const step = rec4(s);
+        const status2 = str4(step.status) ?? "pending";
+        return {
+          text: str4(step.step) ?? "",
+          status: status2 === "completed" ? "done" : status2 === "inProgress" || status2 === "in_progress" ? "in_progress" : "pending"
+        };
+      });
+      if (items.length) out.push({ type: "todo", items });
+      break;
+    }
+    case "turn/diff/updated": {
+      const diff = str4(params.diff) ?? "";
+      if (diff) st.diffText = diff;
+      break;
+    }
+    case "thread/tokenUsage/updated": {
+      const usage = rec4(params.tokenUsage);
+      const last = rec4(usage.last) || usage;
+      const input = typeof last.inputTokens === "number" ? last.inputTokens : 0;
+      const output = typeof last.outputTokens === "number" ? last.outputTokens : 0;
+      const cached = typeof last.cachedInputTokens === "number" ? last.cachedInputTokens : 0;
+      out.push({
+        type: "usage",
+        inputTokens: input,
+        outputTokens: output,
+        cacheReadTokens: cached,
+        costUsd: 0
+      });
+      break;
+    }
+    case "turn/completed": {
+      const turn = rec4(params.turn);
+      const status2 = str4(turn.status) ?? "completed";
+      const error = rec4(turn.error);
+      out.push({
+        type: "turn_ended",
+        turnId: str4(turn.id) ?? turnId ?? st.currentTurnId ?? "",
+        status: status2 === "completed" ? "completed" : status2 === "interrupted" ? "interrupted" : "failed",
+        durationMs: typeof turn.durationMs === "number" ? turn.durationMs : void 0,
+        error: str4(error.message),
+        filesChanged: st.filesChanged || void 0
+      });
+      break;
+    }
+    case "error": {
+      const msg = str4(params.message) ?? tr("codex.error");
+      out.push({ type: "notice", level: "error", message: msg });
+      break;
+    }
+    default:
+      break;
+  }
+  return out;
+}
+var MAX_OUTPUT2, trunc2, rec4, str4;
+var init_map2 = __esm({
+  "daemon/src/providers/codex/map.ts"() {
+    init_i18n();
+    MAX_OUTPUT2 = 20 * 1024;
+    trunc2 = (s, n = 80) => s.length > n ? s.slice(0, n - 1) + "\u2026" : s;
+    rec4 = (v) => v && typeof v === "object" ? v : {};
+    str4 = (v) => typeof v === "string" ? v : void 0;
+  }
+});
+
+// daemon/src/providers/codex/commands.ts
+import { readdir as readdir3, readFile as readFile7, stat as stat6 } from "node:fs/promises";
+import { homedir as homedir6 } from "node:os";
+import { basename as basename3, join as join8 } from "node:path";
+function parseFrontMatter(raw) {
+  if (!raw.startsWith("---\n")) return { meta: {}, body: raw };
+  const end = raw.indexOf("\n---\n", 4);
+  if (end === -1) return { meta: {}, body: raw };
+  const fm = raw.slice(4, end);
+  const meta = {};
+  for (const line of fm.split(/\r?\n/)) {
+    const m = line.match(/^([a-zA-Z0-9_-]+):\s*(.+)$/);
+    if (m) meta[m[1]] = m[2].trim().replace(/^["']|["']$/g, "");
+  }
+  return { meta, body: raw.slice(end + 5) };
+}
+function firstLine(body) {
+  for (const line of body.split(/\r?\n/)) {
+    const t = line.trim();
+    if (t && !t.startsWith("#")) return t.replace(/^#+\s*/, "").slice(0, 120);
+  }
+  return "";
+}
+async function readPromptFiles(dir) {
+  const out = [];
+  let names = [];
+  try {
+    names = await readdir3(dir);
+  } catch {
+    return out;
+  }
+  for (const f of names) {
+    if (!f.endsWith(".md")) continue;
+    const path5 = join8(dir, f);
+    try {
+      const st = await stat6(path5);
+      if (!st.isFile()) continue;
+      const raw = await readFile7(path5, "utf8");
+      const { meta, body } = parseFrontMatter(raw);
+      const name = basename3(f, ".md");
+      out.push({
+        name,
+        description: meta.description || firstLine(body) || name,
+        argumentHint: meta.argumentHint || meta["argument-hint"],
+        kind: "command",
+        body
+      });
+    } catch {
+    }
+  }
+  return out;
+}
+async function readSkillDirs(root) {
+  const out = [];
+  let dirs = [];
+  try {
+    dirs = await readdir3(root);
+  } catch {
+    return out;
+  }
+  for (const d of dirs) {
+    const skillPath = join8(root, d, "SKILL.md");
+    try {
+      const st = await stat6(skillPath);
+      if (!st.isFile()) continue;
+      const raw = await readFile7(skillPath, "utf8");
+      const { meta, body } = parseFrontMatter(raw);
+      const name = meta.name || d;
+      out.push({
+        name,
+        description: meta.description || firstLine(body) || name,
+        argumentHint: meta.argumentHint,
+        kind: "skill",
+        body
+      });
+    } catch {
+    }
+  }
+  return out;
+}
+async function loadCodexSlashEntries(cwd, opts) {
+  const home = homedir6();
+  const parts = await Promise.all([
+    opts?.skipHome ? Promise.resolve([]) : readPromptFiles(join8(home, ".codex", "prompts")),
+    readPromptFiles(join8(cwd, ".codex", "prompts")),
+    opts?.skipHome ? Promise.resolve([]) : readSkillDirs(join8(home, ".codex", "skills")),
+    readSkillDirs(join8(cwd, ".codex", "skills"))
+  ]);
+  const byName = /* @__PURE__ */ new Map();
+  for (const list of parts) {
+    for (const e of list) {
+      if (!byName.has(e.name)) byName.set(e.name, e);
+    }
+  }
+  return sortSlashCommands([...byName.values()]);
+}
+function expandCodexSlash(text, entries) {
+  const parsed = parseSlashInput(text);
+  if (!parsed) return text;
+  const hit = entries.find((e) => e.name === parsed.name);
+  if (!hit) return text;
+  return hit.body.replace(/\$ARGUMENTS/g, parsed.args);
+}
+function codexSlashCommandsFromEntries(entries) {
+  return entries.map(({ body: _b, ...rest }) => rest);
+}
+var init_commands = __esm({
+  "daemon/src/providers/codex/commands.ts"() {
+    init_slash();
+  }
+});
+
+// daemon/src/providers/codex/session.ts
+var rid3, MODE_PRESETS, CodexSession;
+var init_session2 = __esm({
+  "daemon/src/providers/codex/session.ts"() {
+    init_input();
+    init_i18n();
+    init_queue();
+    init_rpc();
+    init_bin();
+    init_map2();
+    init_commands();
+    init_log();
+    init_launch();
+    rid3 = () => Math.random().toString(36).slice(2, 10);
+    MODE_PRESETS = {
+      plan: { approvalPolicy: "on-request", sandbox: "read-only", sandboxPolicy: { type: "readOnly" } },
+      default: { approvalPolicy: "on-request", sandbox: "read-only", sandboxPolicy: { type: "readOnly" } },
+      acceptEdits: { approvalPolicy: "on-request", sandbox: "workspace-write", sandboxPolicy: { type: "workspaceWrite" } },
+      bypassPermissions: { approvalPolicy: "never", sandbox: "danger-full-access", sandboxPolicy: { type: "dangerFullAccess" } },
+      ask: { approvalPolicy: "on-request", sandbox: "read-only", sandboxPolicy: { type: "readOnly" } }
+    };
+    CodexSession = class {
+      constructor(o) {
+        this.o = o;
+        this.events = this.q;
+      }
+      o;
+      events;
+      q = new AsyncQueue();
+      rpc = null;
+      st = newCodexMapState();
+      sessionThreadId = null;
+      pending = /* @__PURE__ */ new Map();
+      closed = false;
+      started = null;
+      ourTurnId = null;
+      // The current turn's turnId in the timeline (generated on send)
+      /** Codex turn ids whose late started/completed/deltas must be ignored. */
+      staleCodexTurns = /* @__PURE__ */ new Set();
+      codexSlash = null;
+      emit(ev) {
+        if (ev.type === "turn_ended") {
+          if (ev.turnId && this.staleCodexTurns.delete(ev.turnId)) {
+            if (this.st.currentTurnId === ev.turnId) this.st.currentTurnId = null;
+            return;
+          }
+          if (this.ourTurnId) {
+            if (!ev.turnId || ev.turnId === this.st.currentTurnId || ev.turnId === this.ourTurnId) {
+              ev.turnId = this.ourTurnId;
+            } else {
+              return;
+            }
+            this.ourTurnId = null;
+            this.st.currentTurnId = null;
+          } else {
+            if (ev.turnId) {
+              this.staleCodexTurns.delete(ev.turnId);
+              if (this.st.currentTurnId === ev.turnId) this.st.currentTurnId = null;
+            }
+            return;
+          }
+        }
+        this.q.push(ev);
+      }
+      async start() {
+        if (this.started) return this.started;
+        const attempt = (async () => {
+          const rpc = new CodexRpc(
+            argvFor(
+              { ok: true, cmd: this.o.binCmd, prefixArgs: this.o.binPrefixArgs, display: this.o.binCmd, via: this.o.binVia ?? "path", shim: this.o.binShim },
+              launchArgv(["app-server"], this.o.launch)
+            ),
+            { cwd: this.o.cwd }
+          );
+          this.rpc = rpc;
+          rpc.onNotification = (m, p) => {
+            const turnFromParams = () => {
+              const turn = p?.turn;
+              if (typeof turn?.id === "string") return turn.id;
+              if (typeof p.turnId === "string") return p.turnId;
+              return null;
+            };
+            const tid = turnFromParams();
+            if (tid && this.staleCodexTurns.has(tid)) {
+              if (m === "turn/completed") this.staleCodexTurns.delete(tid);
+              return;
+            }
+            for (const ev of mapNotification(m, p, this.st)) this.emit(ev);
+          };
+          rpc.onServerRequest = (m, p) => this.onServerRequest(m, p);
+          rpc.onExit = () => {
+            for (const [, p] of this.pending) p.resolve({ cancelled: true });
+            this.pending.clear();
+            if (!this.closed) this.q.close();
+          };
+          await rpc.request("initialize", {
+            clientInfo: { name: "agent-console", title: "Agent Console", version: this.o.version },
+            capabilities: { experimentalApi: true }
+          });
+          rpc.notify("initialized", {});
+          const preset = MODE_PRESETS[this.o.mode];
+          let threadId;
+          if (this.o.resumeId) {
+            const res = await rpc.request("thread/resume", {
+              threadId: this.o.resumeId,
+              cwd: this.o.cwd,
+              model: this.o.model,
+              approvalPolicy: preset.approvalPolicy,
+              sandbox: preset.sandbox
+            });
+            threadId = res.thread?.id ?? this.o.resumeId;
+          } else {
+            const res = await rpc.request("thread/start", {
+              cwd: this.o.cwd,
+              model: this.o.model,
+              approvalPolicy: preset.approvalPolicy,
+              sandbox: preset.sandbox
+            });
+            threadId = res.thread?.id ?? "";
+          }
+          if (threadId) {
+            this.sessionThreadId = threadId;
+            this.emit({ type: "provider_session_id", id: threadId });
+          }
+        })();
+        this.started = attempt.catch((e) => {
+          if (this.started === guarded2) {
+            this.started = null;
+            const rpc = this.rpc;
+            this.rpc = null;
+            if (rpc) {
+              rpc.onExit = () => {
+              };
+              void Promise.resolve(rpc.close()).catch(() => {
+              });
+            }
+          }
+          throw e;
+        });
+        const guarded2 = this.started;
+        return this.started;
+      }
+      async send(input) {
+        if (this.closed) throw new Error(tr("codex.closed"));
+        await this.start();
+        const rpc = this.rpc;
+        const preset = MODE_PRESETS[this.o.mode];
+        const entries = this.codexSlash ?? await loadCodexSlashEntries(this.o.cwd);
+        this.codexSlash = entries;
+        const wireText = expandCodexSlash(input.text, entries);
+        const { items, warnings } = await buildCodexInput(wireText, input.images ?? []);
+        const turnId = "u_" + Date.now().toString(36) + "_" + rid3();
+        if (this.ourTurnId && this.st.currentTurnId) this.staleCodexTurns.add(this.st.currentTurnId);
+        this.ourTurnId = turnId;
+        this.st.currentTurnId = null;
+        this.emit({
+          type: "turn_started",
+          turnId,
+          model: this.o.model,
+          mode: this.o.mode,
+          effort: this.o.effort
+        });
+        for (const w of warnings) this.emit({ type: "notice", level: "warn", message: tr("notice.attachmentIssue", { detail: w }) });
+        try {
+          const res = await rpc.request("turn/start", {
+            threadId: this.sessionThreadId ?? void 0,
+            input: items,
+            model: this.o.model,
+            effort: this.o.effort,
+            approvalPolicy: preset.approvalPolicy,
+            sandboxPolicy: preset.sandboxPolicy
+          });
+          const codexTurnId = typeof res?.turn?.id === "string" ? res.turn.id : null;
+          if (!codexTurnId) return;
+          const wasCancelled = this.ourTurnId !== turnId;
+          if (wasCancelled) {
+            this.staleCodexTurns.add(codexTurnId);
+            try {
+              await rpc.request(
+                "turn/interrupt",
+                { threadId: this.threadId(), turnId: codexTurnId },
+                5e3
+              );
+            } catch (e) {
+              const msg = String(e?.message ?? e);
+              if (!/idle|not running|no.*turn/i.test(msg)) log("warn", "codex interrupt \u5931\u8D25", { err: msg });
+            }
+            return;
+          }
+          this.st.currentTurnId = codexTurnId;
+        } catch (e) {
+          if (this.ourTurnId !== turnId) return;
+          this.emit({
+            type: "turn_ended",
+            turnId,
+            status: "failed",
+            error: String(e?.message ?? e)
+          });
+        }
+      }
+      async steer(input) {
+        if (!this.rpc || !this.st.currentTurnId) throw new Error(tr("codex.noTurnSteer"));
+        const { items, warnings } = await buildCodexInput(input.text, input.images ?? []);
+        for (const w of warnings) this.emit({ type: "notice", level: "warn", message: tr("notice.attachmentIssue", { detail: w }) });
+        try {
+          await this.rpc.request("turn/steer", {
+            threadId: this.threadId(),
+            expectedTurnId: this.st.currentTurnId,
+            input: items
+          });
+        } catch (e) {
+          log("warn", "codex steer \u5931\u8D25", { err: String(e) });
+        }
+      }
+      async interrupt() {
+        for (const [, p] of this.pending) p.resolve({ cancelled: true });
+        this.pending.clear();
+        const localTurn = this.ourTurnId;
+        const codexTurn = this.st.currentTurnId;
+        if (!this.rpc) {
+          if (localTurn) this.emit({ type: "turn_ended", turnId: localTurn, status: "interrupted" });
+          return;
+        }
+        if (codexTurn) {
+          this.staleCodexTurns.add(codexTurn);
+          try {
+            await this.rpc.request(
+              "turn/interrupt",
+              { threadId: this.threadId(), turnId: codexTurn },
+              5e3
+            );
+          } catch (e) {
+            const msg = String(e?.message ?? e);
+            if (!/idle|not running|no.*turn/i.test(msg)) {
+              log("warn", "codex interrupt \u5931\u8D25", { err: msg });
+            }
+          }
+        }
+        if (localTurn && this.ourTurnId === localTurn) {
+          this.emit({ type: "turn_ended", turnId: localTurn, status: "interrupted" });
+        }
+      }
+      threadId() {
+        return this.sessionThreadId ?? void 0;
+      }
+      // ---- server requests (§7.3.5 approvals) ----
+      async onServerRequest(method, params) {
+        switch (method) {
+          case "item/commandExecution/requestApproval": {
+            const command = String(params.command ?? "");
+            const requestId = "perm_" + rid3();
+            this.emit({
+              type: "permission_request",
+              requestId,
+              title: tr("tool.run", { x: command.slice(0, 80) }),
+              kind: "tool",
+              detail: { command, cwd: params.cwd, reason: params.reason, approvalId: params.approvalId, itemId: params.itemId },
+              options: [
+                { id: "accept", label: tr("perm.allow"), kind: "allow_once" },
+                { id: "acceptForSession", label: tr("perm.allowSession"), kind: "allow_always" },
+                { id: "decline", label: tr("perm.deny"), kind: "reject_once" }
+              ]
+            });
+            const a = await this.waitFor(requestId);
+            if (a.cancelled) return { decision: "cancel" };
+            const opt = a.optionId === "acceptForSession" ? "acceptForSession" : a.optionId === "decline" ? "decline" : "accept";
+            return { decision: opt };
+          }
+          case "item/fileChange/requestApproval": {
+            const itemId = typeof params.itemId === "string" ? params.itemId : "";
+            const changes = Array.isArray(params.changes) && params.changes.length ? params.changes : itemId ? this.st.fileChangesByItemId.get(itemId) ?? [] : [];
+            const requestId = "perm_" + rid3();
+            this.emit({
+              type: "permission_request",
+              requestId,
+              title: tr("perm.editFiles"),
+              kind: "tool",
+              detail: { changes, approvalId: params.approvalId, itemId: params.itemId, reason: params.reason },
+              options: [
+                { id: "accept", label: tr("perm.allow"), kind: "allow_once" },
+                { id: "acceptForSession", label: tr("perm.allowSession"), kind: "allow_always" },
+                { id: "decline", label: tr("perm.deny"), kind: "reject_once" }
+              ]
+            });
+            const a = await this.waitFor(requestId);
+            if (a.cancelled) return { decision: "cancel" };
+            const opt = a.optionId === "acceptForSession" ? "acceptForSession" : a.optionId === "decline" ? "decline" : "accept";
+            return { decision: opt };
+          }
+          case "item/tool/requestUserInput": {
+            const requestId = "q_" + rid3();
+            this.emit({
+              type: "question",
+              requestId,
+              questions: params.questions ?? []
+            });
+            const a = await this.waitFor(requestId);
+            if (a.cancelled) return { answers: {} };
+            const raw = a.answers ?? {};
+            const shaped = {};
+            for (const [k, v] of Object.entries(raw)) shaped[k] = { answers: [v] };
+            return { answers: shaped };
+          }
+          default:
+            throw new Error(`\u672A\u8BC6\u522B\u7684\u670D\u52A1\u7AEF\u8BF7\u6C42 ${method}`);
+        }
+      }
+      waitFor(requestId) {
+        return new Promise((resolve4) => {
+          this.pending.set(requestId, { kind: "permission", resolve: resolve4 });
+        });
+      }
+      respond(requestId, answer) {
+        const p = this.pending.get(requestId);
+        if (p) {
+          this.pending.delete(requestId);
+          p.resolve(answer);
+        }
+      }
+      async setModel(model) {
+        this.o.model = model;
+      }
+      async setMode(mode2) {
+        this.o.mode = mode2;
+      }
+      async setEffort(effort) {
+        this.o.effort = effort;
+      }
+      async listCommands() {
+        try {
+          const entries = this.codexSlash ?? await loadCodexSlashEntries(this.o.cwd);
+          this.codexSlash = entries;
+          return codexSlashCommandsFromEntries(entries);
+        } catch {
+          return [];
+        }
+      }
+      async close() {
+        this.closed = true;
+        for (const [, p] of this.pending) p.resolve({ cancelled: true });
+        this.pending.clear();
+        if (this.rpc) await this.rpc.close();
+        this.q.close();
+      }
+    };
+  }
+});
+
+// daemon/src/providers/types.ts
+var PLACEHOLDER_MODEL_NAME;
+var init_types = __esm({
+  "daemon/src/providers/types.ts"() {
+    PLACEHOLDER_MODEL_NAME = "Default";
+  }
+});
+
+// daemon/src/providers/codex/provider.ts
+import { homedir as homedir7 } from "node:os";
+import { dirname as dirname3, isAbsolute as isAbsolute2, join as join9 } from "node:path";
+import { readFile as readFile8 } from "node:fs/promises";
+function clearCodexModelCache() {
+  modelCache = null;
+}
+function runVersion2(r, args, timeoutMs = 5e3) {
+  return new Promise((resolvePromise, reject) => {
+    let out = "";
+    const p = spawnBin(r, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const t = setTimeout(() => {
+      try {
+        void killTree(p, { graceMs: 500 });
+      } catch {
+      }
+      reject(new Error("timeout"));
+    }, timeoutMs);
+    const od = new OutputDecoder(), ed = new OutputDecoder();
+    p.stdout?.on("data", (c) => out += od.write(c));
+    p.stderr?.on("data", (c) => out += ed.write(c));
+    p.on("error", reject);
+    p.on("close", (code) => {
+      clearTimeout(t);
+      if (code === 0) resolvePromise(out);
+      else reject(new Error("exit " + code));
+    });
+  });
+}
+function normalizeEfforts(raw) {
+  const out = [];
+  for (const e of raw ?? []) {
+    const o = e;
+    const v = typeof e === "string" ? e : o?.reasoningEffort ?? o?.effort;
+    if (typeof v === "string" && v && !out.includes(v)) out.push(v);
+  }
+  return out;
+}
+async function fetchModels(r, cwd, launch) {
+  const rpc = new CodexRpc(argvFor(r, launchArgv(["app-server"], launch)), { cwd });
+  try {
+    await rpc.request("initialize", {
+      clientInfo: { name: "agent-console", title: "Agent Console", version: "0" },
+      capabilities: { experimentalApi: true }
+    }, 15e3);
+    rpc.notify("initialized", {});
+    const res = await rpc.request("model/list", {}, 15e3);
+    const rows = res.data ?? [];
+    return rows.filter((m) => typeof m.id === "string" && m.id).map((m) => {
+      const efforts = normalizeEfforts(m.supportedReasoningEfforts);
+      const thinkingOptions = efforts.map((e) => ({ id: e, label: e }));
+      const defaultThinking = (typeof m.defaultReasoningEffort === "string" ? m.defaultReasoningEffort : null) ?? thinkingOptions[0]?.id ?? null;
+      return {
+        id: m.id,
+        name: m.displayName ?? m.id,
+        isDefault: m.isDefault,
+        efforts,
+        thinkingOptions,
+        defaultThinking
+      };
+    });
+  } finally {
+    await rpc.close();
+  }
+}
+function tomlValue(raw) {
+  const v = raw.trim().replace(/\s+#.*$/, "");
+  const quoted = v.match(/^"([\s\S]*)"$/) ?? v.match(/^'([\s\S]*)'$/);
+  if (quoted) return quoted[1];
+  if (v.startsWith("[") && v.endsWith("]")) {
+    return v.slice(1, -1).split(",").map((x) => tomlValue(x)).filter((x) => typeof x === "string");
+  }
+  return null;
+}
+function parseCodexConfig(text) {
+  let section = "";
+  const values = /* @__PURE__ */ new Map();
+  for (const line of text.split(/\r?\n/)) {
+    const s = line.trim();
+    if (!s || s.startsWith("#")) continue;
+    const header = s.match(/^\[([^\]]+)\]$/);
+    if (header) {
+      section = header[1];
+      continue;
+    }
+    const m = s.match(/^([A-Za-z0-9_.-]+)\s*=\s*(.+)$/);
+    if (!m) continue;
+    const value = tomlValue(m[2]);
+    if (typeof value === "string" || Array.isArray(value)) values.set(`${section}\0${m[1]}`, value);
+  }
+  const top = (key) => values.get(`\0${key}`);
+  const profile = top("profile");
+  const profileName = typeof profile === "string" ? profile : null;
+  const profileValue = (key) => profileName ? values.get(`profiles.${profileName}\0${key}`) : void 0;
+  const modelProvider = profileValue("model_provider") ?? top("model_provider");
+  const model = profileValue("model") ?? top("model");
+  const catalog = profileValue("model_catalog_json") ?? top("model_catalog_json");
+  const provider = typeof modelProvider === "string" ? modelProvider : null;
+  const models2 = /* @__PURE__ */ new Set();
+  if (typeof model === "string" && model) models2.add(model);
+  for (const [key, value] of values) {
+    if (provider && key === `model_providers.${provider}\0models` && Array.isArray(value)) {
+      for (const m of value) models2.add(m);
+    }
+  }
+  return {
+    modelProvider: provider,
+    model: typeof model === "string" ? model : null,
+    providerModels: [...models2],
+    catalogJson: typeof catalog === "string" && catalog.trim() ? catalog.trim() : null
+  };
+}
+function resolveCatalogPath(raw, configDir, home = homedir7()) {
+  let p = raw.trim();
+  const env = p.match(/^(?:\$HOME|\$\{HOME\})(?=$|[\\/])/);
+  if (env) p = home + p.slice(env[0].length);
+  else if (p === "~") p = home;
+  else if (/^~[\\/]/.test(p)) p = join9(home, p.slice(2));
+  return isAbsolute2(p) ? p : join9(configDir, p);
+}
+function parseCodexCatalog(text) {
+  const doc = JSON.parse(text);
+  if (!Array.isArray(doc?.models)) return [];
+  const out = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const raw of doc.models) {
+    const m = raw;
+    if (!m || typeof m.slug !== "string" || !m.slug || seen.has(m.slug)) continue;
+    if (typeof m.visibility === "string" && m.visibility !== "list") continue;
+    seen.add(m.slug);
+    const efforts = normalizeEfforts(Array.isArray(m.supported_reasoning_levels) ? m.supported_reasoning_levels : void 0);
+    const thinkingOptions = efforts.map((e) => ({ id: e, label: e }));
+    const def = typeof m.default_reasoning_level === "string" && efforts.includes(m.default_reasoning_level) ? m.default_reasoning_level : null;
+    const name = typeof m.display_name === "string" && m.display_name.trim() ? m.display_name.trim() : m.slug;
+    out.push({ id: m.slug, name, efforts, thinkingOptions, defaultThinking: def ?? thinkingOptions[0]?.id ?? null });
+  }
+  return out;
+}
+async function codexProviderModels(config, configDir, home = homedir7()) {
+  let rows = [];
+  if (config.catalogJson) {
+    const file = resolveCatalogPath(config.catalogJson, configDir, home);
+    try {
+      rows = parseCodexCatalog(await readFile8(file, "utf8"));
+    } catch (e) {
+      log("warn", "codex model_catalog_json \u8BFB\u53D6\u5931\u8D25", { file, err: String(e) });
+    }
+  }
+  const ids = new Set(rows.map((r) => r.id));
+  for (const id2 of config.providerModels) {
+    if (!ids.has(id2)) {
+      ids.add(id2);
+      rows.push({ id: id2, name: id2 });
+    }
+  }
+  if (config.model && !rows.some((r) => r.id === config.model)) rows.unshift({ id: config.model, name: config.model });
+  const def = config.model ?? rows[0]?.id;
+  return rows.map((r) => ({ ...r, isDefault: r.id === def }));
+}
+function codexConfigFile() {
+  const home = process.env.CODEX_HOME?.trim() || join9(homedir7(), ".codex");
+  return home.toLowerCase().endsWith(".toml") ? home : join9(home, "config.toml");
+}
+async function readCodexConfig() {
+  try {
+    return parseCodexConfig(await readFile8(codexConfigFile(), "utf8"));
+  } catch {
+    return { modelProvider: null, model: null, providerModels: [], catalogJson: null };
+  }
+}
+function isChatGptProvider(id2) {
+  return !id2 || /^(openai|chatgpt)$/i.test(id2);
+}
+function createCodexProvider(version) {
+  return {
+    id: "codex",
+    name: "Codex",
+    capabilities: codexCapabilities,
+    async detect(launch) {
+      const bin = launch ? await resolveLaunch(launch) : await resolveBin("codex");
+      if (!bin.ok) {
+        return { available: false, reason: bin.reason, installHint: INSTALL_HINT2 };
+      }
+      try {
+        const v = await runVersion2(bin, [...launch?.prefixArgs ?? [], "--version"]);
+        return { available: true, bin: bin.display, version: v.trim().split("\n")[0] || "" };
+      } catch (e) {
+        return { available: true, bin: bin.display, version: "", reason: String(e) };
+      }
+    },
+    async listModels(launch) {
+      const config = await readCodexConfig();
+      if (!isChatGptProvider(config.modelProvider)) {
+        const rows = await codexProviderModels(config, dirname3(codexConfigFile()));
+        return rows.length ? rows : [{ id: "", name: `${PLACEHOLDER_MODEL_NAME} (${config.modelProvider})`, isDefault: true }];
+      }
+      if (!launch && modelCache && Date.now() - modelCache.at < MODEL_CACHE_MS) return modelCache.models;
+      const bin = launch ? await resolveLaunch(launch) : await resolveBin("codex");
+      if (!bin.ok) return [{ id: "", name: PLACEHOLDER_MODEL_NAME }];
+      try {
+        const models2 = await fetchModels(bin, process.cwd(), launch);
+        modelCache = { at: Date.now(), models: models2 };
+        return models2;
+      } catch (e) {
+        log("warn", "codex model/list \u5931\u8D25", { err: String(e) });
+        return [{ id: "", name: PLACEHOLDER_MODEL_NAME }];
+      }
+    },
+    async createSession(o) {
+      const bin = o.launch ? await resolveLaunch(o.launch) : await resolveBin("codex");
+      if (!bin.ok) throw new Error(tr("codex.notFound", { detail: bin.reason, hint: INSTALL_HINT2 }));
+      return new CodexSession({
+        threadId: o.threadId,
+        cwd: o.cwd,
+        model: o.model,
+        mode: o.mode,
+        effort: o.effort,
+        resumeId: o.resumeId,
+        binCmd: bin.cmd,
+        binPrefixArgs: bin.prefixArgs,
+        binVia: bin.via,
+        binShim: bin.shim,
+        launch: o.launch,
+        version
+      });
+    },
+    // §7.6: ~/.codex/sessions/**/rollout-*.jsonl matched by cwd
+    async listHistory(cwd) {
+      const items = await listCodexHistory(cwd);
+      return items.map((i) => ({ provider: "codex", ...i, imported: false }));
+    },
+    async readHistory(sessionId, cwd) {
+      return await readCodexHistory(sessionId, cwd);
+    }
+  };
+}
+var INSTALL_HINT2, codexCapabilities, modelCache, MODEL_CACHE_MS;
+var init_provider2 = __esm({
+  "daemon/src/providers/codex/provider.ts"() {
+    init_codex();
+    init_bin();
+    init_rpc();
+    init_session2();
+    init_log();
+    init_i18n();
+    init_launch();
+    init_types();
+    init_decode();
+    INSTALL_HINT2 = "npm i -g @openai/codex";
+    codexCapabilities = {
+      resume: true,
+      interrupt: true,
+      steer: true,
+      images: true,
+      plan: true,
+      questions: true,
+      cost: false,
+      // tokenUsage yes, cost no
+      effort: [],
+      // effort values depend on the model — filled from model/list after detect
+      // No "plan": app-server 0.16x has no plan/collaboration mode on turn/start, and a read-only "plan" was the same preset as default (B9)
+      modes: ["default", "acceptEdits", "bypassPermissions"],
+      modeLabels: { default: "Read Only", acceptEdits: "Auto", bypassPermissions: "Full Access" }
+    };
+    modelCache = null;
+    MODEL_CACHE_MS = 10 * 60 * 1e3;
+  }
+});
+
+// daemon/src/providers/catalog.ts
+function catalogById(id2) {
+  return PROVIDER_CATALOG.find((p) => p.id === id2);
+}
+function providerCreatable(status2) {
+  return status2 !== "planned";
+}
+var PROVIDER_CATALOG;
+var init_catalog = __esm({
+  "daemon/src/providers/catalog.ts"() {
+    PROVIDER_CATALOG = [
+      { id: "claude", name: "Claude Code", bins: ["claude"], installHint: "npm i -g @anthropic-ai/claude-code", status: "verified" },
+      { id: "codex", name: "Codex", bins: ["codex"], installHint: "npm i -g @openai/codex", status: "verified" },
+      { id: "cursor", name: "Cursor", bins: ["cursor-agent", "cursor"], installHint: "curl https://cursor.com/install -fsS | bash", status: "verified" },
+      { id: "copilot", name: "Copilot", bins: ["copilot"], installHint: "npm i -g @github/copilot", status: "verified" },
+      { id: "opencode", name: "OpenCode", bins: ["opencode"], installHint: "npm i -g opencode-ai", status: "verified" },
+      { id: "pi", name: "Pi", bins: ["pi-acp", "pi", "pi-coding-agent"], installHint: "npm i -g pi-acp", status: "verified" },
+      { id: "devin", name: "Devin CLI", bins: ["devin"], installHint: "https://docs.devin.ai/cli", status: "verified" },
+      { id: "dsh", name: "dsh", bins: ["dsh"], installHint: "npm i -g @deepseek-ai/dsh", status: "verified" }
+    ];
+  }
+});
+
+// daemon/src/providers/acp/spawn.ts
+import { Readable, Writable } from "node:stream";
+import { resolve as resolvePath } from "node:path";
+import * as acp from "@agentclientprotocol/sdk";
+function spawnResolved(r, args, o = {}) {
+  return spawnBin(r, args, {
+    cwd: o.cwd,
+    stdio: ["pipe", "pipe", "pipe"],
+    env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
+    group: true
+  });
+}
+function acpStreamFromChild(child) {
+  if (!child.stdin || !child.stdout) throw new Error("ACP \u5B50\u8FDB\u7A0B\u7F3A\u5C11 stdio \u7BA1\u9053");
+  const output = Writable.toWeb(child.stdin);
+  const input = Readable.toWeb(child.stdout);
+  return acp.ndJsonStream(output, input);
+}
+function absCwd(cwd) {
+  return resolvePath(cwd);
+}
+async function killAcpChild(child) {
+  await killTree(child);
+}
+var init_spawn = __esm({
+  "daemon/src/providers/acp/spawn.ts"() {
+    init_bin();
+  }
+});
+
+// daemon/src/providers/acp/clientHandlers.ts
+import { readFile as readFile9, writeFile as writeFile2 } from "node:fs/promises";
+import { methods } from "@agentclientprotocol/sdk";
+function registerAcpClientHandlers(app, bridge) {
+  app.onRequest(methods.client.fs.readTextFile, async (ctx) => {
+    const text = await readFile9(ctx.params.path, "utf8");
+    return { content: text };
+  });
+  app.onRequest(methods.client.fs.writeTextFile, async (ctx) => {
+    await writeFile2(ctx.params.path, ctx.params.content, "utf8");
+    return {};
+  });
+  app.onRequest(methods.client.session.requestPermission, async (ctx) => {
+    const tc = ctx.params.toolCall;
+    const options = ctx.params.options.map((o) => ({
+      id: o.optionId,
+      label: o.name,
+      kind: o.kind
+    }));
+    if (bridge.autoAcceptPermissions?.()) {
+      const allow = options.find((o) => o.kind === "allow_once" || o.kind === "allow_always") ?? options[0];
+      if (allow) return { outcome: { outcome: "selected", optionId: allow.id } };
+    }
+    const requestId = "p" + Math.random().toString(36).slice(2, 10);
+    bridge.push({
+      type: "permission_request",
+      requestId,
+      title: tc.title ?? tc.name ?? tr("tool.needsApproval"),
+      kind: tc.kind ?? "tool",
+      detail: tc.rawInput ?? void 0,
+      options
+    });
+    const answer = await bridge.waitFor(requestId, ctx.signal);
+    if (answer.cancelled) return { outcome: { outcome: "cancelled" } };
+    const optionId = answer.optionId ?? options[0]?.id;
+    if (!optionId) return { outcome: { outcome: "cancelled" } };
+    return { outcome: { outcome: "selected", optionId } };
+  });
+}
+var init_clientHandlers = __esm({
+  "daemon/src/providers/acp/clientHandlers.ts"() {
+    init_i18n();
+  }
+});
+
+// daemon/src/providers/acp/mapUpdate.ts
+function mapToolKind(k) {
+  switch (k) {
+    case "read":
+    case "edit":
+    case "search":
+      return k;
+    case "execute":
+      return "bash";
+    case "fetch":
+      return "web";
+    default:
+      return "other";
+  }
+}
+function mapToolStatus(s) {
+  if (s === "completed") return "ok";
+  if (s === "failed") return "failed";
+  return "running";
+}
+function textFromContent(content) {
+  if (content.type === "text") return content.text;
+  return "";
+}
+function newMapCtx() {
+  return { itemPrefix: "a" + rid4() + "_", messageIds: /* @__PURE__ */ new Map(), seg: 0, lastWasText: false };
+}
+function endTextSegment(ctx) {
+  if (ctx.lastWasText) {
+    ctx.seg++;
+    ctx.lastWasText = false;
+  }
+}
+function mapSessionUpdate(update, ctx) {
+  const out = [];
+  const mid = "messageId" in update && update.messageId ? String(update.messageId) : null;
+  switch (update.sessionUpdate) {
+    case "agent_message_chunk": {
+      const text = textFromContent(update.content);
+      if (!text) break;
+      const itemId = `${ctx.itemPrefix}${mid ?? "msg"}_${ctx.seg}`;
+      if (mid) ctx.messageIds.set(mid, itemId);
+      ctx.lastWasText = true;
+      out.push({ type: "assistant_delta", itemId, text });
+      break;
+    }
+    case "agent_thought_chunk": {
+      const text = textFromContent(update.content);
+      if (!text) break;
+      const itemId = `${ctx.itemPrefix}t_${mid ?? "think"}_${ctx.seg}`;
+      ctx.lastWasText = true;
+      out.push({ type: "reasoning_delta", itemId, text });
+      break;
+    }
+    case "tool_call":
+      endTextSegment(ctx);
+      out.push({
+        type: "tool_call",
+        itemId: ctx.itemPrefix + update.toolCallId,
+        kind: mapToolKind(update.kind),
+        title: update.title,
+        status: mapToolStatus(update.status),
+        input: update.rawInput
+      });
+      break;
+    case "tool_call_update":
+      endTextSegment(ctx);
+      out.push({
+        type: "tool_call",
+        itemId: ctx.itemPrefix + update.toolCallId,
+        kind: mapToolKind(update.kind),
+        title: update.title ?? update.name ?? "",
+        status: mapToolStatus(update.status),
+        input: update.rawInput,
+        output: typeof update.rawOutput === "string" ? update.rawOutput : void 0
+      });
+      break;
+    case "plan":
+      endTextSegment(ctx);
+      out.push({
+        type: "plan",
+        itemId: ctx.itemPrefix + "plan",
+        markdown: update.entries.map((e) => `- ${e.content}`).join("\n"),
+        entries: update.entries.map((e) => ({ step: e.content, status: e.status ?? "" }))
+      });
+      break;
+    case "notice":
+      out.push({
+        type: "notice",
+        level: update.severity === "error" ? "error" : update.severity === "warning" ? "warn" : "info",
+        message: update.description ? `${update.title}: ${update.description}` : update.title
+      });
+      break;
+    case "usage_update":
+      out.push({
+        type: "usage",
+        inputTokens: update.used,
+        outputTokens: 0,
+        cacheReadTokens: 0,
+        costUsd: typeof update.cost?.amount === "number" ? update.cost.amount : 0,
+        contextWindow: update.size
+      });
+      break;
+    default:
+      break;
+  }
+  return out;
+}
+function stopToTurnEnd(stopReason, turnId, err) {
+  if (stopReason === "cancelled") {
+    return { type: "turn_ended", turnId, status: "interrupted" };
+  }
+  if (stopReason === "refusal" || stopReason === "max_tokens") {
+    return { type: "turn_ended", turnId, status: "failed", error: err ?? stopReason };
+  }
+  return { type: "turn_ended", turnId, status: "completed" };
+}
+var rid4;
+var init_mapUpdate = __esm({
+  "daemon/src/providers/acp/mapUpdate.ts"() {
+    rid4 = () => Math.random().toString(36).slice(2, 8);
+  }
+});
+
+// daemon/src/providers/acp/promptCaps.ts
+function promptCapsFromInitialize(res) {
+  const pc = res?.agentCapabilities?.promptCapabilities;
+  return {
+    image: pc?.image === true,
+    audio: pc?.audio === true,
+    embeddedContext: pc?.embeddedContext === true
+  };
+}
+function rememberPromptCaps(providerId, caps) {
+  if (providerId) learned.set(providerId, caps);
+}
+function knownPromptCaps(providerId) {
+  return learned.get(providerId);
+}
+var learned;
+var init_promptCaps = __esm({
+  "daemon/src/providers/acp/promptCaps.ts"() {
+    learned = /* @__PURE__ */ new Map();
+  }
+});
+
+// daemon/src/providers/acp/sessionCaps.ts
+function sessionOpenFromInitialize(res) {
+  const caps = res?.agentCapabilities;
+  const resume = caps?.sessionCapabilities?.resume != null && typeof caps.sessionCapabilities.resume === "object";
+  return { load: caps?.loadSession === true, resume };
+}
+function pickReconnect(open) {
+  if (open.load) return "load";
+  if (open.resume) return "resume";
+  return "none";
+}
+var init_sessionCaps = __esm({
+  "daemon/src/providers/acp/sessionCaps.ts"() {
+  }
+});
+
+// daemon/src/providers/acp/prompt.ts
+import { readFile as readFile10, stat as stat7 } from "node:fs/promises";
+import { basename as basename4 } from "node:path";
+import { pathToFileURL } from "node:url";
+async function buildAcpPrompt(text, attachments, caps, mentions = []) {
+  const media = [];
+  const links = [];
+  const pathLines = [];
+  const imagesByPath = [];
+  const warnings = [];
+  let inlineBytes = 0;
+  const byPath = (file, mime, size, label) => {
+    links.push({ type: "resource_link", uri: pathToFileURL(file).href, name: basename4(file), mimeType: mime, ...size !== null ? { size } : {} });
+    pathLines.push(`${label}: ${file}`);
+  };
+  for (const a of attachments) {
+    const mime = a.mime || "application/octet-stream";
+    let file;
+    let size = null;
+    try {
+      file = await resolveImagePath(a.path);
+      size = (await stat7(file)).size;
+    } catch (e) {
+      warnings.push(`${a.path}: ${String(e?.message ?? e)}`);
+      continue;
+    }
+    const image = attachmentKind(mime) === "image";
+    const audio = mime.startsWith("audio/");
+    if (image && caps.image || audio && caps.audio) {
+      if (size > MAX_INLINE_MEDIA_BYTES || inlineBytes + size > MAX_INLINE_TOTAL_BYTES) {
+        const limit = size > MAX_INLINE_MEDIA_BYTES ? MAX_INLINE_MEDIA_BYTES : MAX_INLINE_TOTAL_BYTES;
+        warnings.push(`${basename4(file)}: ${(size / 1024 / 1024).toFixed(1)} MB, over the ${limit / 1024 / 1024} MB inline limit; sent as a file path`);
+        byPath(file, mime, size, image ? "Attached image" : "Attached audio");
+        if (image) imagesByPath.push(file);
+        continue;
+      }
+      try {
+        const data = (await readFile10(file)).toString("base64");
+        media.push(image ? { type: "image", data, mimeType: mime } : { type: "audio", data, mimeType: mime });
+        inlineBytes += size;
+      } catch (e) {
+        warnings.push(`${basename4(file)}: ${String(e?.message ?? e)}`);
+        byPath(file, mime, size, image ? "Attached image" : "Attached audio");
+        if (image) imagesByPath.push(file);
+      }
+      continue;
+    }
+    if (image || audio) {
+      byPath(file, mime, size, image ? "Attached image" : "Attached audio");
+      if (image) imagesByPath.push(file);
+      continue;
+    }
+    if (isText(mime) && caps.embeddedContext && size <= MAX_EMBED_TEXT_BYTES && inlineBytes + size <= MAX_INLINE_TOTAL_BYTES) {
+      try {
+        const body = await readFile10(file, "utf8");
+        media.push({ type: "resource", resource: { uri: pathToFileURL(file).href, mimeType: mime, text: body } });
+        inlineBytes += size;
+        continue;
+      } catch {
+      }
+    }
+    byPath(file, mime, size, "Attached file");
+  }
+  const fullText = [text, ...pathLines.length ? [pathLines.join("\n")] : []].filter(Boolean).join("\n\n");
+  const blocks = [];
+  if (fullText) blocks.push({ type: "text", text: fullText });
+  blocks.push(...media, ...links);
+  for (const m of mentions) {
+    blocks.push({ type: "resource_link", uri: pathToFileURL(m.path).href, name: basename4(m.path) || m.path });
+  }
+  return { blocks, imagesByPath, warnings };
+}
+var MAX_INLINE_MEDIA_BYTES, MAX_INLINE_TOTAL_BYTES, MAX_EMBED_TEXT_BYTES, isText;
+var init_prompt = __esm({
+  "daemon/src/providers/acp/prompt.ts"() {
+    init_attachmentRefs();
+    init_attachmentKinds();
+    MAX_INLINE_MEDIA_BYTES = 10 * 1024 * 1024;
+    MAX_INLINE_TOTAL_BYTES = 16 * 1024 * 1024;
+    MAX_EMBED_TEXT_BYTES = 1024 * 1024;
+    isText = (mime) => attachmentKind(mime) === "text";
+  }
+});
+
+// daemon/src/providers/acp/session.ts
+import { client, methods as methods2, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
+var AcpSession;
+var init_session3 = __esm({
+  "daemon/src/providers/acp/session.ts"() {
+    init_slash();
+    init_queue();
+    init_bin();
+    init_launch();
+    init_spawn();
+    init_clientHandlers();
+    init_mapUpdate();
+    init_promptCaps();
+    init_sessionCaps();
+    init_prompt();
+    init_i18n();
+    init_log();
+    init_decode();
+    AcpSession = class {
+      constructor(o) {
+        this.o = o;
+        this.events = this.q;
+        this.startModel = o.model;
+        this.cursorFast = o.cursorFast ?? false;
+        this.cursorAutoReview = false;
+        this.commandsReady = new Promise((r) => this.settleCommands = r);
+        this.initPromise = this.boot();
+      }
+      o;
+      events;
+      q = new AsyncQueue();
+      child = null;
+      conn = null;
+      ctx = null;
+      active = null;
+      initErr = null;
+      initPromise;
+      closed = false;
+      turnId = null;
+      turnNum = 0;
+      running = false;
+      /** Current wire session/prompt settle (never rejects) — interrupt waits for it before the next prompt. */
+      inFlightPrompt = null;
+      /** After Stop: notify(cancel) + previous prompt settle + one macrotask, so pumpUpdates drains before next prompt(). */
+      pendingCancelSettle = null;
+      closeWaiters = [];
+      permPending = /* @__PURE__ */ new Map();
+      mapCtx = newMapCtx();
+      modelConfigId = null;
+      thoughtConfigId = null;
+      cursorFast = false;
+      cursorAutoReview = false;
+      slashCommands = [];
+      activeTurnId = null;
+      configOptions = null;
+      // initialize → agentCapabilities.promptCapabilities (ACP baseline until initialize answers: text + resource_link)
+      promptCaps = { image: false, audio: false, embeddedContext: false };
+      initCaps = this.promptCaps;
+      startModel = null;
+      wakePump = null;
+      // listCommands waits for the first batch of commands (or confirmation there are none), following Paseo's waitForInitialCommands
+      commandsReady;
+      settleCommands;
+      async boot() {
+        const bin = this.o.launch ? await resolveLaunch(this.o.launch).then((r) => r.ok ? { ...r, binName: "custom" } : r) : await resolveFirstBin(this.o.binCandidates?.length ? this.o.binCandidates : [this.o.binName]);
+        if (!bin.ok) throw new Error(bin.reason);
+        try {
+          this.child = spawnResolved(bin, launchArgv(this.o.acpArgs, this.o.launch), { cwd: this.o.cwd });
+          const errDec = new OutputDecoder();
+          this.child.stderr?.on("data", (d) => {
+            const t = errDec.write(d).trim();
+            if (t) log("info", `[${this.o.binName} acp] ${t.slice(0, 500)}`);
+          });
+          this.child.on("error", (e) => this.failInit(e));
+          this.child.on("close", (code) => {
+            if (!this.closed && code !== 0) {
+              this.q.push({ type: "notice", level: "error", message: tr("acp.exited", { name: this.o.binName, code: String(code) }) });
+            }
+          });
+          const app = client({ name: "magpie-agent-console" });
+          registerAcpClientHandlers(app, {
+            push: (ev) => this.q.push(ev),
+            waitFor: (id2, signal) => this.waitPerm(id2, signal),
+            autoAcceptPermissions: () => this.cursorAutoReview
+          });
+          const stream = acpStreamFromChild(this.child);
+          this.conn = app.connect(stream);
+          this.ctx = this.conn.agent;
+          const initRes = await this.ctx.request(methods2.agent.initialize, {
+            protocolVersion: PROTOCOL_VERSION,
+            // Cursor: declare support for the parameterized model picker (as Paseo does); only then does it expose levels / Fast as separate config options
+            clientCapabilities: this.o.flavor === "cursor" ? { _meta: { parameterizedModelPicker: true } } : {},
+            clientInfo: { name: "Agent Console", version: this.o.appVersion }
+          });
+          this.promptCaps = promptCapsFromInitialize(initRes);
+          this.initCaps = this.promptCaps;
+          rememberPromptCaps(this.o.providerId, this.promptCaps);
+          const cwd = absCwd(this.o.cwd);
+          const ctx = this.ctx;
+          if (!ctx) throw new Error("ACP \u672A\u8FDE\u63A5");
+          if (this.o.resumeId) {
+            const how = pickReconnect(sessionOpenFromInitialize(initRes));
+            if (how === "load" || how === "resume") {
+              const method = how === "load" ? methods2.agent.session.load : methods2.agent.session.resume;
+              const restored = await ctx.request(method, {
+                sessionId: this.o.resumeId,
+                cwd,
+                mcpServers: []
+              });
+              this.active = ctx.attachSession({
+                sessionId: this.o.resumeId,
+                modes: restored.modes,
+                configOptions: restored.configOptions
+              });
+              if (Array.isArray(restored.configOptions)) this.configOptions = restored.configOptions;
+            } else {
+              this.active = await ctx.buildSession(cwd).start();
+              const agent = this.o.providerName ?? this.o.binName;
+              this.q.push({ type: "notice", level: "warn", message: tr("notice.acpSessionNotRestored", { agent }) });
+            }
+          } else {
+            this.active = await ctx.buildSession(cwd).start();
+          }
+          this.syncModelConfigId();
+          this.syncThoughtConfigId();
+          await this.applySessionMode(this.o.mode);
+          await this.applySessionModel(this.o.model);
+          await this.applyCursorAutoReviewConfig(this.cursorAutoReview);
+          this.q.push({ type: "provider_session_id", id: this.active.sessionId });
+          const init = this.active.newSessionResponse?.availableCommands;
+          if (init?.length) this.applyAvailableCommands(init);
+          void this.pumpUpdates();
+        } catch (e) {
+          this.failInit(e);
+          throw e;
+        }
+      }
+      failInit(e) {
+        this.initErr = e instanceof Error ? e : new Error(String(e));
+      }
+      applyAvailableCommands(raw) {
+        this.slashCommands = sortSlashCommands(mapAcpAvailableCommands(raw));
+        this.q.push({ type: "slash_commands", commands: this.slashCommands });
+        this.settleCommands();
+      }
+      async ready() {
+        await this.initPromise.catch(() => {
+        });
+        if (this.initErr) throw this.initErr;
+        if (!this.active) throw new Error("ACP \u4F1A\u8BDD\u672A\u5C31\u7EEA");
+      }
+      /** The config options currently in effect: each set_config_option response returns the latest set (levels change after switching models); otherwise use session/new's */
+      currentConfig() {
+        return this.configOptions ?? this.active?.newSessionResponse.configOptions ?? [];
+      }
+      syncModelConfigId() {
+        for (const o of this.currentConfig()) {
+          if (o.type === "select" && (o.category === "model" || o.id === "model")) {
+            this.modelConfigId = o.id;
+            return;
+          }
+        }
+        if (this.o.flavor === "cursor") this.modelConfigId = "model";
+      }
+      // Level options belong to the current model: recompute on every refresh (cleared when switching to a model without levels)
+      syncThoughtConfigId() {
+        this.thoughtConfigId = null;
+        const opts = this.currentConfig().filter((o) => o.type === "select");
+        const hit = opts.find((o) => o.category === "thought_level") ?? opts.find((o) => /thought|thinking|effort|reasoning/i.test(o.id ?? ""));
+        if (hit) this.thoughtConfigId = hit.id;
+      }
+      /** set_config_option, then refresh local state from the latest config options it returns */
+      async setOption(configId, value) {
+        if (!this.ctx || !this.active) return false;
+        try {
+          const res = await this.ctx.request(methods2.agent.session.setConfigOption, {
+            sessionId: this.active.sessionId,
+            configId,
+            value
+          });
+          if (Array.isArray(res?.configOptions)) {
+            this.configOptions = res.configOptions;
+            this.syncThoughtConfigId();
+          }
+          return true;
+        } catch (e) {
+          log("info", `ACP set_config_option(${configId}=${value}): ${String(e)}`);
+          return false;
+        }
+      }
+      async applySessionThought(effort) {
+        if (!effort || !this.thoughtConfigId) return;
+        const opt = this.currentConfig().find((o) => o.id === this.thoughtConfigId);
+        const values = (opt?.options ?? []).flatMap((x) => x.options ? x.options : [x]).map((x) => x.value);
+        if (values.length && !values.includes(effort)) return;
+        await this.setOption(this.thoughtConfigId, effort);
+      }
+      /** Mode choices the Agent reports: prefer a category=mode select in configOptions, otherwise ACP modes.availableModes */
+      modeChoices() {
+        const opt = this.currentConfig().find(
+          (o) => o.type === "select" && (o.category === "mode" || o.id === "mode")
+        );
+        if (opt?.options?.length) {
+          return opt.options.filter((x) => typeof x.value === "string").map((x) => ({ id: x.value, name: x.name ?? x.value, configId: opt.id }));
+        }
+        return (this.active?.modes?.availableModes ?? []).map((m) => ({ id: m.id, name: m.name, configId: null }));
+      }
+      resolveAcpModeId(mode2) {
+        if (this.o.modeMap) {
+          const want = this.o.modeMap[mode2];
+          if (!want) return null;
+          const hit = this.modeChoices().find(
+            (m) => m.id === want || m.id.endsWith(`#${want}`) || m.name.toLowerCase() === want
+          );
+          return hit?.id ?? want;
+        }
+        if (this.o.flavor === "cursor") {
+          const map = { default: "agent", bypassPermissions: "agent", plan: "plan", ask: "ask" };
+          const want = map[mode2] ?? "agent";
+          const avail = this.active?.modes?.availableModes ?? [];
+          const hit = avail.find((m) => m.id === want || m.name.toLowerCase() === want);
+          return hit?.id ?? want;
+        }
+        return mode2 === "plan" ? "plan" : "default";
+      }
+      async applySessionMode(mode2) {
+        if (!this.ctx || !this.active) return;
+        const hasAllowAll = this.currentConfig().some((o) => o.id === "allow_all");
+        if (this.o.modeMap?.[mode2] === "allow-all") {
+          const agentId = this.modeChoices().find((m) => m.id === "agent" || m.id.endsWith("#agent"));
+          if (agentId?.configId) await this.setOption(agentId.configId, agentId.id);
+          if (hasAllowAll) await this.setOption("allow_all", "on");
+          return;
+        }
+        if (hasAllowAll && this.o.modeMap) await this.setOption("allow_all", "off");
+        const modeId = this.resolveAcpModeId(mode2);
+        if (!modeId) return;
+        try {
+          const viaConfig = this.modeChoices().find((m) => m.id === modeId)?.configId;
+          if (viaConfig) {
+            await this.setOption(viaConfig, modeId);
+            return;
+          }
+          await this.ctx.request(methods2.agent.session.setMode, {
+            sessionId: this.active.sessionId,
+            modeId
+          });
+        } catch (e) {
+          log("info", `ACP setMode(${mode2}): ${String(e)}`);
+        }
+      }
+      /**
+       * Switch model → refresh level options from the new config options it returns → then apply the level (as Paseo does).
+       * Cursor connects with parameterizedModelPicker: only the base model name is sent (grok-4.6); level / Fast are separate config options.
+       */
+      /** false = the model id was skipped (not in the session's model options and not forced) */
+      async applySessionModel(model, force = false) {
+        if (!this.ctx || !this.active) return false;
+        let applied = true;
+        const value = model && this.o.flavor === "cursor" ? model.replace(/\[.*\]$/u, "") : model;
+        if (value) {
+          const modelOption = this.currentConfig().find((o) => o.id === (this.modelConfigId ?? "model"));
+          const values = (modelOption?.options ?? []).flatMap((x) => x.options ? x.options : [x]).map((x) => x.value).filter((x) => typeof x === "string");
+          if (force || !values.length || values.includes(value)) {
+            await this.setOption(this.modelConfigId ?? "model", value);
+          } else {
+            log("info", `\u5FFD\u7565 ${this.o.binName} \u7684\u65E0\u6548\u6A21\u578B\uFF1A${value}`);
+            applied = false;
+          }
+        }
+        if (this.o.flavor === "cursor" && this.cursorFast && this.currentConfig().some((o) => o.id === "fast")) {
+          await this.setOption("fast", "true");
+        }
+        await this.applySessionThought(this.o.effort);
+        return applied;
+      }
+      async applyCursorAutoReviewConfig(on) {
+        if (this.o.flavor !== "cursor" || !this.ctx || !this.active) return;
+        for (const configId of ["auto_review", "autoReview", "smart_auto"]) {
+          try {
+            await this.ctx.request(methods2.agent.session.setConfigOption, {
+              sessionId: this.active.sessionId,
+              configId,
+              type: "boolean",
+              value: on
+            });
+            return;
+          } catch {
+          }
+        }
+      }
+      /** Cursor only: Fast / Auto-review (can be changed while the session is open) */
+      async updateCursorOpts(fast, autoReview) {
+        this.cursorFast = fast;
+        void autoReview;
+        await this.ready();
+        await this.applySessionModel(this.o.model);
+        await this.applyCursorAutoReviewConfig(false);
+      }
+      waitPerm(requestId, signal) {
+        return new Promise((resolve4) => {
+          this.permPending.set(requestId, resolve4);
+          if (signal?.aborted) this.cancelPerm(requestId);
+          else signal?.addEventListener("abort", () => this.cancelPerm(requestId), { once: true });
+        });
+      }
+      /** Close an open permission request as cancelled (answer the Agent's request and tell the manager) */
+      cancelPerm(requestId) {
+        const r = this.permPending.get(requestId);
+        if (!r) return;
+        this.permPending.delete(requestId);
+        r({ cancelled: true });
+        this.q.push({ type: "permission_resolved", requestId, cancelled: true });
+      }
+      respond(requestId, answer) {
+        const r = this.permPending.get(requestId);
+        if (r) {
+          this.permPending.delete(requestId);
+          r(answer);
+          this.q.push({
+            type: "permission_resolved",
+            requestId,
+            optionId: answer.optionId,
+            cancelled: answer.cancelled
+          });
+        }
+      }
+      async send(input) {
+        await this.ready();
+        if (this.running) throw new Error("\u5F53\u524D\u8F6E\u6B21\u5C1A\u672A\u7ED3\u675F");
+        this.turnNum++;
+        const turnId = "u_" + Date.now().toString(36) + "_" + this.turnNum;
+        this.turnId = turnId;
+        this.running = true;
+        this.q.push({
+          type: "turn_started",
+          turnId,
+          model: this.o.model,
+          mode: this.o.mode,
+          effort: this.o.effort
+        });
+        const text = input.text.trim();
+        const attachments = input.images ?? [];
+        if (!text && !attachments.length) {
+          this.running = false;
+          this.q.push({ type: "turn_ended", turnId, status: "completed" });
+          return;
+        }
+        const built = await buildAcpPrompt(text, attachments, this.promptCaps, input.mentions ?? []);
+        if (this.closed || !this.running || this.turnId !== turnId) return;
+        const agent = this.o.providerName ?? this.o.binName;
+        if (built.imagesByPath.length && !this.promptCaps.image) {
+          const switched = this.o.imagesFollowStartModel && this.initCaps.image && this.o.model !== this.startModel;
+          this.q.push({ type: "notice", level: "warn", message: tr(switched ? "notice.acpImageByPathSwitched" : "notice.acpImageByPath", { agent, paths: built.imagesByPath.join(", ") }) });
+        }
+        for (const w of built.warnings) this.q.push({ type: "notice", level: "warn", message: tr("notice.attachmentIssue", { detail: w }) });
+        if (!built.blocks.length) {
+          if (this.turnId === turnId && this.running) {
+            this.running = false;
+            this.q.push({ type: "turn_ended", turnId, status: "completed" });
+          }
+          return;
+        }
+        void this.runTurn(turnId, built.blocks);
+      }
+      waitCloseOrTimeout(ms) {
+        if (this.closed) return Promise.resolve();
+        return new Promise((resolve4) => {
+          const t = setTimeout(() => {
+            this.closeWaiters = this.closeWaiters.filter((w) => w !== done);
+            resolve4();
+          }, ms);
+          const done = () => {
+            clearTimeout(t);
+            resolve4();
+          };
+          this.closeWaiters.push(done);
+        });
+      }
+      // Send this turn's prompt; session/update still flows through pumpUpdates, but ending the turn is tied
+      // to this prompt() promise so a JSON-RPC error on a cancelled prompt cannot leave a leftover counter.
+      // After Stop, wait for pendingCancelSettle before activating Turn N+1 on the wire (Devin cancels an
+      // overlapping session/prompt that arrives while the previous one is still unwinding).
+      async runTurn(turnId, prompt) {
+        const pending = this.pendingCancelSettle;
+        if (pending) {
+          await Promise.race([pending, this.waitCloseOrTimeout(2e3)]);
+          if (this.pendingCancelSettle === pending) this.pendingCancelSettle = null;
+          if (this.closed || !this.running || this.turnId !== turnId) return;
+        }
+        this.mapCtx = newMapCtx();
+        this.activeTurnId = turnId;
+        this.wakePump?.();
+        this.wakePump = null;
+        const req = this.active.prompt(prompt);
+        const settle = req.then(() => {
+        }, () => {
+        });
+        this.inFlightPrompt = settle;
+        try {
+          const res = await req;
+          if (this.activeTurnId === turnId) {
+            this.endTurn(stopToTurnEnd(res.stopReason, turnId));
+          }
+        } catch (e) {
+          if (this.activeTurnId === turnId) {
+            this.endTurn({
+              type: "turn_ended",
+              turnId,
+              status: "failed",
+              error: String(e?.message ?? e)
+            });
+          }
+        } finally {
+          if (this.inFlightPrompt === settle) this.inFlightPrompt = null;
+        }
+      }
+      endTurn(ev) {
+        for (const id2 of [...this.permPending.keys()]) this.cancelPerm(id2);
+        this.q.push(ev);
+        this.activeTurnId = null;
+        this.running = false;
+      }
+      /**
+       * Read session/update for the whole lifetime of the session.
+       * It used to read only during a turn: the available_commands_update an Agent pushes after session/new and before the first message went unread,
+       * so the slash menu stayed empty. Now command updates are cached at any time; conversation content becomes timeline events only while a turn is in progress.
+       */
+      async pumpUpdates() {
+        const session = this.active;
+        if (!session) return;
+        while (!this.closed) {
+          let msg;
+          try {
+            msg = await session.nextUpdate();
+          } catch (e) {
+            if (this.closed) return;
+            await new Promise((r) => this.wakePump = r);
+            continue;
+          }
+          if (msg.kind === "session_update") {
+            const u = msg.update;
+            if (u.sessionUpdate === "available_commands_update") {
+              this.applyAvailableCommands(u.availableCommands ?? []);
+              continue;
+            }
+            if (!this.activeTurnId) continue;
+            for (const ev of mapSessionUpdate(u, this.mapCtx)) this.q.push(ev);
+          } else {
+            continue;
+          }
+        }
+      }
+      async interrupt() {
+        await this.ready();
+        if (!this.ctx || !this.active) return;
+        const notifyP = this.ctx.notify(methods2.agent.session.cancel, { sessionId: this.active.sessionId }).catch((e) => {
+          log("info", `ACP cancel: ${String(e)}`);
+        });
+        const prevSettle = this.inFlightPrompt ?? Promise.resolve();
+        this.pendingCancelSettle = Promise.all([notifyP, prevSettle]).then(
+          () => new Promise((r) => setTimeout(r, 0))
+        );
+        if (this.running) {
+          const turnId = this.activeTurnId ?? this.turnId;
+          if (turnId) {
+            this.endTurn({ type: "turn_ended", turnId, status: "interrupted" });
+          } else {
+            this.running = false;
+          }
+        }
+        await notifyP;
+      }
+      async setModel(model, opts) {
+        this.o.model = model;
+        await this.ready();
+        if (this.o.imagesFollowStartModel) {
+          this.promptCaps = model === this.startModel ? this.initCaps : { ...this.initCaps, image: false };
+        }
+        return this.applySessionModel(model, Boolean(opts?.force));
+      }
+      async setMode(mode2) {
+        this.o.mode = mode2;
+        await this.ready();
+        await this.applySessionMode(mode2);
+      }
+      async setEffort(effort) {
+        this.o.effort = effort;
+        await this.ready();
+        await this.applySessionThought(effort);
+      }
+      async listCommands() {
+        try {
+          await this.ready();
+        } catch {
+          return [];
+        }
+        if (!this.slashCommands.length) {
+          await Promise.race([this.commandsReady, new Promise((r) => setTimeout(r, 1e4))]);
+        }
+        return this.slashCommands;
+      }
+      async close() {
+        this.closed = true;
+        for (const w of this.closeWaiters.splice(0)) w();
+        this.wakePump?.();
+        this.settleCommands();
+        for (const r of this.permPending.values()) r({ cancelled: true });
+        this.permPending.clear();
+        try {
+          this.active?.dispose();
+        } catch {
+        }
+        try {
+          this.conn?.close();
+        } catch {
+        }
+        await killAcpChild(this.child);
+        this.child = null;
+        this.q.close();
+      }
+    };
+  }
+});
+
+// daemon/src/providers/acp/provider.ts
+function runVersion3(r, args, timeoutMs = 8e3) {
+  return new Promise((resolvePromise, reject) => {
+    let out = "";
+    const p = spawnBin(r, args, { stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, NO_COLOR: "1" } });
+    const t = setTimeout(() => {
+      try {
+        void killTree(p, { graceMs: 500 });
+      } catch {
+      }
+      reject(new Error("timeout"));
+    }, timeoutMs);
+    const od = new OutputDecoder(), ed = new OutputDecoder();
+    p.stdout?.on("data", (c) => out += od.write(c));
+    p.stderr?.on("data", (c) => out += ed.write(c));
+    p.on("error", reject);
+    p.on("close", (code) => {
+      clearTimeout(t);
+      if (code === 0 || out.trim()) resolvePromise(out.trim());
+      else reject(new Error("exit " + code));
+    });
+  });
+}
+async function resolveProviderBin(cfg2) {
+  const names = cfg2.binCandidates?.length ? cfg2.binCandidates : [cfg2.binName];
+  return resolveFirstBin(names);
+}
+function createAcpProvider(cfg2) {
+  const base = cfg2.capabilities ?? acpCapabilities;
+  const ORDER = ["plan", "default", "acceptEdits", "bypassPermissions", "ask"];
+  const caps = cfg2.modeMap ? { ...base, modes: ORDER.filter((m) => cfg2.modeMap[m] !== void 0), modeLabels: cfg2.modeLabels } : base;
+  return {
+    id: cfg2.id,
+    name: cfg2.name,
+    // images is what the Agent's own initialize says (probe at warm-up / providers.list, or any session); until then unknown
+    get capabilities() {
+      const learned2 = knownPromptCaps(cfg2.id);
+      return learned2 ? { ...caps, images: learned2.image, imagesKnown: true } : { ...caps, images: false, imagesKnown: false };
+    },
+    async detect(launch) {
+      const r = launch ? await resolveLaunch(launch) : await resolveProviderBin(cfg2);
+      if (!r.ok) {
+        return { available: false, reason: r.reason, installHint: cfg2.installHint };
+      }
+      let version;
+      const versionArgs = cfg2.id === "devin" ? ["version"] : ["cursor", "opencode"].includes(cfg2.id) ? ["--version"] : null;
+      try {
+        if (versionArgs) {
+          version = (await runVersion3(r, [...launch?.prefixArgs ?? [], ...versionArgs])).split(/\r?\n/)[0]?.trim();
+        }
+      } catch {
+      }
+      return { available: true, bin: r.display, version };
+    },
+    async listModels(launch) {
+      const resolved = launch ? await resolveLaunch(launch) : await resolveProviderBin(cfg2);
+      if (!resolved.ok) return [{ id: "default", name: PLACEHOLDER_MODEL_NAME, isDefault: true }];
+      const r = launch?.prefixArgs?.length && resolved.via !== "cmd-shim" ? { ...resolved, prefixArgs: [...resolved.prefixArgs, ...launch.prefixArgs] } : resolved;
+      if (cfg2.fetchModels) return cfg2.fetchModels(r, launch?.args ?? []);
+      return [{ id: "default", name: PLACEHOLDER_MODEL_NAME, isDefault: true }];
+    },
+    async createSession(o) {
+      return new AcpSession({
+        threadId: o.threadId,
+        providerId: cfg2.id,
+        providerName: cfg2.name,
+        cwd: o.cwd,
+        model: o.model,
+        mode: o.mode,
+        effort: o.effort,
+        resumeId: o.resumeId,
+        binName: cfg2.binName,
+        binCandidates: cfg2.binCandidates ?? [cfg2.binName],
+        acpArgs: cfg2.argsFor ? await cfg2.argsFor(o.model) : cfg2.acpArgs,
+        imagesFollowStartModel: cfg2.imagesFollowStartModel,
+        appVersion: cfg2.appVersion ?? "0.0.1",
+        flavor: cfg2.flavor ?? "generic",
+        modeMap: cfg2.modeMap,
+        cursorFast: o.cursorFast,
+        cursorAutoReview: o.cursorAutoReview,
+        launch: o.launch
+      });
+    }
+  };
+}
+var acpCapabilities, cursorAcpCapabilities;
+var init_provider3 = __esm({
+  "daemon/src/providers/acp/provider.ts"() {
+    init_bin();
+    init_bin();
+    init_launch();
+    init_types();
+    init_session3();
+    init_promptCaps();
+    init_decode();
+    acpCapabilities = {
+      resume: true,
+      interrupt: true,
+      steer: false,
+      images: false,
+      plan: true,
+      questions: false,
+      cost: false,
+      effort: [],
+      modes: ["plan", "default", "acceptEdits", "bypassPermissions"],
+      deltasOnly: true
+    };
+    cursorAcpCapabilities = {
+      ...acpCapabilities,
+      questions: true,
+      // 1.3: bypassPermissions = 全部自动同意: Cursor's agent mode, every approval answered "allow once" by the daemon
+      // (Cursor's own --force only exists at spawn, and Auto-review is not applied over ACP)
+      modes: ["default", "bypassPermissions", "plan", "ask"]
+    };
+  }
+});
+
+// daemon/src/providers/acp/dsh.ts
+import { createHash as createHash2 } from "node:crypto";
+import { mkdir as mkdir2, writeFile as writeFile3 } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join as join10 } from "node:path";
+function dshRoute(model) {
+  if (!model) return null;
+  try {
+    const v = JSON.parse(model);
+    if (Array.isArray(v) && v.length === 2 && typeof v[0] === "string" && typeof v[1] === "string" && v[0] && v[1]) {
+      return { provider: v[0], model: v[1] };
+    }
+  } catch {
+  }
+  return null;
+}
+function dshRoutePatch(route) {
+  return [
+    "# Agent Console: the route dsh's ACP starts on, so initialize advertises image input for it",
+    "- id: acp",
+    "  config:",
+    `    provider: ${JSON.stringify(route.provider)}`,
+    `    model: ${JSON.stringify(route.model)}`,
+    ""
+  ].join("\n");
+}
+async function dshAcpArgs(model, dir = join10(tmpdir(), "agent-console-dsh")) {
+  const route = dshRoute(model);
+  if (!route) return [...DSH_ACP_ARGS];
+  const body = dshRoutePatch(route);
+  const file = join10(dir, `acp-route-${createHash2("sha256").update(body).digest("hex").slice(0, 16)}.yml`);
+  await mkdir2(dir, { recursive: true });
+  await writeFile3(file, body, { mode: 384 });
+  return [...DSH_ACP_ARGS, "--patch", file];
+}
+function dshDefaultModel(models2, current) {
+  return models2.find((m) => /magpie/i.test(m.id))?.id ?? current ?? models2[0]?.id ?? null;
+}
+var DSH_ACP_ARGS;
+var init_dsh = __esm({
+  "daemon/src/providers/acp/dsh.ts"() {
+    DSH_ACP_ARGS = ["--profile", "acp"];
+  }
+});
+
+// daemon/src/providers/acp/probe.ts
+import { tmpdir as tmpdir2 } from "node:os";
+function flatten(opts) {
+  const out = [];
+  for (const o of opts ?? []) {
+    if (o.options) out.push(...flatten(o.options));
+    else if (typeof o.value === "string" && o.value) {
+      out.push({ id: o.value, name: typeof o.name === "string" && o.name ? o.name : o.value });
+    }
+  }
+  return out.filter((m, i) => out.findIndex((x) => x.id === m.id) === i);
+}
+function parseAcpSession(res) {
+  const opts = res.configOptions ?? [];
+  const modelOpt = opts.find((o) => o.type === "select" && (o.category === "model" || o.id === "model"));
+  const thoughtOpt = opts.find((o) => o.type === "select" && (o.category === "thought_level" || o.id === "thought_level"));
+  let models2 = flatten(modelOpt?.options);
+  let currentModel = typeof modelOpt?.currentValue === "string" ? modelOpt.currentValue : null;
+  if (!models2.length && res.models?.availableModels?.length) {
+    models2 = res.models.availableModels.filter((m) => typeof m.modelId === "string" && m.modelId).map((m) => ({ id: m.modelId, name: m.name || m.modelId }));
+    models2 = models2.filter((m, i) => models2.findIndex((x) => x.id === m.id) === i);
+    currentModel = res.models.currentModelId ?? currentModel;
+  }
+  const thinking = flatten(thoughtOpt?.options).map((t) => ({ id: t.id, label: t.name }));
+  const currentThinking = typeof thoughtOpt?.currentValue === "string" ? thoughtOpt.currentValue : null;
+  return { models: models2, currentModel, thinking, currentThinking };
+}
+function probeAcp(r, acpArgs, timeoutMs = 3e4, providerId) {
+  return probeAcpRaw(r, acpArgs, timeoutMs).then((x) => {
+    rememberPromptCaps(providerId, x.promptCaps);
+    return x.parsed;
+  });
+}
+function probeAcpRaw(r, acpArgs, timeoutMs = 3e4, extMethod) {
+  return new Promise((resolvePromise, reject) => {
+    const child = spawnResolved(r, acpArgs, { cwd: tmpdir2() });
+    let buf = "";
+    let nextId = 0;
+    const pending = /* @__PURE__ */ new Map();
+    let done = false;
+    const finish = (err, v) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      void killAcpChild(child).catch(() => {
+      });
+      if (err) reject(err);
+      else resolvePromise(v);
+    };
+    const timer = setTimeout(() => finish(new Error("ACP \u63A2\u6D4B\u8D85\u65F6")), timeoutMs);
+    const send2 = (method, params) => new Promise((res, rej) => {
+      const id2 = ++nextId;
+      pending.set(id2, { res, rej });
+      child.stdin?.write(JSON.stringify({ jsonrpc: "2.0", id: id2, method, params }) + "\n");
+    });
+    child.on("error", (e) => finish(e));
+    child.on("close", () => finish(new Error("ACP \u8FDB\u7A0B\u63D0\u524D\u9000\u51FA")));
+    child.stderr?.on("data", () => {
+    });
+    child.stdout?.setEncoding("utf8");
+    child.stdout?.on("data", (d) => {
+      buf += d;
+      let n;
+      while ((n = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, n).trim();
+        buf = buf.slice(n + 1);
+        if (!line) continue;
+        let m;
+        try {
+          m = JSON.parse(line);
+        } catch {
+          continue;
+        }
+        if (m.id !== void 0 && !m.method && pending.has(m.id)) {
+          const p = pending.get(m.id);
+          pending.delete(m.id);
+          if (m.error) p.rej(new Error(JSON.stringify(m.error)));
+          else p.res(m.result);
+        } else if (m.id !== void 0 && m.method) {
+          child.stdin?.write(JSON.stringify({ jsonrpc: "2.0", id: m.id, result: null }) + "\n");
+        }
+      }
+    });
+    void (async () => {
+      try {
+        const init = await send2("initialize", { protocolVersion: 1, clientCapabilities: {}, clientInfo: { name: "Agent Console", version: "probe" } });
+        const res = await send2("session/new", { cwd: tmpdir2(), mcpServers: [] });
+        let ext = null;
+        if (extMethod) ext = await send2(extMethod, {}).catch(() => null);
+        finish(null, { parsed: parseAcpSession(res ?? {}), ext, promptCaps: promptCapsFromInitialize(init) });
+      } catch (e) {
+        finish(e instanceof Error ? e : new Error(String(e)));
+      }
+    })();
+  });
+}
+function probeToModels(p) {
+  return p.models.map((m) => ({
+    id: m.id,
+    name: m.name,
+    isDefault: m.id === p.currentModel,
+    ...p.thinking.length ? { thinkingOptions: p.thinking, defaultThinking: p.currentThinking ?? void 0 } : {}
+  }));
+}
+function cursorCatalogToModels(catalog, currentModel) {
+  const currentBase = currentModel?.replace(/\[.*\]$/u, "") ?? null;
+  const out = [];
+  for (const m of catalog.models ?? []) {
+    if (typeof m.value !== "string" || !m.value) continue;
+    const id2 = m.value.replace(/\[.*\]$/u, "");
+    const thought = (m.configOptions ?? []).find((o) => o.category === "thought_level");
+    const levels = flatten(thought?.options);
+    out.push({
+      id: id2,
+      name: typeof m.name === "string" && m.name ? m.name : id2,
+      isDefault: id2 === currentBase,
+      ...thought && levels.length ? {
+        thinkingOptions: levels.map((l) => ({ id: l.id, label: EFFORT_LABEL[l.id] ?? l.name })),
+        defaultThinking: typeof thought.currentValue === "string" ? thought.currentValue : void 0,
+        thinkingParam: thought.id
+      } : {}
+    });
+  }
+  return out;
+}
+function cursorProbeModels(acpArgs, providerId) {
+  return async (r, launchArgs = []) => {
+    try {
+      const { parsed, ext, promptCaps } = await probeAcpRaw(r, [...acpArgs, ...launchArgs], 4e4, "cursor/list_available_models");
+      rememberPromptCaps(providerId, promptCaps);
+      const fromCatalog = ext ? cursorCatalogToModels(ext, parsed.currentModel) : [];
+      return fromCatalog.length ? fromCatalog : probeToModels(parsed);
+    } catch (e) {
+      log("warn", "Cursor \u6A21\u578B\u63A2\u6D4B\u5931\u8D25", { err: String(e) });
+      return [];
+    }
+  };
+}
+function dshProbeModels(providerId) {
+  return async (r, launchArgs = []) => {
+    try {
+      const first = await probeAcpRaw(r, [...DSH_ACP_ARGS, ...launchArgs], 3e4);
+      let caps = first.promptCaps;
+      const start = dshDefaultModel(first.parsed.models, first.parsed.currentModel);
+      if (start && start !== first.parsed.currentModel && dshRoute(start)) {
+        caps = await probeAcpRaw(r, [...await dshAcpArgs(start), ...launchArgs], 3e4).then((x) => x.promptCaps, () => caps);
+      }
+      rememberPromptCaps(providerId, caps);
+      return probeToModels(first.parsed);
+    } catch (e) {
+      log("warn", "ACP \u63A2\u6D4B\u6A21\u578B\u5931\u8D25", { err: String(e) });
+      return [];
+    }
+  };
+}
+function acpProbeModels(acpArgs, providerId) {
+  return async (r, launchArgs = []) => {
+    try {
+      return probeToModels(await probeAcp(r, [...acpArgs, ...launchArgs], 3e4, providerId));
+    } catch (e) {
+      log("warn", "ACP \u63A2\u6D4B\u6A21\u578B\u5931\u8D25", { err: String(e) });
+      return [];
+    }
+  };
+}
+var EFFORT_LABEL;
+var init_probe = __esm({
+  "daemon/src/providers/acp/probe.ts"() {
+    init_spawn();
+    init_log();
+    init_promptCaps();
+    init_dsh();
+    EFFORT_LABEL = {
+      none: "None",
+      minimal: "Minimal",
+      low: "Low",
+      medium: "Medium",
+      high: "High",
+      xhigh: "Extra High",
+      max: "Max"
+    };
+  }
+});
+
+// daemon/src/providers/acp/specs.ts
+function acpConfigForEntry(entry, appVersion) {
+  if (!ACP_IDS.has(entry.id)) return null;
+  const base = {
+    id: entry.id,
+    name: entry.name,
+    binName: entry.bins[0] ?? entry.id,
+    binCandidates: entry.bins,
+    installHint: entry.installHint,
+    appVersion
+  };
+  switch (entry.id) {
+    case "cursor":
+      return {
+        ...base,
+        acpArgs: ["acp"],
+        flavor: "cursor",
+        capabilities: cursorAcpCapabilities,
+        // Each model's own thinking levels come from cursor/list_available_models (as Paseo does)
+        fetchModels: cursorProbeModels(["acp"], entry.id)
+      };
+    case "devin":
+      return {
+        ...base,
+        acpArgs: ["acp"],
+        fetchModels: acpProbeModels(["acp"], entry.id),
+        modeMap: { plan: "plan", default: "ask", acceptEdits: "accept-edits", bypassPermissions: "bypass" },
+        modeLabels: { plan: "Plan", default: "Ask", acceptEdits: "Code", bypassPermissions: "Bypass Permissions" }
+      };
+    case "opencode":
+      return {
+        ...base,
+        acpArgs: ["acp"],
+        fetchModels: acpProbeModels(["acp"], entry.id),
+        // 1.3: 全部自动同意 = build + the daemon answers each approval "allow once" (OPENCODE_PERMISSION only applies at spawn)
+        modeMap: { plan: "plan", default: "build", bypassPermissions: "build" },
+        modeLabels: { plan: "Plan", default: "Build", bypassPermissions: "Build" }
+      };
+    case "copilot":
+      return {
+        ...base,
+        acpArgs: ["--acp"],
+        fetchModels: acpProbeModels(["--acp"], entry.id),
+        modeMap: { plan: "plan", default: "agent", bypassPermissions: "allow-all" },
+        modeLabels: { plan: "Plan", default: "Agent", bypassPermissions: "Allow All" }
+      };
+    case "pi":
+      return { ...base, acpArgs: [], fetchModels: acpProbeModels([], entry.id), modeMap: { default: "" } };
+    case "dsh":
+      return {
+        ...base,
+        acpArgs: DSH_ACP_ARGS,
+        argsFor: (model) => dshAcpArgs(model),
+        imagesFollowStartModel: true,
+        fetchModels: dshProbeModels(entry.id)
+      };
+    default:
+      return null;
+  }
+}
+var ACP_IDS;
+var init_specs = __esm({
+  "daemon/src/providers/acp/specs.ts"() {
+    init_provider3();
+    init_probe();
+    init_dsh();
+    ACP_IDS = /* @__PURE__ */ new Set(["cursor", "devin", "opencode", "dsh", "pi", "copilot"]);
+  }
+});
+
+// daemon/src/providers/magpieGateway.ts
+import { readFile as readFile11, stat as stat8 } from "node:fs/promises";
+import { homedir as homedir8 } from "node:os";
+import { join as join11 } from "node:path";
+function magpieTokenFor(agentId) {
+  return `${MAGPIE_GATEWAY_TOKEN}-${agentId}`;
+}
+async function readJson(path5) {
+  try {
+    return JSON.parse(await readFile11(path5, "utf8"));
+  } catch {
+    return null;
+  }
+}
+async function readApplied() {
+  return await readJson(join11(homedir8(), ".config", "magpie", "applied.json")) ?? {};
+}
+async function readClaudeEnv() {
+  const s = await readJson(join11(homedir8(), ".claude", "settings.json"));
+  return s?.env ?? {};
+}
+async function gatewayBase() {
+  const env = await readClaudeEnv();
+  const raw = env.ANTHROPIC_BASE_URL?.trim();
+  return (raw && /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?(\/|$)/i.test(raw) ? raw : "http://127.0.0.1:3425").replace(/\/+$/, "");
+}
+async function fetchGatewayModelIds(agentId) {
+  const base = await gatewayBase();
+  const token = magpieTokenFor(agentId);
+  try {
+    const res = await fetch(`${base}/v1/models`, {
+      signal: AbortSignal.timeout(5e3),
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "x-api-key": token,
+        // Belt-and-suspenders: AgentOf also maps known User-Agents when the token is plain "magpie".
+        "User-Agent": `agent-console/${agentId}`
+      }
+    });
+    if (!res.ok) return [];
+    const j = await res.json();
+    return (j.data ?? []).map((m) => m.id).filter((id2) => typeof id2 === "string" && !!id2);
+  } catch (e) {
+    log("warn", "\u8BFB\u53D6 magpie \u7F51\u5173\u6A21\u578B\u5217\u8868\u5931\u8D25", { agent: agentId, err: String(e) });
+    return [];
+  }
+}
+function parseCapabilities(raw) {
+  const out = /* @__PURE__ */ new Map();
+  for (const part of (raw ?? "").split(";")) {
+    const i = part.indexOf("=");
+    if (i <= 0) continue;
+    const flags = new Set(part.slice(i + 1).split(",").map((s) => s.trim()));
+    if (!flags.has("effort")) continue;
+    const levels = ["low", "medium", "high"];
+    if (flags.has("xhigh_effort")) levels.push("xhigh");
+    if (flags.has("max_effort")) levels.push("max");
+    out.set(part.slice(0, i).trim(), levels);
+  }
+  return out;
+}
+function isPlaceholder(m) {
+  return !m.id || /^(default|auto)$/i.test(m.id);
+}
+async function magpieDefaultModel(providerId) {
+  if (providerId === "dsh") return null;
+  const tool = MAGPIE_TOOLS[providerId];
+  if (!tool) return null;
+  const applied = (await readApplied())[tool.key]?.fields?.model?.trim();
+  return applied || null;
+}
+async function magpieConfigFingerprint(providerId) {
+  if (!MAGPIE_TOOLS[providerId]) return "";
+  const home = homedir8();
+  const ownFiles = {
+    claude: [join11(home, ".claude", "settings.json")],
+    codex: [join11(home, ".codex", "config.toml"), join11(home, ".codex", "magpie-models.json"), join11(home, ".codex", "models.json")],
+    opencode: [join11(home, ".config", "opencode", "opencode.json")],
+    pi: [join11(home, ".pi", "agent", "settings.json"), join11(home, ".pi", "agent", "models.json")],
+    // DSH uses YAML under DSH_HOME (default ~/.dsh), not ~/.config/dsh/config.json.
+    dsh: ["config.yaml", "settings.yaml", "cordis.patch.yml", "profiles/desktop/cordis.patch.yml", "profiles/web/cordis.patch.yml"].map((file) => join11(process.env.DSH_HOME?.trim() || join11(home, ".dsh"), file))
+  };
+  const paths = [
+    join11(home, ".config", "magpie", "applied.json"),
+    join11(home, ".config", "magpie", "settings.json"),
+    ...ownFiles[providerId]
+  ];
+  const parts = [];
+  for (const p of paths) {
+    try {
+      const st = await stat8(p);
+      parts.push(`${p}=${st.mtimeMs}`);
+    } catch {
+      parts.push(`${p}=-`);
+    }
+  }
+  return parts.join("|");
+}
+function filterToGatewayShown(list, gatewayIds, prefix, opts) {
+  if (!gatewayIds.length) return list;
+  const shown = new Set(gatewayIds);
+  const shownPrefixed = new Set(gatewayIds.map((id2) => prefix + id2));
+  const codexBare = opts?.providerId === "codex";
+  return list.filter((m) => {
+    if (shown.has(m.id) || shownPrefixed.has(m.id)) return true;
+    if (prefix && m.id.startsWith(prefix) && shown.has(m.id.slice(prefix.length))) return true;
+    if (codexBare && !m.id.includes("/") && shown.has(`codex/${m.id}`)) return true;
+    return false;
+  });
+}
+async function withMagpie(providerId, own) {
+  const tool = MAGPIE_TOOLS[providerId];
+  if (!tool) return own;
+  const applied = (await readApplied())[tool.key]?.fields;
+  if (!applied?.model) return own;
+  const caps = parseCapabilities((await readClaudeEnv()).CLAUDE_CODE_MODEL_CAPABILITIES);
+  const real = own.filter((m) => !isPlaceholder(m));
+  if (providerId === "dsh") {
+    const appliedId = applied.model.replace(/^magpie\//, "");
+    const selected = real.find(
+      (m) => m.id === applied.model || m.id === appliedId || appliedId.includes("/") && m.id.includes(appliedId)
+    );
+    const fallback = selected ?? real.find((m) => m.isDefault) ?? real[0];
+    return real.map((m) => ({ ...m, isDefault: m.id === fallback?.id }));
+  }
+  const knowsMagpie = tool.prefix ? real.some((m) => m.id.startsWith(tool.prefix)) : real.length > 0;
+  const gatewayIds = await fetchGatewayModelIds(tool.key);
+  let list;
+  if (knowsMagpie) {
+    const mine = real.filter((m) => !tool.prefix || m.id.startsWith(tool.prefix));
+    const others = tool.prefix ? real.filter((m) => !m.id.startsWith(tool.prefix)) : [];
+    const filteredMine = gatewayIds.length ? filterToGatewayShown(mine, gatewayIds, tool.prefix, { providerId }) : mine;
+    list = [...filteredMine.length ? filteredMine : mine, ...others];
+  } else {
+    list = gatewayIds.map((gid) => ({ id: tool.prefix + gid, name: gid }));
+  }
+  const defId = applied.model;
+  if (!list.some((m) => m.id === defId)) list.unshift({ id: defId, name: defId.slice(tool.prefix.length) || defId });
+  list = list.map((m) => ({ ...m, isDefault: m.id === defId }));
+  list.sort((a, b) => Number(!!b.isDefault) - Number(!!a.isDefault));
+  return list.map((m) => {
+    const name = tool.prefix && m.name.startsWith(tool.prefix) ? m.name.slice(tool.prefix.length) : m.name;
+    if (m.thinkingOptions?.length && providerId !== "claude") return { ...m, name };
+    const levels = caps.get(m.id.slice(tool.prefix.length) || m.id);
+    if (!levels) return { ...m, name, thinkingOptions: providerId === "claude" ? [] : m.thinkingOptions };
+    const def = applied.effort && levels.includes(applied.effort) ? applied.effort : levels.includes("high") ? "high" : levels[0];
+    return {
+      ...m,
+      name,
+      thinkingOptions: levels.map((id2) => ({ id: id2, label: EFFORT_LABEL2[id2] ?? id2 })),
+      defaultThinking: m.isDefault ? def : m.defaultThinking ?? def
+    };
+  });
+}
+var MAGPIE_TOOLS, MAGPIE_GATEWAY_TOKEN, EFFORT_LABEL2;
+var init_magpieGateway = __esm({
+  "daemon/src/providers/magpieGateway.ts"() {
+    init_log();
+    MAGPIE_TOOLS = {
+      claude: { key: "claude", prefix: "" },
+      codex: { key: "codex", prefix: "" },
+      opencode: { key: "opencode", prefix: "magpie/" },
+      pi: { key: "pi", prefix: "magpie/" },
+      dsh: { key: "dsh", prefix: "magpie/" }
+    };
+    MAGPIE_GATEWAY_TOKEN = "magpie";
+    EFFORT_LABEL2 = {
+      low: "Low",
+      medium: "Medium",
+      high: "High",
+      xhigh: "Extra High",
+      max: "Max"
+    };
+  }
+});
+
+// daemon/src/providers/infoCache.ts
+function registerProviderCacheClear(hook) {
+  extraClearHooks.add(hook);
+}
+function withTimeout2(p, ms, fb) {
+  return Promise.race([p, new Promise((r) => setTimeout(() => r(fb), ms))]);
+}
+function fresh(e, ttl, fp) {
+  if (!e || Date.now() - e.at >= ttl) return false;
+  if (fp !== void 0 && e.fp !== void 0 && e.fp !== fp) return false;
+  return true;
+}
+function cacheKey(p, launch) {
+  return launch ? `${p.id}\0${launchKey(launch)}` : p.id;
+}
+async function cachedDetect(p, launch) {
+  const key = cacheKey(p, launch);
+  const hit = detects.get(key);
+  if (fresh(hit, DETECT_MS)) return hit.value;
+  let job = inflightDetect.get(key);
+  if (!job) {
+    const timedOut = { available: false, reason: tr("provider.timeout") };
+    job = withTimeout2(
+      p.detect(launch).catch((e) => ({ available: false, reason: String(e?.message ?? e) })),
+      STEP_TIMEOUT_MS,
+      timedOut
+    ).then((v) => {
+      if (v !== timedOut) detects.set(key, { at: Date.now(), value: v });
+      return v;
+    }).finally(() => inflightDetect.delete(key));
+    inflightDetect.set(key, job);
+  }
+  return job;
+}
+async function cachedModels(p, launch) {
+  const key = cacheKey(p, launch);
+  const fp = await magpieConfigFingerprint(p.id).catch(() => "");
+  const hit = models.get(key);
+  if (fresh(hit, MODELS_MS, fp)) return hit.value;
+  let job = inflightModels.get(key);
+  if (!job) {
+    job = withTimeout2(p.listModels(launch).catch(() => []), MODELS_TIMEOUT_MS, null).then(async (v) => {
+      if (v === null) return models.get(key)?.value ?? [];
+      const list = await withMagpie(p.id, dropPlaceholder(v)).catch(() => dropPlaceholder(v));
+      models.set(key, { at: Date.now(), value: list, fp });
+      return list;
+    }).finally(() => inflightModels.delete(key));
+    inflightModels.set(key, job);
+  }
+  return job;
+}
+function dropPlaceholder(list) {
+  if (list.length === 1 && list[0].id === "default" && (list[0].name === "\u9ED8\u8BA4" || list[0].name === PLACEHOLDER_MODEL_NAME)) return [];
+  return list;
+}
+function clearProviderCache(id2) {
+  if (id2) {
+    for (const m of [detects, models]) {
+      for (const k of [...m.keys()]) if (k === id2 || k.startsWith(id2 + "\0")) m.delete(k);
+    }
+  } else {
+    detects.clear();
+    models.clear();
+  }
+  for (const hook of extraClearHooks) {
+    try {
+      hook(id2);
+    } catch {
+    }
+  }
+}
+var DETECT_MS, MODELS_MS, STEP_TIMEOUT_MS, MODELS_TIMEOUT_MS, detects, models, inflightDetect, inflightModels, extraClearHooks;
+var init_infoCache = __esm({
+  "daemon/src/providers/infoCache.ts"() {
+    init_types();
+    init_magpieGateway();
+    init_launch();
+    init_i18n();
+    DETECT_MS = 60 * 1e3;
+    MODELS_MS = 10 * 60 * 1e3;
+    STEP_TIMEOUT_MS = 15e3;
+    MODELS_TIMEOUT_MS = 35e3;
+    detects = /* @__PURE__ */ new Map();
+    models = /* @__PURE__ */ new Map();
+    inflightDetect = /* @__PURE__ */ new Map();
+    inflightModels = /* @__PURE__ */ new Map();
+    extraClearHooks = /* @__PURE__ */ new Set();
+  }
+});
+
+// daemon/src/providers/registry.ts
+function registerProvider(p) {
+  providers.set(p.id, p);
+}
+function getProvider(id2) {
+  return providers.get(id2);
+}
+function listProviders() {
+  return [...providers.values()];
+}
+function initProviders(version = "") {
+  if (!codexCacheHooked) {
+    registerProviderCacheClear((id2) => {
+      if (!id2 || id2 === "codex") clearCodexModelCache();
+    });
+    codexCacheHooked = true;
+  }
+  providers.clear();
+  for (const entry of PROVIDER_CATALOG) {
+    if (entry.id === "claude") registerProvider(createClaudeProvider());
+    else if (entry.id === "codex") registerProvider(createCodexProvider(version));
+    else {
+      const acp2 = acpConfigForEntry(entry, version);
+      if (acp2) registerProvider(createAcpProvider(acp2));
+    }
+  }
+  if (process.env.AGENT_CONSOLE_MOCK === "1") {
+    registerProvider(createMockProvider());
+  }
+}
+var codexCacheHooked, providers;
+var init_registry = __esm({
+  "daemon/src/providers/registry.ts"() {
+    init_mock();
+    init_provider();
+    init_provider2();
+    init_catalog();
+    init_provider3();
+    init_specs();
+    init_infoCache();
+    codexCacheHooked = false;
+    providers = /* @__PURE__ */ new Map();
+  }
+});
+
+// daemon/src/providers/enabled.ts
+function isProviderEnabled(settings, id2) {
+  const m = settings.providerEnabled;
+  if (m && typeof m === "object" && typeof m[id2] === "boolean") return m[id2];
+  const entry = catalogById(id2);
+  if (!entry) return true;
+  return entry.status === "verified";
+}
+var init_enabled = __esm({
+  "daemon/src/providers/enabled.ts"() {
+    init_catalog();
+  }
+});
+
+// daemon/src/util/pickFolderWin.ts
+import { execFile } from "node:child_process";
+function decodePickFolderStdout(stdout) {
+  const buf = Buffer.isBuffer(stdout) ? stdout : Buffer.from(stdout, "utf8");
+  const line = buf.toString("utf8").trim().split(/\r?\n/).pop()?.trim() ?? "";
+  if (!line) return null;
+  if (/^[A-Za-z0-9+/]+=*$/.test(line)) {
+    const decoded = Buffer.from(line, "base64").toString("utf8");
+    if (decoded && !decoded.includes("\uFFFD")) return decoded;
+  }
+  if (!line.includes("\uFFFD")) return line;
+  const gbkLine = new TextDecoder("gbk").decode(buf).trim().split(/\r?\n/).pop()?.trim() ?? "";
+  return gbkLine || null;
+}
+function pickFolderWindows(initial) {
+  return new Promise((resolvePromise) => {
+    if (process.platform !== "win32") return resolvePromise({ available: false, path: null });
+    const init = (initial ?? "").replace(/'/g, "''");
+    const script = "Add-Type -AssemblyName System.Windows.Forms;$d = New-Object System.Windows.Forms.FolderBrowserDialog;$d.Description = '\u9009\u62E9\u9879\u76EE\u6587\u4EF6\u5939';$d.ShowNewFolderButton = $true;" + (init ? `$d.SelectedPath = '${init}';` : "") + "if ($d.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($d.SelectedPath)) }";
+    execFile(
+      "powershell.exe",
+      ["-NoProfile", "-STA", "-NonInteractive", "-Command", script],
+      { timeout: 12e4, windowsHide: false, encoding: "buffer" },
+      (e, stdout) => {
+        if (e) return resolvePromise({ available: true, path: null });
+        resolvePromise({ available: true, path: decodePickFolderStdout(stdout ?? Buffer.alloc(0)) });
+      }
+    );
+  });
+}
+var init_pickFolderWin = __esm({
+  "daemon/src/util/pickFolderWin.ts"() {
+  }
+});
+
+// daemon/src/util/pickFolder.ts
+import { execFile as execFile2 } from "node:child_process";
+import { existsSync as existsSync8, statSync as statSync4 } from "node:fs";
+function appleScriptString(s) {
+  return '"' + s.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+}
+function isDir(p) {
+  try {
+    return !!p && existsSync8(p) && statSync4(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+function pickFolderCommand(platform, initial, find = (n) => findOnPath(n)[0] ?? null, env = process.env) {
+  const init = isDir(initial) ? initial : void 0;
+  if (platform === "darwin") {
+    const prompt = appleScriptString("\u9009\u62E9\u9879\u76EE\u6587\u4EF6\u5939 / Choose a project folder");
+    const loc = init ? ` default location (POSIX file ${appleScriptString(init)})` : "";
+    return { cmd: "/usr/bin/osascript", args: ["-e", `POSIX path of (choose folder with prompt ${prompt}${loc})`] };
+  }
+  if (platform === "linux" || platform === "freebsd" || platform === "openbsd") {
+    if (!env.DISPLAY && !env.WAYLAND_DISPLAY) return null;
+    const zenity = find("zenity");
+    if (zenity) {
+      const args = ["--file-selection", "--directory", "--title=\u9009\u62E9\u9879\u76EE\u6587\u4EF6\u5939 / Choose a project folder"];
+      if (init) args.push(`--filename=${init.endsWith("/") ? init : init + "/"}`);
+      return { cmd: zenity, args };
+    }
+    const kdialog = find("kdialog");
+    if (kdialog) return { cmd: kdialog, args: ["--getexistingdirectory", init ?? env.HOME ?? "/"] };
+  }
+  return null;
+}
+function pickFolder(initial) {
+  if (process.platform === "win32") return pickFolderWindows(initial);
+  const c = pickFolderCommand(process.platform, initial);
+  if (!c) return Promise.resolve({ available: false, path: null });
+  return new Promise((resolvePromise) => {
+    execFile2(c.cmd, c.args, { timeout: TIMEOUT, encoding: "utf8" }, (e, stdout) => {
+      if (e) return resolvePromise({ available: true, path: null });
+      let p = String(stdout ?? "").replace(/\r?\n$/, "").trim();
+      if (p.length > 1) p = p.replace(/\/+$/, "");
+      resolvePromise({ available: true, path: p || null });
+    }).on("error", () => resolvePromise({ available: false, path: null }));
+  });
+}
+var TIMEOUT;
+var init_pickFolder = __esm({
+  "daemon/src/util/pickFolder.ts"() {
+    init_pathscan();
+    init_pickFolderWin();
+    TIMEOUT = 10 * 60 * 1e3;
+  }
+});
+
+// daemon/src/providers/modes.ts
+function clampMode(modes, mode2) {
+  if (mode2 && modes.includes(mode2)) return mode2;
+  if (modes.includes("default")) return "default";
+  return modes[0] ?? "default";
+}
+var init_modes = __esm({
+  "daemon/src/providers/modes.ts"() {
+  }
+});
+
+// daemon/src/providers/autoApprove.ts
+function pickAllowOnce(options) {
+  const once = options.find((o) => o.kind === "allow_once");
+  if (once) return once;
+  const plain = options.find((o) => {
+    const s = `${o.id} ${o.label ?? ""}`;
+    return !o.kind?.startsWith("reject") && !REJECT.test(s) && ALLOW.test(s) && !/always|session|总是|始终/i.test(s);
+  });
+  return plain ?? null;
+}
+function autoApproveOption(mode2, providerId, req) {
+  if (mode2 !== FULL_AUTO) return null;
+  if (FULL_AUTO_NATIVE[providerId]?.daemonAnswers === false) return null;
+  if (req.kind === "plan" || req.kind === "switch_mode") return null;
+  return pickAllowOnce(req.options);
+}
+var FULL_AUTO, FULL_AUTO_NATIVE, REJECT, ALLOW;
+var init_autoApprove = __esm({
+  "daemon/src/providers/autoApprove.ts"() {
+    FULL_AUTO = "bypassPermissions";
+    FULL_AUTO_NATIVE = {
+      claude: { native: "--permission-mode bypassPermissions (+ --allow-dangerously-skip-permissions)", live: "nextTurn", daemonAnswers: true },
+      codex: { native: "approvalPolicy never + sandbox danger-full-access (turn/start)", live: "nextTurn", daemonAnswers: true },
+      cursor: { native: "none over ACP (--force is spawn-only); ACP mode agent", live: "live", daemonAnswers: true },
+      copilot: { native: "ACP config allow_all = on (agent mode)", live: "live", daemonAnswers: true },
+      opencode: { native: "none over ACP (OPENCODE_PERMISSION is spawn-only); ACP mode build", live: "live", daemonAnswers: true },
+      devin: { native: "ACP mode bypass", live: "live", daemonAnswers: true },
+      dsh: { native: "none known; ACP default mode", live: "live", daemonAnswers: true },
+      // pi never asks before its own tools; requestPermission only carries Pi extensions' own dialogs, which stay with the user
+      pi: { native: "always (Pi has no tool approvals)", live: "live", daemonAnswers: false },
+      mock: { native: "mock", live: "live", daemonAnswers: true }
+    };
+    REJECT = /reject|deny|decline|cancel|never|拒绝/i;
+    ALLOW = /allow|accept|approve|yes|允许|同意/i;
+  }
+});
+
+// daemon/src/migrate/autoApprove13.ts
+var autoApprove13_exports = {};
+__export(autoApprove13_exports, {
+  LEGACY_NO_AUTO: () => LEGACY_NO_AUTO,
+  MIGRATED_NOTICE_CODE: () => MIGRATED_NOTICE_CODE,
+  UPGRADE_NOTICE_CODE: () => UPGRADE_NOTICE_CODE,
+  endLegacyDefault: () => endLegacyDefault,
+  guardLegacyMode: () => guardLegacyMode,
+  migrateAutoApprove13: () => migrateAutoApprove13,
+  upgradeNotice: () => upgradeNotice
+});
+function state(s) {
+  const v = s[KEY];
+  return v && typeof v === "object" && v.done === true ? { done: true, legacyDefault: v.legacyDefault === true, noticed: v.noticed === true } : null;
+}
+async function migrateAutoApprove13(stores) {
+  const s = await stores.settings.get();
+  if (state(s)) return { threads: [], legacyDefault: false, skipped: true };
+  const moved = [];
+  for (const t of await stores.threads.list()) {
+    if (t.mode !== FULL_AUTO || !LEGACY_NO_AUTO.has(t.provider)) continue;
+    try {
+      await stores.threads.patch(t.id, { mode: "default" });
+      await stores.threads.appendEvent(t.id, { type: "notice", level: "warn", code: MIGRATED_NOTICE_CODE, message: tr("notice.autoApproveMigrated") });
+      moved.push(t.id);
+    } catch (e) {
+      log("warn", `\u5168\u90E8\u81EA\u52A8\u540C\u610F\u8FC1\u79FB\uFF1A\u5BF9\u8BDD ${t.id} \u5931\u8D25\uFF1A${String(e)}`);
+    }
+  }
+  const legacyDefault = s.defaultMode === FULL_AUTO;
+  await stores.settings.set({ [KEY]: { done: true, legacyDefault, noticed: false } });
+  if (moved.length || legacyDefault) log("info", `\u5168\u90E8\u81EA\u52A8\u540C\u610F\u8FC1\u79FB\uFF1A${moved.length} \u4E2A\u5BF9\u8BDD\u6539\u56DE\u6BCF\u6B21\u8BE2\u95EE\uFF1B\u65E7\u7684\u9ED8\u8BA4\u5168\u90E8\u653E\u884C=${legacyDefault}`);
+  return { threads: moved, legacyDefault, skipped: false };
+}
+async function guardLegacyMode(settings, providerId, mode2) {
+  if (mode2 !== FULL_AUTO || !LEGACY_NO_AUTO.has(providerId)) return { mode: mode2, notice: false };
+  const s = await settings.get();
+  const st = state(s);
+  if (!st?.legacyDefault) return { mode: mode2, notice: false };
+  if (st.noticed) return { mode: "default", notice: false };
+  await settings.set({ [KEY]: { ...st, noticed: true } });
+  return { mode: "default", notice: true };
+}
+async function endLegacyDefault(settings) {
+  const st = state(await settings.get());
+  if (st?.legacyDefault) await settings.set({ [KEY]: { ...st, legacyDefault: false } });
+}
+function upgradeNotice() {
+  return { type: "notice", level: "info", code: UPGRADE_NOTICE_CODE, message: tr("notice.autoApproveUpgrade") };
+}
+var LEGACY_NO_AUTO, UPGRADE_NOTICE_CODE, MIGRATED_NOTICE_CODE, KEY;
+var init_autoApprove13 = __esm({
+  "daemon/src/migrate/autoApprove13.ts"() {
+    init_autoApprove();
+    init_i18n();
+    init_log();
+    LEGACY_NO_AUTO = /* @__PURE__ */ new Set(["cursor", "opencode", "dsh"]);
+    UPGRADE_NOTICE_CODE = "auto_approve_upgrade";
+    MIGRATED_NOTICE_CODE = "auto_approve_migrated";
+    KEY = "autoApproveUpgrade";
+  }
+});
+
+// daemon/src/util/mentions.ts
+import { realpath, stat as stat9 } from "node:fs/promises";
+import { isAbsolute as isAbsolute3, resolve as resolve3, sep as sep2, win32 as win322, posix as posix2 } from "node:path";
+function insideRoot(root, child, platform = process.platform) {
+  const p = platform === "win32" ? win322 : posix2;
+  const norm2 = (s) => platform === "win32" ? p.resolve(s).toLowerCase() : p.resolve(s);
+  const r = p.relative(norm2(root), norm2(child));
+  return r === "" || !r.startsWith("..") && !p.isAbsolute(r);
+}
+async function resolveMentions(projectPath, refs) {
+  const mentions = [];
+  const warnings = [];
+  const seen = /* @__PURE__ */ new Set();
+  const shown = resolve3(projectPath);
+  let realRoot;
+  try {
+    realRoot = await realpath(shown);
+  } catch {
+    return { mentions, warnings: refs.map((r) => r.rel) };
+  }
+  for (const ref of refs.slice(0, MAX_MENTIONS)) {
+    const rel = String(ref.rel ?? "").replace(/\\/g, "/");
+    if (!rel || rel.includes("\0") || isAbsolute3(rel) || /^[a-zA-Z]:/.test(rel)) {
+      warnings.push(rel || "(empty)");
+      continue;
+    }
+    const abs = resolve3(shown, rel === "." ? "" : rel);
+    if (!insideRoot(shown, abs)) {
+      warnings.push(rel);
+      continue;
+    }
+    let real;
+    let isDir2;
+    try {
+      real = await realpath(abs);
+      isDir2 = (await stat9(real)).isDirectory();
+    } catch {
+      warnings.push(rel);
+      continue;
+    }
+    if (!insideRoot(realRoot, real)) {
+      warnings.push(rel);
+      continue;
+    }
+    if (seen.has(abs)) continue;
+    seen.add(abs);
+    mentions.push({ path: abs, isDir: isDir2 });
+  }
+  return { mentions, warnings };
+}
+function mentionSection(mentions) {
+  if (!mentions.length) return "";
+  const lines = mentions.map((m) => {
+    const shown = m.isDir && !m.path.endsWith(sep2) && !m.path.endsWith("/") ? m.path + (m.path.includes("\\") && !m.path.includes("/") ? "\\" : "/") : m.path;
+    const quoted = /\s|`/.test(shown) ? "`" + shown.replace(/`/g, "'") + "`" : shown;
+    return `- ${quoted}${m.isDir ? " (folder)" : ""}`;
+  });
+  return `Referenced files (read them as needed):
+${lines.join("\n")}`;
+}
+function withMentions(text, mentions) {
+  const sec = mentionSection(mentions);
+  if (!sec) return text;
+  return text.trim() ? `${text}
+
+${sec}` : sec;
+}
+var MAX_MENTIONS;
+var init_mentions = __esm({
+  "daemon/src/util/mentions.ts"() {
+    MAX_MENTIONS = 50;
+  }
+});
+
+// daemon/src/preview/url.ts
+function isLoopbackHost(host) {
+  const h = host.toLowerCase().replace(/^\[|\]$/g, "");
+  if (h === "localhost" || h.endsWith(".localhost")) return /^[a-z0-9.-]+$/.test(h) && !h.includes("..");
+  if (h === "0.0.0.0" || h === "::1" || h === "::") return true;
+  const m = /^127\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+  return !!m && m.slice(1).every((x) => Number(x) <= 255);
+}
+function connectHosts(h) {
+  if (h === "localhost" || h.endsWith(".localhost")) return ["127.0.0.1", "::1"];
+  if (h === "0.0.0.0") return ["127.0.0.1"];
+  if (h === "::1") return ["::1"];
+  if (h === "::") return ["::1", "127.0.0.1"];
+  return [h];
+}
+function withScheme(raw) {
+  const s = raw.trim();
+  if (/^\d{1,5}$/.test(s)) return `http://localhost:${s}/`;
+  if (/^:\d{1,5}(?:[/?#].*)?$/.test(s)) return `http://localhost${s}`;
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(s)) return s;
+  if (/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(s)) return s;
+  return `http://${s}`;
+}
+function checkPreviewUrl(raw) {
+  if (typeof raw !== "string" || !raw.trim()) return { ok: false, reason: "empty" };
+  if (raw.length > MAX_PREVIEW_URL) return { ok: false, reason: "too_long" };
+  let u;
+  try {
+    u = new URL(withScheme(raw));
+  } catch {
+    return { ok: false, reason: "bad_url" };
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return { ok: false, reason: "scheme" };
+  if (u.username || u.password) return { ok: false, reason: "userinfo" };
+  const hostname = u.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!isLoopbackHost(hostname)) return { ok: false, reason: "not_local" };
+  const secure = u.protocol === "https:";
+  const port = u.port ? Number(u.port) : secure ? 443 : 80;
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return { ok: false, reason: "port" };
+  const href = u.href;
+  if (href.length > MAX_PREVIEW_URL) return { ok: false, reason: "too_long" };
+  const hostForUrl = hostname.includes(":") ? `[${hostname}]` : hostname;
+  return {
+    ok: true,
+    target: {
+      href,
+      origin: `${u.protocol}//${hostForUrl}:${port}`,
+      path: `${u.pathname}${u.search}${u.hash}`,
+      secure,
+      hostname,
+      port,
+      connect: connectHosts(hostname),
+      hostHeader: `${hostForUrl}:${port}`
+    }
+  };
+}
+function deniedPort(port, denied) {
+  for (const d of denied) if (d === port) return true;
+  return false;
+}
+function displayOrigin(origin) {
+  return origin.replace(/^http:\/\/(.+):80$/, "http://$1").replace(/^https:\/\/(.+):443$/, "https://$1");
+}
+function externalHref(raw) {
+  if (typeof raw !== "string" || !raw || raw.length > MAX_PREVIEW_URL) return null;
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return null;
+  }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+  if (!u.hostname) return null;
+  const href = u.href;
+  if (/[\s"'<>`\\^{|}]/.test(href) || href.length > MAX_PREVIEW_URL) return null;
+  return href;
+}
+var MAX_PREVIEW_URL;
+var init_url = __esm({
+  "daemon/src/preview/url.ts"() {
+    MAX_PREVIEW_URL = 2048;
+  }
+});
+
+// daemon/src/util/openExternal.ts
+import { execFile as execFile3 } from "node:child_process";
+function openerFor(platform, href) {
+  if (platform === "win32") return { cmd: "rundll32.exe", args: ["url.dll,FileProtocolHandler", href] };
+  if (platform === "darwin") return { cmd: "open", args: [href] };
+  return { cmd: "xdg-open", args: [href] };
+}
+async function openExternal(raw, opts = {}) {
+  const href = externalHref(raw);
+  if (!href) return { ok: false, reason: "bad_url" };
+  const { cmd, args } = openerFor(opts.platform ?? process.platform, href);
+  const run = opts.exec ?? execFile3;
+  return await new Promise((resolve4) => {
+    let settled = false;
+    const done = (v) => {
+      if (!settled) {
+        settled = true;
+        resolve4(v);
+      }
+    };
+    try {
+      const child = run(cmd, args, { windowsHide: true, timeout: 15e3 }, (err) => {
+        done(err ? { ok: false, href, reason: "opener_failed" } : { ok: true, href });
+      });
+      child.on("error", () => done({ ok: false, href, reason: "no_opener" }));
+    } catch {
+      done({ ok: false, href, reason: "no_opener" });
+    }
+    setTimeout(() => done({ ok: true, href }), opts.waitMs ?? 4e3).unref?.();
+  });
+}
+var init_openExternal = __esm({
+  "daemon/src/util/openExternal.ts"() {
+    init_url();
+  }
+});
+
+// daemon/src/util/osOpen.ts
+import { spawn as spawn4 } from "node:child_process";
+import { existsSync as existsSync9, readdirSync as readdirSync2 } from "node:fs";
+import { homedir as homedir9 } from "node:os";
+import path4 from "node:path";
+function envGet3(env, key) {
+  const k = Object.keys(env).find((x) => x.toLowerCase() === key.toLowerCase());
+  return k ? env[k] : void 0;
+}
+function exeNearShim(shim, exes, exists) {
+  const P = path4.win32;
+  let dir = P.dirname(shim);
+  for (let up = 0; up < 4; up++) {
+    for (const exe of exes) {
+      const f = P.join(dir, exe);
+      if (exists(f)) return f;
+    }
+    const parent = P.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+function ideLaunchFor(spec, dir, deps = {}) {
+  const platform = deps.platform ?? process.platform;
+  const env = deps.env ?? process.env;
+  const exists = deps.exists ?? existsSync9;
+  const find = deps.find ?? ((n) => findOnPath(n, { platform, env }));
+  const win = platform === "win32";
+  for (const bin of spec.bins) {
+    const hit = find(bin)[0];
+    if (!hit) continue;
+    if (!win) return { cmd: hit, args: [dir] };
+    const ext = path4.win32.extname(hit).toLowerCase();
+    if (ext === ".exe" || ext === ".com") return { cmd: hit, args: [dir] };
+    if (ext === ".cmd" || ext === ".bat") {
+      const exe = exeNearShim(hit, spec.winExe, exists);
+      if (exe) return { cmd: exe, args: [dir] };
+      const r = {
+        ok: true,
+        cmd: deps.comspec ?? envGet3(env, "ComSpec") ?? "cmd.exe",
+        prefixArgs: [],
+        display: hit,
+        via: "cmd-shim",
+        shim: hit
+      };
+      return { ...argvFor(r, [dir]), hide: true };
+    }
+  }
+  if (win) {
+    for (const d of spec.winDirs) {
+      const base = envGet3(env, d.base);
+      if (!base) continue;
+      const f = path4.win32.join(base, d.rel);
+      if (exists(f)) return { cmd: f, args: [dir] };
+    }
+    if (spec.winJetBrains) {
+      const list = deps.list ?? ((p) => {
+        try {
+          return readdirSync2(p);
+        } catch {
+          return [];
+        }
+      });
+      for (const key of ["ProgramFiles", "ProgramFiles(x86)"]) {
+        const base = envGet3(env, key);
+        if (!base) continue;
+        const jb = path4.win32.join(base, "JetBrains");
+        const names = list(jb).filter((n) => n.startsWith(spec.winJetBrains.prefix)).sort().reverse();
+        for (const n of names) {
+          const f = path4.win32.join(jb, n, spec.winJetBrains.exe);
+          if (exists(f)) return { cmd: f, args: [dir] };
+        }
+      }
+    }
+  }
+  if (platform === "darwin") {
+    const home = deps.home ?? homedir9();
+    for (const app of spec.macApps) {
+      for (const root of ["/Applications", path4.posix.join(home, "Applications")]) {
+        const bundle = path4.posix.join(root, `${app}.app`);
+        if (exists(bundle)) return { cmd: "open", args: ["-a", bundle, dir] };
+      }
+    }
+  }
+  return null;
+}
+function detectIde(dir, deps = {}) {
+  for (const spec of IDES) {
+    const launch = ideLaunchFor(spec, dir, deps);
+    if (launch) return { ide: spec.name, launch };
+  }
+  return null;
+}
+function revealLaunch(platform, target, isDir2) {
+  if (platform === "win32") {
+    const p = path4.win32.normalize(target);
+    return isDir2 ? { cmd: "explorer.exe", args: [p] } : { cmd: "explorer.exe", args: [`/select,"${p}"`], windowsVerbatimArguments: true };
+  }
+  if (platform === "darwin") return isDir2 ? { cmd: "open", args: [target] } : { cmd: "open", args: ["-R", target] };
+  return { cmd: "xdg-open", args: [isDir2 ? target : path4.posix.dirname(target)] };
+}
+function launchDetached(l, opts = {}) {
+  const run = opts.spawn ?? spawn4;
+  return new Promise((resolve4) => {
+    let settled = false;
+    const done = (v) => {
+      if (!settled) {
+        settled = true;
+        resolve4(v);
+      }
+    };
+    let child;
+    try {
+      child = run(l.cmd, l.args, {
+        detached: true,
+        stdio: "ignore",
+        windowsHide: !!l.hide,
+        shell: false,
+        ...l.windowsVerbatimArguments ? { windowsVerbatimArguments: true } : {}
+      });
+    } catch (e) {
+      done({ ok: false, reason: String(e?.message ?? e) });
+      return;
+    }
+    child.once("error", (e) => done({ ok: false, reason: e.message }));
+    child.once("exit", (code) => {
+      if (opts.ignoreExit || code === 0) done({ ok: true });
+      else done({ ok: false, reason: `exit ${code}` });
+    });
+    child.once("spawn", () => {
+      setTimeout(() => done({ ok: true }), opts.graceMs ?? 1500).unref?.();
+    });
+    child.unref();
+  });
+}
+var IDES;
+var init_osOpen = __esm({
+  "daemon/src/util/osOpen.ts"() {
+    init_pathscan();
+    init_bin();
+    IDES = [
+      {
+        name: "Cursor",
+        bins: ["cursor"],
+        winExe: ["Cursor.exe"],
+        winDirs: [{ base: "LOCALAPPDATA", rel: "Programs\\cursor\\Cursor.exe" }, { base: "ProgramFiles", rel: "cursor\\Cursor.exe" }],
+        macApps: ["Cursor"]
+      },
+      {
+        name: "VS Code",
+        bins: ["code"],
+        winExe: ["Code.exe"],
+        winDirs: [{ base: "LOCALAPPDATA", rel: "Programs\\Microsoft VS Code\\Code.exe" }, { base: "ProgramFiles", rel: "Microsoft VS Code\\Code.exe" }],
+        macApps: ["Visual Studio Code"]
+      },
+      {
+        name: "Windsurf",
+        bins: ["windsurf"],
+        winExe: ["Windsurf.exe"],
+        winDirs: [{ base: "LOCALAPPDATA", rel: "Programs\\Windsurf\\Windsurf.exe" }, { base: "ProgramFiles", rel: "Windsurf\\Windsurf.exe" }],
+        macApps: ["Windsurf"]
+      },
+      {
+        name: "Zed",
+        bins: ["zed", "zeditor"],
+        winExe: ["Zed.exe", "zed.exe"],
+        winDirs: [{ base: "LOCALAPPDATA", rel: "Programs\\Zed\\Zed.exe" }, { base: "ProgramFiles", rel: "Zed\\Zed.exe" }],
+        macApps: ["Zed"]
+      },
+      {
+        name: "IntelliJ IDEA",
+        bins: ["idea"],
+        winExe: ["idea64.exe"],
+        winDirs: [],
+        winJetBrains: { prefix: "IntelliJ IDEA", exe: "bin\\idea64.exe" },
+        macApps: ["IntelliJ IDEA", "IntelliJ IDEA Ultimate", "IntelliJ IDEA CE"]
+      },
+      {
+        name: "WebStorm",
+        bins: ["webstorm"],
+        winExe: ["webstorm64.exe"],
+        winDirs: [],
+        winJetBrains: { prefix: "WebStorm", exe: "bin\\webstorm64.exe" },
+        macApps: ["WebStorm"]
+      },
+      {
+        name: "Sublime Text",
+        bins: ["subl"],
+        winExe: ["sublime_text.exe", "subl.exe"],
+        winDirs: [{ base: "ProgramFiles", rel: "Sublime Text\\subl.exe" }, { base: "ProgramFiles", rel: "Sublime Text 3\\subl.exe" }],
+        macApps: ["Sublime Text"]
+      }
+    ];
+  }
+});
+
+// daemon/src/preview/inject.ts
+function injectScriptTag(html) {
+  const tag = `<script src="${PREVIEW_SCRIPT_PATH}"></script>`;
+  const head = /<head(\s[^>]*)?>/i.exec(html);
+  if (head) return html.slice(0, head.index + head[0].length) + tag + html.slice(head.index + head[0].length);
+  const root = /<html(\s[^>]*)?>/i.exec(html);
+  if (root) return html.slice(0, root.index + root[0].length) + tag + html.slice(root.index + root[0].length);
+  const doctype = /^\s*<!doctype[^>]*>/i.exec(html);
+  if (doctype) return html.slice(0, doctype[0].length) + tag + html.slice(doctype[0].length);
+  return tag + html;
+}
+var PREVIEW_SCRIPT_PATH, PREVIEW_SCRIPT;
+var init_inject = __esm({
+  "daemon/src/preview/inject.ts"() {
+    PREVIEW_SCRIPT_PATH = "/__agent_console__/preview.js";
+    PREVIEW_SCRIPT = `(function(){
+  "use strict";
+  if (window.__acPreview) return; window.__acPreview = 1;
+  function mem(){ var m = new Map(); var s = {
+    getItem: function(k){ k = String(k); return m.has(k) ? m.get(k) : null; },
+    setItem: function(k, v){ m.set(String(k), String(v)); },
+    removeItem: function(k){ m.delete(String(k)); },
+    clear: function(){ m.clear(); },
+    key: function(i){ var a = Array.from(m.keys()); return i >= 0 && i < a.length ? a[i] : null; }
+  }; Object.defineProperty(s, "length", { get: function(){ return m.size; } }); return s; }
+  ["localStorage", "sessionStorage"].forEach(function(n){
+    var ok = true; try { var st = window[n]; st.getItem("__ac"); } catch (e) { ok = false; }
+    if (!ok) { try { Object.defineProperty(window, n, { value: mem(), configurable: true }); } catch (e) {} }
+  });
+  try { void document.cookie; } catch (e) {
+    var jar = {};
+    try { Object.defineProperty(document, "cookie", { configurable: true,
+      get: function(){ return Object.keys(jar).map(function(k){ return k + "=" + jar[k]; }).join("; "); },
+      set: function(v){ var p = String(v).split(";")[0]; var i = p.indexOf("="); if (i > 0) jar[p.slice(0, i).trim()] = p.slice(i + 1).trim(); }
+    }); } catch (e2) {}
+  }
+  var parentWin = window.parent;
+  if (!parentWin || parentWin === window) return;
+  var last = "";
+  function report(){ try {
+    var msg = { ac_preview: 1, href: String(location.href), title: String(document.title || "") };
+    var key = msg.href + "\\n" + msg.title; if (key === last) return; last = key;
+    parentWin.postMessage(msg, "*");
+  } catch (e) {} }
+  ["pushState", "replaceState"].forEach(function(k){
+    var orig = history[k]; if (typeof orig !== "function") return;
+    history[k] = function(){ var r = orig.apply(this, arguments); setTimeout(report, 0); return r; };
+  });
+  window.addEventListener("popstate", report);
+  window.addEventListener("hashchange", report);
+  window.addEventListener("load", report);
+  document.addEventListener("DOMContentLoaded", report);
+  setInterval(report, 1000);
+  window.addEventListener("message", function(e){
+    if (e.source !== parentWin) return;
+    var d = e.data; if (!d || typeof d !== "object") return;
+    var c = d.ac_preview_cmd;
+    if (c === "back") history.back();
+    else if (c === "forward") history.forward();
+    else if (c === "reload") location.reload();
+    else if (c === "ping") { last = ""; report(); }
+  });
+  report();
+})();
+`;
+  }
+});
+
+// daemon/src/preview/proxy.ts
+import { createServer as createServer2, request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { connect as netConnect, isIP } from "node:net";
+import { connect as tlsConnect } from "node:tls";
+import { randomBytes as randomBytes3 } from "node:crypto";
+function esc(s) {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+function rewriteRequestHeaders(inH, t, proxyOrigin, upgrade) {
+  const out = {};
+  const targetOrigin = displayOrigin(t.origin);
+  for (const [k, v] of Object.entries(inH)) {
+    if (v === void 0) continue;
+    const key = k.toLowerCase();
+    if (!upgrade && HOP.has(key)) continue;
+    if (upgrade && (key === "proxy-connection" || key === "proxy-authorization" || key === "keep-alive" || key === "te" || key === "trailer" || key === "transfer-encoding")) continue;
+    if (key === "cookie" || key === "host" || key === "origin" || key === "referer" || key === "forwarded" || key.startsWith("x-forwarded-")) continue;
+    out[key] = v;
+  }
+  out.host = t.hostHeader.replace(/:(80|443)$/, (m) => m === ":80" && !t.secure || m === ":443" && t.secure ? "" : m);
+  if (inH.origin !== void 0) out.origin = targetOrigin;
+  const ref = inH.referer;
+  if (typeof ref === "string" && (ref === proxyOrigin || ref.startsWith(proxyOrigin + "/"))) out.referer = targetOrigin + ref.slice(proxyOrigin.length);
+  if (inH["sec-fetch-site"] !== void 0) out["sec-fetch-site"] = "same-origin";
+  if (!upgrade) out["accept-encoding"] = "identity";
+  return out;
+}
+function rewriteResponseHeaders(inH, t, proxyOrigin) {
+  const out = {};
+  for (const [k, v] of Object.entries(inH)) {
+    if (v === void 0) continue;
+    const key = k.toLowerCase();
+    if (HOP.has(key)) continue;
+    if (key === "x-frame-options" || key === "set-cookie" || key === "referrer-policy" || key.startsWith("access-control-allow-")) continue;
+    if (key === "content-security-policy" || key === "content-security-policy-report-only") {
+      const kept = (Array.isArray(v) ? v : [v]).map(stripFrameAncestors).filter(Boolean);
+      if (kept.length) out[key] = kept.join(", ");
+      continue;
+    }
+    if (key === "location" && typeof v === "string") {
+      out[key] = rewriteLocation(v, t, proxyOrigin);
+      continue;
+    }
+    out[key] = v;
+  }
+  out["access-control-allow-origin"] = "null";
+  out["referrer-policy"] = "no-referrer";
+  const vary = typeof out.vary === "string" ? out.vary : "";
+  out.vary = vary ? /\borigin\b/i.test(vary) ? vary : `${vary}, Origin` : "Origin";
+  return out;
+}
+function stripFrameAncestors(csp) {
+  return csp.split(";").map((d) => d.trim()).filter((d) => d && !/^frame-ancestors(\s|$)/i.test(d)).join("; ");
+}
+function rewriteLocation(loc, t, proxyOrigin) {
+  let u;
+  try {
+    u = new URL(loc, t.href);
+  } catch {
+    return loc;
+  }
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(loc) && !loc.startsWith("//")) return loc;
+  const port = u.port ? Number(u.port) : u.protocol === "https:" ? 443 : 80;
+  const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (u.protocol === (t.secure ? "https:" : "http:") && host === t.hostname && port === t.port) {
+    return proxyOrigin + u.pathname + u.search + u.hash;
+  }
+  return loc;
+}
+function looksLikeMagpie(h) {
+  return Object.keys(h).some((k) => k.toLowerCase().startsWith("x-magpie-"));
+}
+function magpieIndex(body) {
+  try {
+    const j = JSON.parse(body);
+    return !!j && typeof j === "object" && j.name === "magpie" && (Array.isArray(j.apis) || typeof j.version === "string");
+  } catch {
+    return false;
+  }
+}
+async function identify(t, addrs, timeoutMs) {
+  for (const addr of addrs) {
+    const r = await new Promise((resolve4) => {
+      let settled = false;
+      const done = (v) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve4(v);
+        }
+      };
+      const reqFn = t.secure ? httpsRequest : httpRequest;
+      const q = reqFn({
+        host: addr,
+        port: t.port,
+        method: "GET",
+        path: "/",
+        headers: { host: t.hostHeader, accept: "application/json", "accept-encoding": "identity", "user-agent": "agent-console-preview-check" },
+        agent: false,
+        ...t.secure ? { rejectUnauthorized: false, servername: isIP(t.hostname) ? void 0 : t.hostname } : {}
+      });
+      const timer = setTimeout(() => {
+        q.destroy();
+        done("none");
+      }, timeoutMs);
+      q.on("error", () => done("none"));
+      q.on("response", (res) => {
+        if (looksLikeMagpie(res.headers)) {
+          res.destroy();
+          return done("magpie");
+        }
+        const ct = String(res.headers["content-type"] ?? "").toLowerCase();
+        if (!ct.includes("json")) {
+          res.destroy();
+          return done("other");
+        }
+        const chunks = [];
+        let size = 0;
+        res.on("data", (c) => {
+          size += c.length;
+          if (size > 256 * 1024) {
+            res.destroy();
+            done("other");
+            return;
+          }
+          chunks.push(c);
+        });
+        res.on("end", () => done(magpieIndex(Buffer.concat(chunks).toString("utf8")) ? "magpie" : "other"));
+        res.on("error", () => done("none"));
+      });
+      q.end();
+    });
+    if (r !== "none") return r;
+  }
+  return "none";
+}
+var PreviewError, HOP, RETRY_CODES, IDENTITY_TTL, PREVIEW_PING_PATH, PreviewProxy;
+var init_proxy = __esm({
+  "daemon/src/preview/proxy.ts"() {
+    init_security();
+    init_url();
+    init_inject();
+    PreviewError = class extends Error {
+      code;
+      constructor(code, message) {
+        super(message);
+        this.code = code;
+      }
+    };
+    HOP = /* @__PURE__ */ new Set(["connection", "keep-alive", "proxy-connection", "proxy-authorization", "proxy-authenticate", "te", "trailer", "transfer-encoding", "upgrade"]);
+    RETRY_CODES = /* @__PURE__ */ new Set(["ECONNREFUSED", "EADDRNOTAVAIL", "EAFNOSUPPORT", "ENETUNREACH", "EHOSTUNREACH", "ECONNRESET", "ETIMEDOUT"]);
+    IDENTITY_TTL = 60 * 1e3;
+    PREVIEW_PING_PATH = "/__agent_console__/ping";
+    PreviewProxy = class {
+      constructor(opts) {
+        this.opts = opts;
+        this.idleMs = opts.idleMs ?? 10 * 60 * 1e3;
+        this.maxTargets = opts.maxTargets ?? 8;
+        this.maxHtml = opts.maxHtmlBytes ?? 8 * 1024 * 1024;
+        this.now = opts.now ?? Date.now;
+        this.identityTimeout = opts.identityTimeoutMs ?? 30 * 1e3;
+      }
+      opts;
+      byOrigin = /* @__PURE__ */ new Map();
+      opening = /* @__PURE__ */ new Map();
+      sweepTimer = null;
+      idleMs;
+      maxTargets;
+      maxHtml;
+      now;
+      identityTimeout;
+      /** Ports of the listeners themselves (a preview of a preview is refused) */
+      ports() {
+        return [...this.byOrigin.values()].map((l) => l.port);
+      }
+      get size() {
+        return this.byOrigin.size;
+      }
+      async open(raw) {
+        const c = checkPreviewUrl(raw);
+        if (!c.ok) throw new PreviewError(c.reason, `preview url refused: ${c.reason}`);
+        const t = c.target;
+        if (deniedPort(t.port, [...this.opts.deniedPorts(), ...this.ports()])) {
+          throw new PreviewError("denied_port", `port ${t.port} can't be previewed`);
+        }
+        let l = this.byOrigin.get(t.origin);
+        if (!l) {
+          const who = await identify(t, t.connect, Math.min(3e3, this.identityTimeout));
+          if (who === "magpie") {
+            this.opts.log?.("warn", `preview refused: ${t.origin} answers like Magpie's gateway`);
+            throw new PreviewError("denied_port", `${t.origin} is Magpie's gateway`);
+          }
+          let p = this.opening.get(t.origin);
+          if (!p) {
+            p = this.listen(t).finally(() => this.opening.delete(t.origin));
+            this.opening.set(t.origin, p);
+          }
+          l = await p;
+        }
+        l.lastUsed = this.now();
+        l.nonce = randomBytes3(16).toString("hex");
+        l.canaryAuthority = `acprobe${randomBytes3(16).toString("hex")}.localhost:${l.port}`;
+        l.canaryNonce = randomBytes3(16).toString("hex");
+        this.ensureSweep();
+        return {
+          proxyOrigin: l.proxyOrigin,
+          target: t.origin,
+          url: t.href,
+          path: t.path,
+          proxyHref: l.proxyOrigin + t.path,
+          nonce: l.nonce,
+          canaryOrigin: `http://${l.canaryAuthority}`,
+          canaryNonce: l.canaryNonce
+        };
+      }
+      /** Close the listener for this target (any URL on it, or its origin) */
+      release(raw) {
+        const c = checkPreviewUrl(raw);
+        if (!c.ok) return false;
+        const l = this.byOrigin.get(c.target.origin);
+        if (!l) return false;
+        this.close(l);
+        return true;
+      }
+      closeAll() {
+        for (const l of [...this.byOrigin.values()]) this.close(l);
+        if (this.sweepTimer) clearInterval(this.sweepTimer);
+        this.sweepTimer = null;
+      }
+      /** Close listeners idle for idleMs (no request and no open WebSocket); exposed for tests with a fake clock */
+      sweep() {
+        const now = this.now();
+        for (const l of [...this.byOrigin.values()]) {
+          if (l.tunnels === 0 && now - l.lastUsed > this.idleMs) {
+            this.opts.log?.("info", `preview proxy for ${l.target.origin} idle, closing`);
+            this.close(l);
+          }
+        }
+        if (this.byOrigin.size === 0 && this.sweepTimer) {
+          clearInterval(this.sweepTimer);
+          this.sweepTimer = null;
+        }
+      }
+      ensureSweep() {
+        if (this.sweepTimer) return;
+        this.sweepTimer = setInterval(() => this.sweep(), 60 * 1e3);
+        this.sweepTimer.unref();
+      }
+      close(l) {
+        if (this.byOrigin.get(l.target.origin) === l) this.byOrigin.delete(l.target.origin);
+        try {
+          l.server.close();
+        } catch {
+        }
+        for (const s of l.sockets) s.destroy();
+        l.sockets.clear();
+      }
+      async listen(t) {
+        while (this.byOrigin.size >= this.maxTargets) {
+          const oldest = [...this.byOrigin.values()].sort((a2, b) => a2.lastUsed - b.lastUsed)[0];
+          if (!oldest) break;
+          this.close(oldest);
+        }
+        const server = createServer2();
+        const l = {
+          target: t,
+          server,
+          port: 0,
+          authority: "",
+          proxyOrigin: "",
+          nonce: "",
+          canaryAuthority: "",
+          canaryNonce: "",
+          magpie: false,
+          checkedAt: 0,
+          resolving: null,
+          lastUsed: this.now(),
+          sockets: /* @__PURE__ */ new Set(),
+          tunnels: 0,
+          addr: null
+        };
+        server.on("connection", (s) => {
+          l.sockets.add(s);
+          s.on("close", () => l.sockets.delete(s));
+        });
+        server.on("request", (req, res) => this.onRequest(l, req, res));
+        server.on("upgrade", (req, socket, head) => this.onUpgrade(l, req, socket, head));
+        server.on("clientError", (_e, socket) => {
+          try {
+            socket.destroy();
+          } catch {
+          }
+        });
+        await new Promise((resolve4, reject) => {
+          server.once("error", reject);
+          server.listen(0, "127.0.0.1", () => resolve4());
+        });
+        const a = server.address();
+        l.port = a && typeof a === "object" ? a.port : 0;
+        l.authority = `ac${randomBytes3(16).toString("hex")}.localhost:${l.port}`;
+        l.proxyOrigin = `http://${l.authority}`;
+        this.byOrigin.set(t.origin, l);
+        this.opts.log?.("info", `preview proxy 127.0.0.1:${l.port} \u2192 ${t.origin}`);
+        return l;
+      }
+      // ---- request gate shared by HTTP and WS ----
+      /** null = refuse; otherwise which name matched (canary is ping-only) */
+      gate(l, req) {
+        const host = String(req.headers.host ?? "").toLowerCase();
+        let role = null;
+        if (l.authority && tokenEqual(host, l.authority)) role = "key";
+        else if (l.canaryAuthority && tokenEqual(host, l.canaryAuthority)) role = "canary";
+        else {
+          return checkHost(req.headers.host, l.port).ok ? { code: 403, why: "preview_key" } : { code: 421, why: "bad_host" };
+        }
+        const o = req.headers.origin;
+        if (o !== void 0 && o !== "" && o !== "null") {
+          if (role === "key" && o.toLowerCase() !== l.proxyOrigin) return { code: 403, why: "bad_origin" };
+          if (role === "canary") return { code: 403, why: "bad_origin" };
+        }
+        return { role };
+      }
+      /** A refusal: plain text, no CORS headers (the page that sent it can't read it), nothing forwarded */
+      refuse(res, req, code, why) {
+        res.writeHead(code, {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+          "x-content-type-options": "nosniff",
+          "content-security-policy": "sandbox; default-src 'none'",
+          "referrer-policy": "no-referrer"
+        });
+        res.end(req.method === "HEAD" ? void 0 : why);
+        req.resume();
+      }
+      onRequest(l, req, res) {
+        const g = this.gate(l, req);
+        if ("code" in g) {
+          this.refuse(res, req, g.code, g.why);
+          return;
+        }
+        l.lastUsed = this.now();
+        const path5 = (req.url ?? "/").split("?")[0];
+        if (path5 === PREVIEW_PING_PATH) {
+          const body = g.role === "canary" ? l.canaryNonce : l.nonce;
+          res.writeHead(200, { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "null", "referrer-policy": "no-referrer" });
+          res.end(req.method === "HEAD" ? void 0 : body);
+          req.resume();
+          return;
+        }
+        if (g.role === "canary") {
+          this.refuse(res, req, 403, "preview_canary");
+          return;
+        }
+        if (l.magpie) {
+          this.refuse(res, req, 403, "magpie");
+          return;
+        }
+        if (path5 === PREVIEW_SCRIPT_PATH) {
+          res.writeHead(200, {
+            "content-type": "text/javascript; charset=utf-8",
+            "cache-control": "no-store",
+            "access-control-allow-origin": "null",
+            "x-content-type-options": "nosniff",
+            "referrer-policy": "no-referrer"
+          });
+          res.end(req.method === "HEAD" ? void 0 : PREVIEW_SCRIPT);
+          return;
+        }
+        if (req.method === "OPTIONS" && req.headers["access-control-request-method"]) {
+          const h = {
+            "access-control-allow-origin": "null",
+            "access-control-allow-methods": String(req.headers["access-control-request-method"]).slice(0, 200) + ", GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD",
+            "access-control-max-age": "600",
+            vary: "origin"
+          };
+          const rh = req.headers["access-control-request-headers"];
+          if (typeof rh === "string") h["access-control-allow-headers"] = rh.slice(0, 2e3);
+          res.writeHead(204, h);
+          res.end();
+          req.resume();
+          return;
+        }
+        void this.forward(l, req, res);
+      }
+      /**
+       * The address to forward to, once the target is known not to be Magpie's gateway (asked again after IDENTITY_TTL).
+       * Fails closed: no answer to the identity check → null (error page), Magpie → l.magpie (refused from then on).
+       */
+      resolveAddr(l) {
+        if (l.magpie) return Promise.resolve(null);
+        if (l.addr && this.now() - l.checkedAt < IDENTITY_TTL) return Promise.resolve(l.addr);
+        if (!l.resolving) {
+          l.resolving = (async () => {
+            const addr = l.addr ?? await this.probeAddr(l);
+            if (!addr) return null;
+            const who = await identify(l.target, [addr], this.identityTimeout);
+            if (who === "magpie") {
+              l.magpie = true;
+              l.addr = null;
+              this.opts.log?.("warn", `preview proxy for ${l.target.origin}: the target answers like Magpie's gateway, refusing`);
+              return null;
+            }
+            if (who === "none") {
+              l.addr = null;
+              return null;
+            }
+            l.addr = addr;
+            l.checkedAt = this.now();
+            return addr;
+          })().finally(() => {
+            l.resolving = null;
+          });
+        }
+        return l.resolving;
+      }
+      async probeAddr(l) {
+        for (const host of l.target.connect) {
+          const ok = await new Promise((resolve4) => {
+            const s = netConnect({ host, port: l.target.port });
+            const done = (v) => {
+              s.removeAllListeners();
+              s.destroy();
+              resolve4(v);
+            };
+            s.setTimeout(3e3, () => done(false));
+            s.once("connect", () => done(true));
+            s.once("error", () => done(false));
+          });
+          if (ok) return host;
+        }
+        return null;
+      }
+      servername(l) {
+        return isIP(l.target.hostname) ? void 0 : l.target.hostname;
+      }
+      async forward(l, req, res) {
+        const addr = await this.resolveAddr(l);
+        if (l.magpie) {
+          this.refuse(res, req, 403, "magpie");
+          return;
+        }
+        if (!addr) {
+          this.errorPage(l, req, res);
+          return;
+        }
+        const headers = rewriteRequestHeaders(req.headers, l.target, l.proxyOrigin, false);
+        const reqFn = l.target.secure ? httpsRequest : httpRequest;
+        const up = reqFn({
+          host: addr,
+          port: l.target.port,
+          method: req.method,
+          path: req.url ?? "/",
+          headers,
+          ...l.target.secure ? { rejectUnauthorized: false, servername: this.servername(l) } : {}
+        });
+        up.on("response", (ur) => this.respond(l, req, res, ur));
+        up.on("error", (e) => {
+          if (RETRY_CODES.has(e.code ?? "")) l.addr = null;
+          if (!res.headersSent) this.errorPage(l, req, res);
+          else res.destroy();
+        });
+        req.on("aborted", () => up.destroy());
+        res.on("close", () => {
+          if (!res.writableFinished) up.destroy();
+        });
+        req.pipe(up);
+      }
+      respond(l, req, res, ur) {
+        l.lastUsed = this.now();
+        if (looksLikeMagpie(ur.headers)) {
+          l.magpie = true;
+          l.addr = null;
+          ur.resume();
+          this.refuse(res, req, 403, "magpie");
+          return;
+        }
+        const h = rewriteResponseHeaders(ur.headers, l.target, l.proxyOrigin);
+        const status2 = ur.statusCode ?? 502;
+        const ctype = String(ur.headers["content-type"] ?? "").toLowerCase();
+        const encoded = !!ur.headers["content-encoding"] && ur.headers["content-encoding"] !== "identity";
+        const html = ctype.includes("text/html") && !encoded && req.method !== "HEAD" && status2 !== 204 && status2 !== 304;
+        if (!html) {
+          res.writeHead(status2, h);
+          ur.pipe(res);
+          return;
+        }
+        const chunks = [];
+        let size = 0;
+        let passthrough = false;
+        ur.on("data", (c) => {
+          if (passthrough) return;
+          size += c.length;
+          chunks.push(c);
+          if (size > this.maxHtml) {
+            passthrough = true;
+            res.writeHead(status2, h);
+            for (const x of chunks) res.write(x);
+            ur.removeAllListeners("data");
+            ur.removeAllListeners("end");
+            ur.pipe(res);
+          }
+        });
+        ur.on("end", () => {
+          if (passthrough) return;
+          const out = Buffer.from(injectScriptTag(Buffer.concat(chunks).toString("latin1")), "latin1");
+          h["content-length"] = String(out.length);
+          res.writeHead(status2, h);
+          res.end(out);
+        });
+        ur.on("error", () => res.destroy());
+      }
+      errorPage(l, req, res) {
+        const where = displayOrigin(l.target.origin).replace(/^https?:\/\//, "");
+        const body = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(where)}</title>
+<style>body{font:13px/1.6 system-ui,sans-serif;color:#525252;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#fff}
+@media (prefers-color-scheme:dark){body{background:#1a1a1a;color:#a3a3a3}button{background:#262626;color:#e5e5e5;border-color:#3a3a3a}}
+.b{text-align:center;max-width:420px;padding:20px}code{font-family:ui-monospace,monospace}button{margin-top:12px;padding:5px 14px;border:1px solid #d4d4d4;border-radius:6px;background:#fafafa;cursor:pointer;font:inherit}</style></head>
+<body><div class="b"><div><code>${esc(where)}</code> \u6CA1\u6709\u54CD\u5E94\uFF0Cdev server \u542F\u52A8\u4E86\u5417\uFF1F</div><div><code>${esc(where)}</code> is not responding. Is the dev server running?</div>
+<button onclick="location.reload()">\u91CD\u8BD5 / Retry</button></div></body></html>`;
+        res.writeHead(502, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "null" });
+        res.end(req.method === "HEAD" ? void 0 : body);
+        req.resume();
+      }
+      // ---- WebSocket (HMR) ----
+      onUpgrade(l, req, socket, head) {
+        const g = this.gate(l, req);
+        if ("code" in g || g.role === "canary" || l.magpie) {
+          const code = "code" in g ? g.code : 403;
+          socket.end(`HTTP/1.1 ${code} ${code === 421 ? "Misdirected Request" : "Forbidden"}\r
+connection: close\r
+\r
+`);
+          return;
+        }
+        l.lastUsed = this.now();
+        socket.on("error", () => {
+        });
+        void this.resolveAddr(l).then((addr) => {
+          if (!addr || socket.destroyed) {
+            socket.end("HTTP/1.1 502 Bad Gateway\r\nconnection: close\r\n\r\n");
+            return;
+          }
+          const up = l.target.secure ? tlsConnect({ host: addr, port: l.target.port, rejectUnauthorized: false, servername: this.servername(l) }) : netConnect({ host: addr, port: l.target.port });
+          const ready2 = l.target.secure ? "secureConnect" : "connect";
+          l.tunnels++;
+          let counted = true;
+          const done = () => {
+            if (counted) {
+              counted = false;
+              l.tunnels--;
+              l.lastUsed = this.now();
+            }
+            up.destroy();
+            socket.destroy();
+          };
+          up.once(ready2, () => {
+            const lines = [`${req.method ?? "GET"} ${req.url ?? "/"} HTTP/1.1`];
+            const hs = rewriteRequestHeaders(req.headers, l.target, l.proxyOrigin, true);
+            for (const [k, v] of Object.entries(hs)) {
+              if (v === void 0) continue;
+              for (const one of Array.isArray(v) ? v : [v]) lines.push(`${k}: ${String(one).replace(/[\r\n]/g, "")}`);
+            }
+            up.write(lines.join("\r\n") + "\r\n\r\n");
+            if (head?.length) up.write(head);
+            up.pipe(socket);
+            socket.pipe(up);
+          });
+          up.on("data", () => {
+            l.lastUsed = this.now();
+          });
+          up.on("error", done);
+          up.on("close", done);
+          socket.on("close", done);
+        });
+      }
+    };
+  }
+});
+
+// daemon/src/preview/host.ts
+import os from "node:os";
+function previewHost(platform = os.platform(), release2 = os.release()) {
+  if (platform !== "darwin") return { platform, darwinMajor: null };
+  const m = /^(\d+)\./.exec(String(release2 ?? "").trim()) ?? /^(\d+)$/.exec(String(release2 ?? "").trim());
+  const major = m ? Number(m[1]) : NaN;
+  return { platform, darwinMajor: Number.isInteger(major) && major > 0 ? major : null };
+}
+var init_host = __esm({
+  "daemon/src/preview/host.ts"() {
+  }
+});
+
+// daemon/src/ws/methods.ts
+import { z } from "zod";
+import { existsSync as existsSync10, statSync as statSync5 } from "node:fs";
+import { mkdir as mkdir3, realpath as realpath2, stat as stat10, writeFile as writeFile4 } from "node:fs/promises";
+import { homedir as homedir10 } from "node:os";
+import { dirname as dirname4, isAbsolute as isAbsolute4, join as join12, sep as sep3, win32 as win32Path } from "node:path";
+import { execFile as execFile4 } from "node:child_process";
+function wrap(schema, fn) {
+  return (params, ctx) => {
+    const r = schema.safeParse(params ?? {});
+    if (!r.success) {
+      throw new ApiError("bad_params", tr("err.badParams", { detail: r.error.issues.map((i) => i.message).join("; ") }));
+    }
+    return fn(r.data, ctx);
+  };
+}
+function registerMethods(gw, svc) {
+  const zEmpty = z.object({}).passthrough().optional();
+  gw.method("app.setLocale", wrap(z.object({ lang: z.string().max(32) }), (p) => {
+    setAppLocale(p.lang);
+    return true;
+  }));
+  gw.method("app.info", wrap(zEmpty, () => ({
+    version: svc.cfg.version,
+    dataDir: svc.cfg.dataDir,
+    pid: process.pid,
+    port: svc.cfg.port
+  })));
+  gw.method("shell.status", wrap(zEmpty, async () => {
+    const st = agentShellStatus();
+    return { ...st, platform: process.platform, downloadUrl: GIT_FOR_WINDOWS_URL };
+  }));
+  gw.method("shell.check", wrap(z.object({ path: z.string().max(1024) }), (p) => {
+    if (process.platform !== "win32") return { ok: false, reason: "notWindows" };
+    return checkBashPath(p.path);
+  }));
+  gw.method("app.shutdown", wrap(zEmpty, () => {
+    setTimeout(() => process.exit(0), 100);
+    return { ok: true };
+  }));
+  gw.method("app.openExternal", wrap(z.object({ url: z.string().min(1).max(MAX_PREVIEW_URL) }), async (p) => openExternal(p.url)));
+  gw.method("preview.open", wrap(
+    z.object({ url: z.string().min(1).max(MAX_PREVIEW_URL), threadId: z.string().max(200).optional() }),
+    async (p) => {
+      if (!svc.preview) throw new ApiError("unavailable", tr("err.previewUnavailable"));
+      let r;
+      try {
+        r = await svc.preview.open(p.url);
+      } catch (e) {
+        if (e instanceof PreviewError) {
+          throw new ApiError(e.code === "denied_port" ? "preview_denied" : "preview_url", tr(e.code === "denied_port" ? "err.previewDenied" : "err.previewUrl"));
+        }
+        throw e;
+      }
+      if (p.threadId) {
+        const meta = await svc.threads.get(p.threadId);
+        if (meta && meta.previewUrl !== r.url) {
+          const next = await svc.threads.patch(p.threadId, { previewUrl: r.url });
+          gw.publish("sidebar", { type: "thread.upsert", thread: next });
+        }
+      }
+      return { ...r, host: previewHost() };
+    }
+  ));
+  gw.method("preview.release", wrap(z.object({ url: z.string().min(1).max(MAX_PREVIEW_URL) }), (p) => ({
+    ok: svc.preview?.release(p.url) ?? false
+  })));
+  gw.method("settings.get", wrap(zEmpty, () => svc.settings.get()));
+  gw.method("settings.set", wrap(z.object({ patch: z.record(z.string(), z.unknown()) }), async (p) => {
+    const checked = parseSettingsPatch(p.patch);
+    if (!checked.ok) throw new ApiError("bad_params", `Invalid setting: ${checked.error}`);
+    const before = await svc.settings.get();
+    const next = await svc.settings.set(checked.patch);
+    if ("defaultMode" in checked.patch) await endLegacyDefault(svc.settings);
+    if ("bashPath" in checked.patch && (before.bashPath ?? "") !== (next.bashPath ?? "")) {
+      await refreshAgentShell(typeof next.bashPath === "string" ? next.bashPath : "");
+    }
+    for (const id2 of Object.keys(checked.patch.providerCommand ?? {})) {
+      if (JSON.stringify(before.providerCommand?.[id2] ?? null) !== JSON.stringify(next.providerCommand?.[id2] ?? null)) {
+        clearProviderCache(id2);
+      }
+    }
+    return next;
+  }));
+  gw.method("sub.add", wrap(
+    z.object({ ch: z.string().min(1).max(120), afterSeq: z.number().int().nonnegative().optional() }),
+    async (p, ctx) => {
+      svc.gateway.subscribe(ctx.conn, p.ch);
+      const m = /^thread:(.+)$/.exec(p.ch);
+      if (m && p.afterSeq != null) {
+        const events = await svc.threads.readEvents(m[1], p.afterSeq, 5e3).catch(() => []);
+        for (const ev of events) ctx.conn.send({ t: "evt", ch: p.ch, d: { type: "event", event: ev } });
+      }
+      return { ok: true };
+    }
+  ));
+  gw.method("sub.remove", wrap(z.object({ ch: z.string().min(1).max(120) }), (p, ctx) => {
+    svc.gateway.unsubscribe(ctx.conn, p.ch);
+    return { ok: true };
+  }));
+  gw.method("providers.list", wrap(
+    z.object({ refresh: z.boolean().optional(), provider: z.string().optional() }).passthrough().optional(),
+    async (p) => {
+      if (p?.refresh) {
+        if (p.provider) {
+          clearBinCache(p.provider);
+          clearProviderCache(p.provider);
+        } else {
+          clearBinCache();
+          clearProviderCache();
+        }
+      }
+      const settings = await svc.settings.get();
+      const rows = await Promise.all(
+        listProviders().map(async (p2) => {
+          const entry = catalogById(p2.id);
+          const enabled = isProviderEnabled(settings, p2.id);
+          const launch = launchFromSettings(settings, p2.id);
+          const skip = !enabled || entry?.status === "planned";
+          const det = skip ? { available: false, reason: !enabled ? tr("provider.disabled") : tr("provider.planned") } : await cachedDetect(p2, launch);
+          const models2 = !skip && det.available ? await cachedModels(p2, launch) : [];
+          return {
+            id: p2.id,
+            name: p2.name,
+            available: det.available,
+            enabled,
+            status: entry?.status ?? "verified",
+            ready: entry?.status === "verified",
+            bin: det.bin,
+            version: det.version,
+            reason: !enabled ? tr("provider.disabled") : det.reason,
+            installHint: det.installHint,
+            capabilities: p2.capabilities,
+            models: models2
+          };
+        })
+      );
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      const ordered = PROVIDER_CATALOG.map((e) => byId.get(e.id)).filter(Boolean);
+      for (const r of rows) {
+        if (!PROVIDER_CATALOG.some((e) => e.id === r.id)) ordered.push(r);
+      }
+      return ordered;
+    }
+  ));
+  gw.method("projects.list", wrap(zEmpty, () => svc.projects.list()));
+  gw.method("projects.create", wrap(
+    z.object({ path: z.string().min(1), name: z.string().optional() }),
+    async (p) => {
+      const proj = await svc.projects.create(p.path, p.name);
+      const s = await svc.settings.get();
+      const dirs = (s.recentDirs ?? []).filter((d) => d.toLowerCase() !== p.path.toLowerCase());
+      await svc.settings.set({ recentDirs: [p.path, ...dirs].slice(0, 12) });
+      gw.publish("sidebar", { type: "project.upsert", project: proj });
+      return proj;
+    }
+  ));
+  gw.method("projects.rename", wrap(z.object({ id: z.string(), name: z.string() }), async (p) => {
+    const proj = await svc.projects.rename(p.id, p.name);
+    gw.publish("sidebar", { type: "project.upsert", project: proj });
+    return proj;
+  }));
+  gw.method("projects.remove", wrap(z.object({ id: z.string() }), async (p) => {
+    const proj = await svc.projects.get(p.id);
+    if (!proj) throw new ApiError("not_found", tr("err.projectMissing"));
+    for (const t of await svc.threads.list()) {
+      if (t.projectId === p.id) {
+        await svc.threads.delete(t.id);
+        gw.publish("sidebar", { type: "thread.remove", id: t.id });
+      }
+    }
+    await svc.projects.remove(p.id);
+    gw.publish("sidebar", { type: "project.remove", id: p.id });
+    return { ok: true };
+  }));
+  gw.method("projects.open", wrap(z.object({ id: z.string() }), async (p) => {
+    const proj = await svc.projects.get(p.id);
+    if (!proj) throw new ApiError("not_found", tr("err.projectMissing"));
+    if (!existsSync10(proj.path)) throw new ApiError("bad_path", tr("err.dirMissing"));
+    const cmd = process.platform === "win32" ? "explorer.exe" : process.platform === "darwin" ? "open" : "xdg-open";
+    const target = process.platform === "win32" ? win32Path.normalize(proj.path) : proj.path;
+    execFile4(cmd, [target], { windowsHide: true }, () => {
+    }).on("error", () => {
+    });
+    return { ok: true };
+  }));
+  gw.method("projects.openInIde", wrap(z.object({ id: z.string() }), async (p) => {
+    const proj = await svc.projects.get(p.id);
+    if (!proj) throw new ApiError("not_found", tr("err.projectMissing"));
+    let dir;
+    try {
+      dir = await realpath2(proj.path);
+      if (!(await stat10(dir)).isDirectory()) throw new Error("not a folder");
+    } catch {
+      throw new ApiError("bad_path", tr("err.dirMissing"));
+    }
+    if (process.platform === "win32") dir = win32Path.normalize(dir);
+    const hit = detectIde(dir);
+    if (!hit) throw new ApiError("no_ide", tr("err.noIde"));
+    const r = await launchDetached(hit.launch);
+    if (!r.ok) throw new ApiError("ide_failed", tr("err.ideFailed", { ide: hit.ide, detail: r.reason }));
+    return { ok: true, ide: hit.ide };
+  }));
+  gw.method("fs.check", wrap(z.object({ path: z.string().min(1) }), (p) => {
+    let exists = false;
+    let isDir2 = false;
+    try {
+      exists = existsSync10(p.path);
+      isDir2 = exists && statSync5(p.path).isDirectory();
+    } catch {
+    }
+    return { exists, isDir: isDir2 };
+  }));
+  gw.method("fs.recentDirs", wrap(zEmpty, async () => {
+    const s = await svc.settings.get();
+    return (s.recentDirs ?? []).slice(0, 12);
+  }));
+  gw.method("fs.pickFolder", wrap(
+    z.object({ initial: z.string().optional() }).passthrough().optional(),
+    (p) => pickFolder(p?.initial)
+  ));
+  gw.method("threads.list", wrap(zEmpty, () => svc.threads.list()));
+  gw.method("threads.create", wrap(
+    z.object({
+      projectId: z.string().min(1),
+      provider: z.string().min(1),
+      model: z.string().nullable().optional(),
+      mode: threadModeSchema.optional(),
+      effort: z.string().nullable().optional(),
+      title: z.string().optional(),
+      providerSessionId: z.string().nullable().optional(),
+      importedFrom: z.object({ provider: z.string(), sessionId: z.string() }).optional()
+    }),
+    async (p) => {
+      const proj = await svc.projects.get(p.projectId);
+      if (!proj) throw new ApiError("not_found", tr("err.projectMissing"));
+      if (!existsSync10(proj.path)) throw new ApiError("bad_path", tr("err.projectDirGone"));
+      if (!p.providerSessionId && !isProviderEnabled(await svc.settings.get(), p.provider)) {
+        throw new ApiError("bad_params", tr("provider.disabledNamed", { name: catalogById(p.provider)?.name ?? p.provider }));
+      }
+      const cat = catalogById(p.provider);
+      if (!p.providerSessionId && cat && !providerCreatable(cat.status)) {
+        throw new ApiError("bad_params", tr("provider.plannedNamed", { name: cat.name }));
+      }
+      const provider = getProvider(p.provider);
+      const guard = await guardLegacyMode(svc.settings, p.provider, clampMode(provider?.capabilities.modes ?? [], p.mode));
+      const mode2 = guard.mode;
+      const meta = await svc.threads.create({ ...p, mode: mode2 });
+      if (guard.notice) await svc.threads.appendEvent(meta.id, upgradeNotice());
+      gw.publish("sidebar", { type: "thread.upsert", thread: meta });
+      return meta;
+    }
+  ));
+  gw.method("threads.get", wrap(
+    z.object({ id: z.string(), afterSeq: z.number().int().nonnegative().optional() }),
+    async (p) => {
+      const meta = await svc.threads.get(p.id);
+      if (!meta) throw new ApiError("not_found", tr("err.threadMissing"));
+      const events = await svc.threads.readEvents(p.id, p.afterSeq ?? 0, 5e3);
+      const rt = svc.runtime?.(p.id) ?? null;
+      return {
+        meta,
+        events,
+        queue: rt?.queue ?? [],
+        pending: rt?.pending ?? [],
+        runtimeStatus: rt?.status ?? meta.status
+      };
+    }
+  ));
+  gw.method("threads.update", wrap(
+    z.object({
+      id: z.string(),
+      title: z.string().optional(),
+      pinned: z.boolean().optional(),
+      archived: z.boolean().optional(),
+      previewUrl: z.string().max(MAX_PREVIEW_URL).nullable().optional()
+    }),
+    async (p) => {
+      const meta = await svc.threads.get(p.id);
+      if (!meta) throw new ApiError("not_found", tr("err.threadMissing"));
+      const patch = {};
+      if (p.title !== void 0) {
+        patch.title = p.title.trim() || meta.title;
+        patch.titleAuto = false;
+      }
+      if (p.pinned !== void 0) patch.pinned = p.pinned;
+      if (p.archived !== void 0) patch.archived = p.archived;
+      if (p.previewUrl !== void 0) {
+        if (p.previewUrl === null) patch.previewUrl = null;
+        else {
+          const c = checkPreviewUrl(p.previewUrl);
+          if (!c.ok) throw new ApiError("bad_params", tr("err.previewUrl"));
+          patch.previewUrl = c.target.href;
+        }
+      }
+      const next = await svc.threads.patch(p.id, patch);
+      gw.publish("sidebar", { type: "thread.upsert", thread: next });
+      return next;
+    }
+  ));
+  gw.method("threads.delete", wrap(z.object({ id: z.string() }), async (p) => {
+    const meta = await svc.threads.get(p.id);
+    if (!meta) throw new ApiError("not_found", tr("err.threadMissing"));
+    if (svc.manager) await svc.manager.deleteThread(p.id);
+    else await svc.threads.delete(p.id);
+    gw.publish("sidebar", { type: "thread.remove", id: p.id });
+    return { ok: true };
+  }));
+  const projectPath = async (projectId) => {
+    const proj = await svc.projects.get(projectId);
+    if (!proj) throw new ApiError("not_found", tr("err.projectMissing"));
+    if (!existsSync10(proj.path)) throw new ApiError("bad_path", tr("err.projectDirGone"));
+    return proj.path;
+  };
+  gw.method("git.status", wrap(
+    z.object({ projectId: z.string() }),
+    async (p) => svc.git.status(await projectPath(p.projectId))
+  ));
+  gw.method("git.diff", wrap(
+    z.object({ projectId: z.string(), path: z.string() }),
+    async (p) => svc.git.diff(await projectPath(p.projectId), p.path)
+  ));
+  gw.method("git.discard", wrap(
+    z.object({ projectId: z.string(), path: z.string() }),
+    async (p) => svc.git.discard(await projectPath(p.projectId), p.path, svc.cfg.dataDir)
+  ));
+  gw.method("files.tree", wrap(
+    z.object({ projectId: z.string(), dir: z.string().default(".") }),
+    async (p) => svc.files.tree(await projectPath(p.projectId), p.dir)
+  ));
+  gw.method("files.read", wrap(
+    z.object({ projectId: z.string(), path: z.string() }),
+    async (p) => svc.files.read(await projectPath(p.projectId), p.path)
+  ));
+  gw.method("files.reveal", wrap(z.object({ projectId: z.string(), path: z.string() }), async (p) => {
+    const proj = await svc.projects.get(p.projectId);
+    if (!proj) throw new ApiError("not_found", tr("err.projectMissing"));
+    let root;
+    try {
+      root = await realpath2(proj.path);
+    } catch {
+      throw new ApiError("bad_path", tr("err.dirMissing"));
+    }
+    const rel = p.path.replace(/\\/g, "/");
+    if (!rel || isAbsolute4(rel) || win32Path.isAbsolute(rel) || rel.split("/").includes("..")) {
+      throw new ApiError("bad_path", tr("err.pathOutside"));
+    }
+    let target;
+    try {
+      target = await realpath2(join12(root, rel));
+    } catch {
+      throw new ApiError("bad_path", tr("err.targetMissing"));
+    }
+    const fold = (s) => process.platform === "win32" || process.platform === "darwin" ? s.toLowerCase() : s;
+    const rootSep = root.endsWith(sep3) ? root : root + sep3;
+    if (fold(target) !== fold(root) && !fold(target).startsWith(fold(rootSep))) {
+      throw new ApiError("bad_path", tr("err.pathOutside"));
+    }
+    const isDir2 = (await stat10(target)).isDirectory();
+    const r = await launchDetached(revealLaunch(process.platform, target, isDir2), { ignoreExit: process.platform === "win32" });
+    if (!r.ok) throw new ApiError("reveal_failed", tr("err.revealFailed", { detail: r.reason }));
+    return { ok: true };
+  }));
+  gw.method("history.list", wrap(z.object({ projectId: z.string() }), async (p) => {
+    const proj = await svc.projects.get(p.projectId);
+    if (!proj) throw new ApiError("not_found", tr("err.projectMissing"));
+    const imported = new Set(
+      (await svc.threads.list()).filter((t) => t.projectId === p.projectId && t.providerSessionId).map((t) => t.providerSessionId)
+    );
+    const out = [];
+    for (const provider of listProviders()) {
+      if (!provider.listHistory) continue;
+      const items = await provider.listHistory(proj.path).catch(() => []);
+      for (const i of items) out.push({ ...i, imported: imported.has(i.sessionId) });
+    }
+    return out;
+  }));
+  gw.method("history.import", wrap(
+    z.object({
+      projectId: z.string(),
+      items: z.array(z.object({ provider: z.string(), sessionId: z.string(), title: z.string().optional() })).min(1).max(20)
+    }),
+    async (p) => {
+      const proj = await svc.projects.get(p.projectId);
+      if (!proj) throw new ApiError("not_found", tr("err.projectMissing"));
+      const metas = [];
+      for (const item of p.items) {
+        const provider = getProvider(item.provider);
+        if (!provider?.readHistory) continue;
+        const existing = (await svc.threads.list()).find(
+          (t) => t.projectId === p.projectId && t.provider === item.provider && t.providerSessionId === item.sessionId
+        );
+        if (existing) {
+          metas.push(existing);
+          continue;
+        }
+        const meta = await svc.threads.create({
+          projectId: p.projectId,
+          provider: item.provider,
+          title: item.title,
+          providerSessionId: item.sessionId,
+          importedFrom: { provider: item.provider, sessionId: item.sessionId }
+        });
+        const events = await provider.readHistory(item.sessionId, proj.path).catch(() => []);
+        for (const ev of events) {
+          await svc.threads.appendEvent(meta.id, ev);
+        }
+        await svc.threads.patch(meta.id, { status: "closed" });
+        gw.publish("sidebar", { type: "thread.upsert", thread: await svc.threads.get(meta.id) });
+        metas.push(await svc.threads.get(meta.id));
+      }
+      return metas;
+    }
+  ));
+  gw.method("terminal.list", wrap(
+    z.object({ projectId: z.string().optional() }).passthrough().optional(),
+    (p) => svc.terminals.list(p?.projectId)
+  ));
+  gw.method("terminal.create", wrap(
+    z.object({ projectId: z.string(), cols: z.number().int().min(20).max(500).default(80), rows: z.number().int().min(5).max(200).default(24) }),
+    async (p) => {
+      const path5 = await projectPath(p.projectId);
+      const r = await svc.terminals.create(p.projectId, path5, p.cols, p.rows);
+      if ("error" in r) throw new ApiError("bad_params", r.error);
+      return r;
+    }
+  ));
+  gw.method("terminal.attach", wrap(z.object({ id: z.string() }), async (p, ctx) => {
+    const r = svc.terminals.attach(p.id);
+    if (r.error || r.index == null) throw new ApiError("not_found", r.error ?? tr("err.terminalMissing"));
+    svc.gateway.subscribe(ctx.conn, `terminal:${r.index}`);
+    return r;
+  }));
+  gw.method("terminal.resize", wrap(
+    z.object({ id: z.string(), cols: z.number().int(), rows: z.number().int() }),
+    (p) => svc.terminals.resize(p.id, p.cols, p.rows)
+  ));
+  gw.method("terminal.kill", wrap(z.object({ id: z.string() }), (p) => svc.terminals.kill(p.id)));
+  const needManager = () => {
+    if (!svc.manager) throw new ApiError("unavailable", tr("err.noManager"));
+    return svc.manager;
+  };
+  gw.method("thread.send", wrap(
+    z.object({
+      id: z.string(),
+      text: z.string(),
+      attachments: z.array(z.object({ path: z.string(), mime: z.string(), name: z.string().optional() })).optional(),
+      // 1.2: paths dragged from the Files panel, relative to the project (the daemon resolves and checks them)
+      mentions: z.array(z.object({ rel: z.string().min(1).max(4096), isDir: z.boolean().optional() })).max(MAX_MENTIONS).optional(),
+      behavior: z.enum(["queue", "steer"]).optional(),
+      // 1.3: the page's id for its optimistic bubble, echoed on the user_message event (dedupe, no jump)
+      clientId: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/).optional()
+    }),
+    async (p) => {
+      const delivered = await needManager().send(p.id, { text: p.text, attachments: p.attachments, mentions: p.mentions, clientId: p.clientId }, p.behavior ?? "queue");
+      return { ok: true, delivered: delivered ?? "started" };
+    }
+  ));
+  gw.method("thread.queueRemove", wrap(z.object({ id: z.string(), queueId: z.string() }), async (p) => {
+    return { ok: needManager().removeQueued(p.id, p.queueId) };
+  }));
+  gw.method("thread.interrupt", wrap(z.object({ id: z.string() }), async (p) => {
+    await needManager().interrupt(p.id);
+    return { ok: true };
+  }));
+  gw.method("thread.respond", wrap(
+    z.object({
+      id: z.string(),
+      requestId: z.string(),
+      optionId: z.string().optional(),
+      answers: z.record(z.string(), z.string()).optional(),
+      cancelled: z.boolean().optional()
+    }),
+    async (p) => {
+      await needManager().respond(p.id, p.requestId, { optionId: p.optionId, answers: p.answers, cancelled: p.cancelled });
+      return { ok: true };
+    }
+  ));
+  gw.method("thread.setModel", wrap(z.object({ id: z.string(), model: z.string().nullable() }), async (p) => {
+    await needManager().setModel(p.id, p.model);
+    return { ok: true };
+  }));
+  gw.method("thread.setMode", wrap(z.object({ id: z.string(), mode: threadModeSchema }), async (p) => {
+    await needManager().setMode(p.id, p.mode);
+    return { ok: true };
+  }));
+  gw.method("thread.setEffort", wrap(z.object({ id: z.string(), effort: z.string().nullable() }), async (p) => {
+    await needManager().setEffort(p.id, p.effort);
+    return { ok: true };
+  }));
+  gw.method("thread.commands", wrap(z.object({ id: z.string(), load: z.boolean().optional() }), async (p) => {
+    const commands = await needManager().listCommands(p.id, { load: p.load });
+    return { commands };
+  }));
+  gw.method("thread.setCursorOpts", wrap(
+    z.object({
+      id: z.string(),
+      cursorFast: z.boolean().optional(),
+      cursorAutoReview: z.boolean().optional()
+    }),
+    async (p) => {
+      await needManager().setCursorOpts(p.id, {
+        cursorFast: p.cursorFast,
+        cursorAutoReview: p.cursorAutoReview
+      });
+      return { ok: true };
+    }
+  ));
+  gw.method("thread.setProvider", wrap(z.object({ id: z.string(), provider: z.string().min(1) }), async (p) => {
+    await needManager().setProvider(p.id, p.provider);
+    return { ok: true };
+  }));
+  gw.method("thread.close", wrap(z.object({ id: z.string() }), async (p) => {
+    await needManager().close(p.id);
+    return { ok: true };
+  }));
+  gw.method("thread.exportMarkdown", wrap(z.object({ id: z.string() }), async (p) => {
+    const meta = await svc.threads.get(p.id);
+    if (!meta) throw new ApiError("not_found", tr("err.threadMissing"));
+    const events = await svc.threads.readEvents(p.id, 0, 2e4);
+    const L = [];
+    L.push(`# ${meta.title}`, "");
+    L.push(`> ${meta.provider} \xB7 ${meta.model ?? tr("export.defaultModel")} \xB7 ${meta.mode} \xB7 ${new Date(meta.createdAt).toLocaleString(intlLocale())}`, "");
+    for (const e of events) {
+      switch (e.type) {
+        case "user_message": {
+          const refs = e.mentions?.length ? "\n\n" + e.mentions.map((m) => `- \`${m.path}${m.isDir ? "/" : ""}\``).join("\n") : "";
+          L.push(`**${tr("export.me")}**${e.steered ? tr("export.steered") : ""}:
+
+${e.text}${refs}`, "");
+          break;
+        }
+        case "assistant_message":
+          L.push(e.text, "");
+          break;
+        case "reasoning":
+          L.push(`<details><summary>${tr("export.reasoning")}</summary>
+
+${e.text}
+</details>`, "");
+          break;
+        case "tool_call": {
+          const icon = e.status === "ok" ? "\u2713" : e.status === "failed" ? "\u2717" : "\u2026";
+          L.push(`- \`${e.kind}\` ${icon} ${e.title}${e.output ? `
+  \`\`\`
+  ${e.output.slice(0, 2e3)}
+  \`\`\`` : ""}`);
+          break;
+        }
+        case "plan":
+          L.push(`### ${tr("export.plan")}
+
+` + e.markdown, "");
+          break;
+        case "todo":
+          L.push(`### ${tr("export.todo")}
+
+` + e.items.map((i) => `- [${i.status === "done" || i.status === "completed" ? "x" : " "}] ${i.text}`).join("\n"), "");
+          break;
+        case "notice":
+          L.push(`_${e.message}_`, "");
+          break;
+        case "turn_ended":
+          L.push(`\u2014 ${e.status}${e.durationMs ? ` \xB7 ${Math.round(e.durationMs / 1e3)}s` : ""}${e.error ? ` \xB7 ${e.error}` : ""} \u2014`, "");
+          break;
+        default:
+          break;
+      }
+    }
+    const markdown = L.join("\n");
+    const safe = meta.title.replace(/[\\/:*?"<>|\s]+/g, "_").slice(0, 60) || "thread";
+    const filename = `${safe}.md`;
+    let dir = join12(homedir10(), "Downloads");
+    try {
+      await mkdir3(dir, { recursive: true });
+    } catch {
+      dir = join12(svc.cfg.dataDir, "exports");
+      await mkdir3(dir, { recursive: true });
+    }
+    let dest = join12(dir, filename);
+    if (existsSync10(dest)) {
+      const stamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      dest = join12(dir, `${safe}-${stamp2}.md`);
+    }
+    await writeFile4(dest, markdown, "utf8");
+    revealInFileManager(dest);
+    return { markdown, filename, path: dest };
+  }));
+}
+function revealInFileManager(filePath) {
+  if (process.platform === "win32") {
+    execFile4("explorer.exe", ["/select," + win32Path.normalize(filePath)], { windowsHide: true }, () => {
+    }).on("error", () => {
+    });
+    return;
+  }
+  if (process.platform === "darwin") {
+    execFile4("open", ["-R", filePath], () => {
+    }).on("error", () => {
+    });
+    return;
+  }
+  execFile4("xdg-open", [dirname4(filePath)], () => {
+  }).on("error", () => {
+  });
+}
+var threadModeSchema, ApiError;
+var init_methods = __esm({
+  "daemon/src/ws/methods.ts"() {
+    init_settings();
+    init_registry();
+    init_catalog();
+    init_enabled();
+    init_pickFolder();
+    init_bin();
+    init_infoCache();
+    init_launch();
+    init_modes();
+    init_autoApprove13();
+    init_i18n();
+    init_mentions();
+    init_openExternal();
+    init_osOpen();
+    init_agentShell();
+    init_gitBash();
+    init_proxy();
+    init_url();
+    init_host();
+    threadModeSchema = z.enum(["plan", "default", "acceptEdits", "bypassPermissions", "ask"]);
+    ApiError = class extends Error {
+      code;
+      constructor(code, message) {
+        super(message);
+        this.code = code;
+      }
+    };
+  }
+});
+
+// daemon/src/util/atomic.ts
+import { writeFile as writeFile5, rename, mkdir as mkdir4 } from "node:fs/promises";
+import { dirname as dirname5 } from "node:path";
+async function writeJsonAtomic(file, obj) {
+  try {
+    await mkdir4(dirname5(file), { recursive: true });
+    const tmp = `${file}.tmp-${process.pid}-${Math.random().toString(36).slice(2, 8)}`;
+    await writeFile5(tmp, JSON.stringify(obj, null, 2), "utf8");
+    await rename(tmp, file);
+  } catch (e) {
+    if (e instanceof ApiError) throw e;
+    throw new ApiError("io_error", `\u5199\u5165\u6570\u636E\u5931\u8D25\uFF08${file}\uFF09\uFF1A${e?.message ?? e}`);
+  }
+}
+var init_atomic = __esm({
+  "daemon/src/util/atomic.ts"() {
+    init_methods();
+  }
+});
+
+// daemon/src/store/settings.ts
+import { readFile as readFile12 } from "node:fs/promises";
+import { join as join13 } from "node:path";
+import { z as z2 } from "zod";
+function parseSettingsPatch(patch) {
+  const r = settingsPatchSchema.safeParse(patch);
+  if (r.success) return { ok: true, patch: r.data };
+  return {
+    ok: false,
+    error: r.error.issues.map((i) => `${i.path.join(".") || "(patch)"}: ${i.message}`).join("; ")
+  };
+}
+function sanitizeStored(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const shape = settingsPatchSchema.shape;
+  const out = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const field = shape[k];
+    if (field && k !== "idleCloseMinutes" && !field.safeParse(v).success) continue;
+    if (k === "idleCloseMinutes") {
+      const n = Number(v);
+      if (!Number.isFinite(n)) continue;
+      out[k] = Math.min(IDLE_CLOSE_MAX, Math.max(IDLE_CLOSE_MIN, Math.round(n)));
+      continue;
+    }
+    out[k] = v;
+  }
+  return out;
+}
+var CONTENT_WIDTHS, CHAT_FONT_MIN, CHAT_FONT_MAX, CHAT_FONT_DEFAULT, DEFAULT_SETTINGS, IDLE_CLOSE_MIN, IDLE_CLOSE_MAX, mode, id, settingsPatchSchema, SettingsStore;
+var init_settings = __esm({
+  "daemon/src/store/settings.ts"() {
+    init_atomic();
+    CONTENT_WIDTHS = ["narrow", "default", "wide", "full"];
+    CHAT_FONT_MIN = 12;
+    CHAT_FONT_MAX = 18;
+    CHAT_FONT_DEFAULT = 13;
+    DEFAULT_SETTINGS = {
+      defaultProvider: "claude",
+      defaultMode: "default",
+      sendKey: "enter",
+      runningSend: "queue",
+      showThinking: true,
+      theme: "auto",
+      contentWidth: "default",
+      chatFontSize: CHAT_FONT_DEFAULT,
+      idleCloseMinutes: 30,
+      collapsedProjects: [],
+      panel: { open: false, tab: "changes", width: 440 },
+      sidebarWidth: 248,
+      lastProjectId: null,
+      lastThreadId: null,
+      recentDirs: []
+    };
+    IDLE_CLOSE_MIN = 5;
+    IDLE_CLOSE_MAX = 240;
+    mode = z2.enum(["plan", "default", "acceptEdits", "bypassPermissions", "ask"]);
+    id = z2.string().min(1).max(200);
+    settingsPatchSchema = z2.object({
+      defaultProvider: z2.string().min(1).max(64),
+      defaultMode: mode,
+      sendKey: z2.enum(["enter", "ctrlEnter"]),
+      runningSend: z2.enum(["queue", "steer"]),
+      showThinking: z2.boolean(),
+      // auto = follow the host: Magpie's light/dark inside Magpie, the OS outside it
+      theme: z2.enum(["auto", "light", "dark"]),
+      contentWidth: z2.enum(CONTENT_WIDTHS),
+      chatFontSize: z2.number().int().min(CHAT_FONT_MIN).max(CHAT_FONT_MAX),
+      idleCloseMinutes: z2.number().int().min(IDLE_CLOSE_MIN).max(IDLE_CLOSE_MAX),
+      collapsedProjects: z2.array(id).max(1e3),
+      panel: z2.object({ open: z2.boolean(), tab: z2.string().max(40), width: z2.number().min(0).max(5e3) }).partial(),
+      sidebarWidth: z2.number().min(0).max(5e3),
+      sidebarHidden: z2.boolean(),
+      lastProjectId: id.nullable(),
+      lastThreadId: id.nullable(),
+      recentDirs: z2.array(z2.string().max(4096)).max(50),
+      providerEnabled: z2.record(z2.string().max(64), z2.boolean()),
+      providerCommand: z2.record(
+        z2.string().max(64),
+        z2.object({ executable: z2.string().max(4096).optional(), args: z2.array(z2.string().max(4096)).max(64).optional() }).strict()
+      ),
+      v1Migrated: z2.boolean(),
+      bashPath: z2.string().max(1024)
+    }).partial().strict();
+    SettingsStore = class {
+      file;
+      cache = null;
+      writing = Promise.resolve();
+      constructor(dataDir) {
+        this.file = join13(dataDir, "settings.json");
+      }
+      async get() {
+        if (this.cache) return this.cache;
+        let raw = {};
+        try {
+          raw = JSON.parse(await readFile12(this.file, "utf8"));
+        } catch {
+        }
+        raw = sanitizeStored(raw);
+        this.cache = { ...DEFAULT_SETTINGS, ...raw, panel: { ...DEFAULT_SETTINGS.panel, ...raw.panel } };
+        return this.cache;
+      }
+      async set(patch) {
+        const cur = await this.get();
+        const next = { ...cur, ...patch, panel: { ...cur.panel, ...patch.panel } };
+        this.cache = next;
+        const snap = next;
+        this.writing = this.writing.then(() => writeJsonAtomic(this.file, snap));
+        await this.writing;
+        return next;
+      }
+    };
+  }
+});
+
+// daemon/src/util/jsonl.ts
+import { appendFile, readFile as readFile14, mkdir as mkdir5, rename as rename2, writeFile as writeFile6 } from "node:fs/promises";
+import { dirname as dirname6 } from "node:path";
+async function readJsonl(file) {
+  let text = "";
+  try {
+    text = await readFile14(file, "utf8");
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const line of text.split("\n")) {
+    const t = line.trim();
+    if (!t) continue;
+    try {
+      out.push(JSON.parse(t));
+    } catch {
+    }
+  }
+  return out;
+}
+function appendJsonl(file, obj) {
+  const prev = writers.get(file) ?? Promise.resolve();
+  const next = prev.then(async () => {
+    try {
+      await mkdir5(dirname6(file), { recursive: true });
+      await appendFile(file, JSON.stringify(obj) + "\n", "utf8");
+    } catch (e) {
+      if (e instanceof ApiError) throw e;
+      throw new ApiError("io_error", `\u5199\u5165\u6570\u636E\u5931\u8D25\uFF08${file}\uFF09\uFF1A${e?.message ?? e}`);
+    }
+  });
+  writers.set(
+    file,
+    next.catch(() => {
+    })
+  );
+  return next;
+}
+var writers;
+var init_jsonl = __esm({
+  "daemon/src/util/jsonl.ts"() {
+    init_methods();
+    writers = /* @__PURE__ */ new Map();
+  }
+});
+
+// daemon/src/migrate/legacy.ts
+var legacy_exports = {};
+__export(legacy_exports, {
+  migrateLegacy: () => migrateLegacy
+});
+import { cp as cp2, mkdir as mkdir8, readdir as readdir6, readFile as readFile18 } from "node:fs/promises";
+import { existsSync as existsSync14 } from "node:fs";
+import { join as join20 } from "node:path";
+function stamp() {
+  const d = /* @__PURE__ */ new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+}
+async function migrateLegacy(dataDir, stores) {
+  const settings = await stores.settings.get();
+  if (settings.v1Migrated) return { migrated: 0, skipped: true };
+  const oldDir = join20(dataDir, "sessions");
+  const oldSettingsPath = join20(dataDir, "settings.json");
+  if (!existsSync14(oldDir) && !existsSync14(oldSettingsPath)) {
+    await stores.settings.set({ v1Migrated: true });
+    return { migrated: 0, skipped: true };
+  }
+  const backup = join20(dataDir, "trash", `legacy-${stamp()}`);
+  await mkdir8(backup, { recursive: true });
+  if (existsSync14(oldDir)) await cp2(oldDir, join20(backup, "sessions"), { recursive: true }).catch(() => {
+  });
+  if (existsSync14(oldSettingsPath)) await cp2(oldSettingsPath, join20(backup, "settings.json")).catch(() => {
+  });
+  const oldSettings = existsSync14(oldSettingsPath) ? JSON.parse(await readFile18(oldSettingsPath, "utf8").catch(() => "{}")) : {};
+  const projectIdByPath = /* @__PURE__ */ new Map();
+  const lc = (p) => p.replace(/\\/g, "/").toLowerCase().replace(/\/+$/, "");
+  for (const p of oldSettings.projects ?? []) {
+    if (!p?.path) continue;
+    try {
+      const proj = await stores.projects.create(p.path, p.name);
+      projectIdByPath.set(lc(proj.path), proj.id);
+    } catch (e) {
+      log("warn", "\u8FC1\u79FB\uFF1A\u5EFA\u9879\u76EE\u5931\u8D25", { path: p.path, err: String(e) });
+    }
+  }
+  let sessionIds = [];
+  try {
+    sessionIds = (await readdir6(oldDir)).filter((d) => validId(d) && existsSync14(join20(oldDir, d, "meta.json")));
+  } catch {
+  }
+  const metas = [];
+  for (const id2 of sessionIds) {
+    try {
+      const m = JSON.parse(await readFile18(join20(oldDir, id2, "meta.json"), "utf8"));
+      if (m?.cwd) metas.push(m);
+    } catch {
+    }
+  }
+  const extraDirs = [];
+  const projPaths = [...projectIdByPath.keys()];
+  for (const m of metas) {
+    const covered = projPaths.some((pp) => belongsTo(m.cwd, pp)) || extraDirs.some((d) => belongsTo(m.cwd, d));
+    if (covered) continue;
+    for (let i = extraDirs.length - 1; i >= 0; i--) if (belongsTo(extraDirs[i], m.cwd)) extraDirs.splice(i, 1);
+    extraDirs.push(m.cwd);
+  }
+  for (const d of extraDirs) {
+    if (!existsSync14(d)) continue;
+    try {
+      const name = d.replace(/\\/g, "/").split("/").filter(Boolean).pop() ?? d;
+      const proj = await stores.projects.create(d, name);
+      projectIdByPath.set(lc(proj.path), proj.id);
+      projPaths.push(lc(proj.path));
+    } catch (e) {
+      log("warn", "\u8FC1\u79FB\uFF1A\u8865\u5EFA\u5B64\u513F\u9879\u76EE\u5931\u8D25", { path: d, err: String(e) });
+    }
+  }
+  const projectOf = (cwd) => {
+    const l = lc(cwd);
+    let best = null;
+    for (const [pp, id2] of projectIdByPath) {
+      if (belongsTo(l, pp) && (best == null || pp.length > best.length)) best = pp;
+    }
+    return best ? projectIdByPath.get(best) : null;
+  };
+  let migrated = 0;
+  const threadsDir = join20(dataDir, "threads");
+  for (const m of metas) {
+    try {
+      const projectId = projectOf(m.cwd);
+      if (!projectId) {
+        log("warn", "\u8FC1\u79FB\uFF1A\u65E0\u9879\u76EE\u53EF\u5F52\uFF0C\u8DF3\u8FC7", { id: m.id, cwd: m.cwd });
+        continue;
+      }
+      const testTitle = SKIP_TITLE.test(m.title ?? "") || m.title === "\u9ED8\u8BA4\u5267\u672C\u6F14\u793A";
+      const provider = m.agent === "claude" || m.agent === "codex" ? m.agent : "mock";
+      const archived = testTitle || m.agent !== "claude" && m.agent !== "codex";
+      const now = Date.now();
+      const meta = {
+        id: `t_${m.id.replace(/^s?_?/, "")}`.slice(0, 80),
+        projectId,
+        title: m.title || "\u65E7\u5BF9\u8BDD",
+        titleAuto: false,
+        provider,
+        model: m.model || null,
+        mode: MODE_MAP[m.permission] ?? "default",
+        effort: null,
+        providerSessionId: m.cliSessionId || null,
+        status: "closed",
+        pinned: !!m.pinned,
+        archived,
+        createdAt: m.created || now,
+        updatedAt: m.updated || now,
+        lastTurnStatus: m.lastStatus === "ok" ? "completed" : m.lastStatus === "error" ? "failed" : null,
+        usage: {
+          inputTokens: m.totalUsage?.inputTokens ?? 0,
+          outputTokens: m.totalUsage?.outputTokens ?? 0,
+          cacheReadTokens: m.totalUsage?.cacheReadTokens ?? 0,
+          costUsd: m.totalCost ?? 0
+        },
+        importedFrom: m.cliSessionId ? { provider, sessionId: m.cliSessionId } : void 0,
+        seq: 0
+      };
+      const tdir = join20(threadsDir, meta.id);
+      if (existsSync14(tdir)) meta.id = `t_${m.id}_v1`.slice(0, 80);
+      await mkdir8(join20(threadsDir, meta.id), { recursive: true });
+      const oldEvts = (await readFile18(join20(oldDir, m.id, "events.jsonl"), "utf8").catch(() => "")).split("\n").filter((l) => l.trim()).map((l) => {
+        try {
+          return JSON.parse(l);
+        } catch {
+          return null;
+        }
+      }).filter((x) => !!x);
+      const lines = [];
+      const openTools = /* @__PURE__ */ new Map();
+      let seq = 0;
+      const push = (ev) => {
+        seq++;
+        lines.push({ ...ev, seq, ts: Date.now(), threadId: meta.id });
+      };
+      for (const e of oldEvts) {
+        switch (e.type) {
+          case "user":
+            push({ type: "user_message", text: String(e.text ?? "") });
+            break;
+          case "text":
+            push({ type: "assistant_message", itemId: `lg_${seq}`, text: String(e.text ?? "") });
+            break;
+          case "thinking":
+            push({ type: "reasoning", itemId: `lg_${seq}`, text: String(e.text ?? "") });
+            break;
+          case "tool.call": {
+            const key = String(e.itemId ?? e.callId ?? `c${seq}`);
+            openTools.set(key, { kind: String(e.kind ?? "other"), title: String(e.title ?? e.kind ?? "\u5DE5\u5177"), input: e.input, detail: e.detail });
+            push({ type: "tool_call", itemId: key, kind: "other", title: String(e.title ?? "\u5DE5\u5177"), status: "running", input: e.input, detail: e.detail });
+            break;
+          }
+          case "tool.result": {
+            const key = String(e.itemId ?? e.callId ?? `c${seq}`);
+            const open = openTools.get(key);
+            openTools.delete(key);
+            push({
+              type: "tool_call",
+              itemId: key,
+              kind: open?.kind ?? "other",
+              title: open?.title ?? "\u5DE5\u5177",
+              status: e.ok === false || e.error ? "failed" : "ok",
+              output: typeof e.output === "string" ? e.output.slice(0, 2e4) : void 0,
+              detail: open?.detail
+            });
+            break;
+          }
+          case "todo": {
+            const items = e.items ?? [];
+            push({ type: "todo", items: items.map((i) => ({ text: String(i.text ?? ""), status: i.status === "done" ? "done" : i.status === "in_progress" ? "in_progress" : "todo" })) });
+            break;
+          }
+          case "permission.denied":
+            push({ type: "notice", level: "warn", message: `\u5DF2\u62D2\u7EDD\uFF1A${String(e.title ?? e.kind ?? "")}` });
+            break;
+          case "permission.request":
+          case "permission.resolved":
+            break;
+          // Old permission cards are stale; don't recreate them
+          case "notice":
+            push({ type: "notice", level: e.level ?? "info", message: String(e.message ?? "") });
+            break;
+          case "run.end": {
+            const u = e.usage;
+            if (u) push({ type: "usage", turnId: `lg_t${seq}`, inputTokens: u.inputTokens ?? 0, outputTokens: u.outputTokens ?? 0, cacheReadTokens: u.cacheReadTokens ?? 0, costUsd: e.costUsd ?? 0 });
+            push({ type: "turn_ended", turnId: `lg_t${seq}`, status: e.status === "error" ? "failed" : e.status === "interrupted" ? "interrupted" : "completed", durationMs: e.ms ?? void 0, error: e.error });
+            break;
+          }
+          case "run.start":
+            break;
+          case "init":
+            break;
+          default:
+            break;
+        }
+      }
+      for (const [key, o] of openTools) {
+        seq++;
+        lines.push({ type: "tool_call", itemId: key, kind: "other", title: o.title, status: "failed", seq, ts: Date.now(), threadId: meta.id });
+      }
+      for (const ev of lines) await appendJsonl(join20(threadsDir, meta.id, "timeline.jsonl"), ev);
+      meta.seq = seq;
+      await writeJsonAtomic(join20(threadsDir, meta.id, "meta.json"), meta);
+      migrated++;
+    } catch (e) {
+      log("warn", "\u8FC1\u79FB\uFF1A\u4F1A\u8BDD\u5931\u8D25", { id: m.id, err: String(e) });
+    }
+  }
+  const patch = { v1Migrated: true };
+  if (typeof oldSettings.theme === "string") patch.theme = oldSettings.theme;
+  if (typeof oldSettings.sendKey === "string") patch.sendKey = oldSettings.sendKey;
+  if (typeof oldSettings.showThinking === "boolean") patch.showThinking = oldSettings.showThinking;
+  if (typeof oldSettings.defaultAgent === "string") patch.defaultProvider = oldSettings.defaultAgent === "claude" || oldSettings.defaultAgent === "codex" ? oldSettings.defaultAgent : "claude";
+  if (typeof oldSettings.defaultPermission === "string") patch.defaultMode = MODE_MAP[oldSettings.defaultPermission] ?? "default";
+  await stores.settings.set(patch);
+  log("info", `\u65E7\u6570\u636E\u8FC1\u79FB\u5B8C\u6210\uFF1A${migrated} \u4E2A\u4F1A\u8BDD\u3001${projectIdByPath.size} \u4E2A\u9879\u76EE\uFF0C\u5907\u4EFD\u5728 ${backup}`);
+  return { migrated, skipped: false };
+}
+var SKIP_TITLE, MODE_MAP, belongsTo;
+var init_legacy = __esm({
+  "daemon/src/migrate/legacy.ts"() {
+    init_jsonl();
+    init_atomic();
+    init_paths();
+    init_log();
+    SKIP_TITLE = /^\/(slow|deny|error|long|codex)/;
+    MODE_MAP = {
+      plan: "plan",
+      default: "default",
+      acceptEdits: "acceptEdits",
+      bypassPermissions: "bypassPermissions",
+      auto: "acceptEdits",
+      full: "bypassPermissions"
+    };
+    belongsTo = (cwd, parent) => {
+      const c = cwd.replace(/\\/g, "/").toLowerCase().replace(/\/+$/, "");
+      const p = parent.replace(/\\/g, "/").toLowerCase().replace(/\/+$/, "");
+      return c === p || c.startsWith(p + "/");
+    };
+  }
+});
+
+// daemon/src/providers/warm.ts
+var warm_exports = {};
+__export(warm_exports, {
+  warmProviderCache: () => warmProviderCache
+});
+async function warmProviderCache(settings) {
+  await Promise.all(
+    listProviders().map(async (p) => {
+      if (!isProviderEnabled(settings, p.id) || catalogById(p.id)?.status === "planned") return;
+      const det = await cachedDetect(p);
+      if (det.available) await cachedModels(p);
+    })
+  );
+}
+var init_warm = __esm({
+  "daemon/src/providers/warm.ts"() {
+    init_registry();
+    init_catalog();
+    init_enabled();
+    init_infoCache();
+  }
+});
+
+// daemon/src/main.ts
+import { mkdirSync as mkdirSync2, rmSync as rmSync2, chmodSync as chmodSync2 } from "node:fs";
+import { join as join21, dirname as dirname9 } from "node:path";
+import { fileURLToPath as fileURLToPath4 } from "node:url";
+
+// daemon/src/config.ts
+import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join as join2, resolve, dirname as dirname2 } from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+
+// daemon/src/util/buildStamp.ts
+import { existsSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+function resolveDaemonMainJs() {
+  const self = fileURLToPath(import.meta.url);
+  const norm2 = self.replace(/\\/g, "/");
+  if (norm2.endsWith("/daemon/dist/main.js") || norm2.endsWith("/dist/main.js")) return self;
+  const here = dirname(self);
+  const candidates = [
+    join(here, "..", "..", "dist", "main.js"),
+    // src/util → daemon/dist/main.js (vitest/tsc)
+    join(here, "main.js"),
+    // Already in the dist directory
+    join(here, "..", "main.js")
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+function daemonBuildStamp() {
+  try {
+    const mainJs = resolveDaemonMainJs();
+    if (!mainJs) return "0";
+    return String(statSync(mainJs).mtimeMs);
+  } catch {
+    return "0";
+  }
+}
+
+// daemon/src/config.ts
+function pkgVersion() {
+  try {
+    const here = dirname2(fileURLToPath2(import.meta.url));
+    const pkg = JSON.parse(readFileSync(join2(here, "..", "..", "package.json"), "utf8"));
+    return String(pkg.version || "0.0.0");
+  } catch {
+    return "0.0.0";
+  }
+}
+function parseConfig(argv) {
+  let port = null;
+  let data = null;
+  let token = null;
+  let parentPid;
+  let gatePort;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--port" && argv[i + 1]) port = Number(argv[++i]);
+    else if (a.startsWith("--port=")) port = Number(a.slice(7));
+    else if (a === "--data" && argv[i + 1]) data = argv[++i];
+    else if (a.startsWith("--data=")) data = a.slice(7);
+    else if (a === "--token" && argv[i + 1]) token = argv[++i];
+    else if (a.startsWith("--token=")) token = a.slice(8);
+    else if (a === "--parent-pid" && argv[i + 1]) parentPid = Number(argv[++i]);
+    else if (a.startsWith("--parent-pid=")) parentPid = Number(a.slice(13));
+    else if (a === "--gate-port" && argv[i + 1]) gatePort = Number(argv[++i]);
+    else if (a.startsWith("--gate-port=")) gatePort = Number(a.slice(12));
+  }
+  if (port == null || !Number.isInteger(port) || port < 0 || port > 65535) {
+    const envPort = Number(process.env.AGENT_CONSOLE_PORT || "");
+    port = Number.isInteger(envPort) && envPort >= 0 && envPort <= 65535 ? envPort : 3488;
+  }
+  const xdg = data ?? process.env.XDG_CONFIG_HOME ?? join2(homedir(), ".config");
+  const dataDir = resolve(join2(xdg, "magpie", "agent-console"));
+  const idleEnv = Number(process.env.AGENT_CONSOLE_IDLE_EXIT_MIN || "");
+  return {
+    port,
+    dataDir,
+    token: token ?? process.env.AGENT_CONSOLE_TOKEN ?? randomBytes(16).toString("hex"),
+    version: pkgVersion(),
+    idleExitMinutes: Number.isFinite(idleEnv) && idleEnv > 0 ? idleEnv : 60,
+    buildStamp: daemonBuildStamp(),
+    parentPid: Number.isInteger(parentPid) ? parentPid : void 0,
+    gatePort: Number.isInteger(gatePort) && gatePort > 0 && gatePort <= 65535 ? gatePort : void 0
+  };
+}
+
+// daemon/src/main.ts
+init_log();
+
+// daemon/src/http.ts
+init_security();
+init_log();
+init_i18n();
+import { createServer } from "node:http";
+import { readFile, stat } from "node:fs/promises";
+import { existsSync as existsSync2 } from "node:fs";
+import { join as join4, normalize, extname } from "node:path";
+var MIME = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".woff2": "font/woff2",
+  ".map": "application/json",
+  ".json": "application/json; charset=utf-8"
+};
+var MAX_UPLOAD = 50 * 1024 * 1024;
+var MAX_MSG = 200 * 1024;
+function safeDecode(s) {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return null;
+  }
+}
+function send(res, code, body, headers = {}) {
+  res.writeHead(code, headers);
+  res.end(body);
+}
+function sendJson(res, code, obj, headers = {}) {
+  send(res, code, JSON.stringify(obj), { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...headers });
+}
+var STATIC_HEADERS = {
+  "cache-control": "no-store",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "no-referrer"
+};
+function createHttpServer(cfg2, appDir, attachments, hooks = {}) {
+  const server = createServer(async (req, res) => {
+    try {
+      await route(req, res);
+    } catch (e) {
+      log("error", "HTTP \u5904\u7406\u5F02\u5E38", { url: req.url, err: String(e) });
+      if (!res.headersSent) sendJson(res, 500, { ok: false, e: { code: "internal", message: tr("http.internal") } });
+      else res.end();
+    }
+  });
+  async function route(req, res) {
+    const hostCheck = checkHost(req.headers.host, cfg2.port);
+    if (!hostCheck.ok) {
+      sendJson(res, hostCheck.code, { ok: false, e: { code: "bad_host", message: hostCheck.message } });
+      return;
+    }
+    const origin = classifyOrigin(req.headers.origin, cfg2.port);
+    if (origin === "foreign") {
+      sendJson(res, 403, { ok: false, e: { code: "bad_origin", message: tr("http.badOrigin") } });
+      return;
+    }
+    const url = new URL(req.url ?? "/", `http://127.0.0.1:${cfg2.port}`);
+    const pathname = url.pathname;
+    const isApi = pathname.startsWith("/api/");
+    const isAttachment = pathname.startsWith("/attachments/");
+    if (req.method === "OPTIONS") {
+      if (pathname !== "/api/upload" || origin === "none") {
+        sendJson(res, 403, { ok: false, e: { code: "bad_preflight", message: tr("http.badPreflight") } });
+        return;
+      }
+      send(res, 204, "", {
+        "access-control-allow-origin": origin === "opaque" ? "null" : `http://127.0.0.1:${cfg2.port}`,
+        "access-control-allow-headers": "x-agent-console, content-type",
+        "access-control-allow-methods": "GET, POST, OPTIONS",
+        "access-control-max-age": "600",
+        vary: "origin"
+      });
+      return;
+    }
+    if (isApi || isAttachment) {
+      const headerToken = req.headers["x-agent-console"];
+      const queryToken = isAttachment ? url.searchParams.get("t") : null;
+      const validToken = typeof headerToken === "string" && tokenEqual(headerToken, cfg2.token) || typeof queryToken === "string" && tokenEqual(queryToken, cfg2.token);
+      if (!validToken) {
+        sendJson(res, 403, { ok: false, e: { code: "bad_token", message: tr("http.badToken") } });
+        return;
+      }
+      if (origin === "opaque") {
+        res.setHeader("access-control-allow-origin", "null");
+        res.setHeader("vary", "origin");
+      }
+      if (isApi) {
+        await routeApi(req, res, pathname, url);
+        return;
+      }
+      const id2 = safeDecode(pathname.slice("/attachments/".length));
+      const a = id2 === null ? null : await attachments.get(id2);
+      if (!a) {
+        sendJson(res, 404, { ok: false, e: { code: "not_found", message: tr("http.noAttachment") } });
+        return;
+      }
+      const data2 = await attachments.read(a.id);
+      send(res, 200, data2 ?? Buffer.alloc(0), { ...STATIC_HEADERS, "content-type": a.mime });
+      return;
+    }
+    if (origin === "opaque") {
+      sendJson(res, 403, { ok: false, e: { code: "bad_origin", message: tr("http.badOrigin") } });
+      return;
+    }
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      sendJson(res, 405, { ok: false, e: { code: "method", message: tr("http.method") } });
+      return;
+    }
+    if (pathname === "/" || pathname === "/index.html") {
+      try {
+        const html = await readFile(join4(appDir, "index.html"), "utf8");
+        send(res, 200, html, { ...STATIC_HEADERS, "content-type": "text/html; charset=utf-8" });
+      } catch {
+        send(res, 503, tr("http.noApp"), { ...STATIC_HEADERS, "content-type": "text/plain; charset=utf-8" });
+      }
+      return;
+    }
+    const decoded = safeDecode(pathname);
+    if (decoded === null) {
+      sendJson(res, 400, { ok: false, e: { code: "bad_path", message: tr("http.badPath") } });
+      return;
+    }
+    const rel = normalize(decoded).replace(/^([\\/])+/, "");
+    const full = normalize(join4(appDir, rel));
+    if (!full.startsWith(normalize(appDir)) || rel.includes("..")) {
+      sendJson(res, 403, { ok: false, e: { code: "bad_path", message: tr("http.pathDenied") } });
+      return;
+    }
+    if (!existsSync2(full) || !(await stat(full)).isFile()) {
+      sendJson(res, 404, { ok: false, e: { code: "not_found", message: tr("http.noFile") } });
+      return;
+    }
+    const data = await readFile(full);
+    send(res, 200, data, { ...STATIC_HEADERS, "content-type": MIME[extname(full).toLowerCase()] ?? "application/octet-stream" });
+  }
+  async function routeApi(req, res, pathname, url) {
+    if (pathname === "/api/ping" && req.method === "GET") {
+      sendJson(res, 200, { ok: true, version: cfg2.version, port: cfg2.port, pid: process.pid, dataDir: cfg2.dataDir, buildStamp: cfg2.buildStamp });
+      return;
+    }
+    if (pathname === "/api/upload" && req.method === "POST") {
+      const name = url.searchParams.get("name") ?? "";
+      if (!attachments.allowedExt(name)) {
+        sendJson(res, 400, { ok: false, e: { code: "bad_type", message: tr("http.badType") } });
+        return;
+      }
+      const declared = Number(req.headers["content-length"] ?? 0);
+      if (declared > MAX_UPLOAD) {
+        res.setHeader("connection", "close");
+        sendJson(res, 413, { ok: false, e: { code: "too_large", message: tr("http.tooLarge") } });
+        req.resume();
+        return;
+      }
+      const chunks = [];
+      let size = 0;
+      for await (const c of req) {
+        const b = c;
+        size += b.length;
+        if (size > MAX_UPLOAD) {
+          res.setHeader("connection", "close");
+          sendJson(res, 413, { ok: false, e: { code: "too_large", message: tr("http.tooLarge") } });
+          return;
+        }
+        chunks.push(b);
+      }
+      const a = await attachments.save(name, Buffer.concat(chunks));
+      sendJson(res, 200, { ok: true, id: a.id, name: a.name, mime: a.mime, size: a.size });
+      return;
+    }
+    sendJson(res, 404, { ok: false, e: { code: "not_found", message: tr("http.noRoute") } });
+  }
+  if (hooks.onUpgrade) {
+    server.on("upgrade", hooks.onUpgrade);
+  }
+  return server;
+}
+
+// daemon/src/store/attachments.ts
+init_paths();
+import { writeFile, mkdir, stat as stat2, readFile as readFile2 } from "node:fs/promises";
+import { join as join5, extname as extname2 } from "node:path";
+import { randomBytes as randomBytes2 } from "node:crypto";
+var IMG_EXT = /* @__PURE__ */ new Set([".png", ".jpg", ".jpeg", ".gif", ".webp"]);
+var TEXT_EXT = /* @__PURE__ */ new Set([".txt", ".md", ".log", ".json", ".csv", ".xml", ".yaml", ".yml", ".html", ".css", ".js", ".ts", ".py", ".toml", ".ini", ".conf"]);
+var MIME2 = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp"
+};
+var TEXT_MIME = "text/plain; charset=utf-8";
+var AttachmentStore = class {
+  constructor(dir) {
+    this.dir = dir;
+  }
+  dir;
+  // id → file name: avoids a readdir of the whole directory on every lookup (slow with many attachments)
+  files = /* @__PURE__ */ new Map();
+  safeExt(name) {
+    const ext = extname2(name).toLowerCase();
+    if (IMG_EXT.has(ext) || TEXT_EXT.has(ext)) return ext;
+    if (!ext) return ".txt";
+    return null;
+  }
+  allowedExt(name) {
+    return this.safeExt(name) !== null;
+  }
+  async save(name, data) {
+    const ext = this.safeExt(name);
+    if (!ext) throw new Error("\u4E0D\u652F\u6301\u7684\u6587\u4EF6\u7C7B\u578B");
+    const id2 = "a_" + Date.now().toString(36) + randomBytes2(3).toString("hex");
+    await mkdir(this.dir, { recursive: true });
+    const file = join5(this.dir, id2 + ext);
+    await writeFile(file, data);
+    this.files.set(id2, id2 + ext);
+    const mime = MIME2[ext] ?? TEXT_MIME;
+    return { id: id2, name: name || "\u672A\u547D\u540D" + ext, mime, size: data.length, path: file };
+  }
+  async get(id2) {
+    if (!validId(id2)) return null;
+    const known = this.files.get(id2);
+    if (known) {
+      const hit = await this.describe(id2, known);
+      if (hit) return hit;
+      this.files.delete(id2);
+    }
+    const { readdir: readdir7 } = await import("node:fs/promises");
+    try {
+      for (const f of await readdir7(this.dir)) {
+        if (f.startsWith(id2 + ".")) {
+          this.files.set(id2, f);
+          return await this.describe(id2, f);
+        }
+      }
+    } catch {
+    }
+    return null;
+  }
+  async describe(id2, f) {
+    const p = join5(this.dir, f);
+    const s = await stat2(p).catch(() => null);
+    if (!s?.isFile()) return null;
+    const ext = extname2(f).toLowerCase();
+    return { id: id2, name: f.slice(id2.length + 1) || f, mime: MIME2[ext] ?? TEXT_MIME, size: s.size, path: p };
+  }
+  async read(id2) {
+    const a = await this.get(id2);
+    if (!a) return null;
+    return readFile2(a.path);
+  }
+};
+
+// daemon/src/main.ts
+init_settings();
+init_agentShell();
+
+// daemon/src/store/projects.ts
+init_atomic();
+init_paths();
+init_methods();
+import { readFile as readFile13 } from "node:fs/promises";
+import { existsSync as existsSync11, statSync as statSync6 } from "node:fs";
+import { join as join14 } from "node:path";
+import { randomBytes as randomBytes4 } from "node:crypto";
+function newId() {
+  return "p_" + Date.now().toString(36) + randomBytes4(3).toString("hex");
+}
+var ProjectsStore = class {
+  file;
+  cache = null;
+  writing = Promise.resolve();
+  constructor(dataDir) {
+    this.file = join14(dataDir, "projects.json");
+  }
+  async list() {
+    if (this.cache) return this.cache;
+    try {
+      this.cache = JSON.parse(await readFile13(this.file, "utf8"));
+      if (!Array.isArray(this.cache)) this.cache = [];
+    } catch {
+      this.cache = [];
+    }
+    return this.cache;
+  }
+  async get(id2) {
+    if (!validId(id2)) return null;
+    return (await this.list()).find((p) => p.id === id2) ?? null;
+  }
+  async save(list) {
+    this.cache = list;
+    const snap = list;
+    this.writing = this.writing.then(() => writeJsonAtomic(this.file, snap));
+    await this.writing;
+  }
+  async create(path5, name) {
+    if (!path5 || typeof path5 !== "string") throw new ApiError("bad_params", "\u8DEF\u5F84\u4E0D\u80FD\u4E3A\u7A7A");
+    if (!existsSync11(path5) || !statSync6(path5).isDirectory()) {
+      throw new ApiError("bad_path", "\u76EE\u5F55\u4E0D\u5B58\u5728\u6216\u4E0D\u662F\u6587\u4EF6\u5939");
+    }
+    const np = normPath(path5);
+    const list = await this.list();
+    const dup = list.find((p) => normPath(p.path) === np);
+    if (dup) return dup;
+    const proj = {
+      id: newId(),
+      name: name?.trim() || path5.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || path5,
+      path: path5,
+      createdAt: Date.now()
+    };
+    list.push(proj);
+    await this.save(list);
+    return proj;
+  }
+  async rename(id2, name) {
+    const list = await this.list();
+    const p = list.find((x) => x.id === id2);
+    if (!p) throw new ApiError("not_found", "\u9879\u76EE\u4E0D\u5B58\u5728");
+    p.name = name.trim() || p.name;
+    await this.save(list);
+    return p;
+  }
+  async remove(id2) {
+    const list = await this.list();
+    const idx = list.findIndex((x) => x.id === id2);
+    if (idx < 0) return;
+    list.splice(idx, 1);
+    await this.save(list);
+  }
+};
+
+// daemon/src/store/threads.ts
+init_atomic();
+init_jsonl();
+init_paths();
+init_methods();
+init_i18n();
+import { mkdir as mkdir6, rename as rename3, readdir as readdir4, readFile as readFile15 } from "node:fs/promises";
+import { join as join15 } from "node:path";
+import { randomBytes as randomBytes5 } from "node:crypto";
+function newId2() {
+  return "t_" + Date.now().toString(36) + randomBytes5(3).toString("hex");
+}
+var ThreadsStore = class {
+  dir;
+  trashDir;
+  metas = /* @__PURE__ */ new Map();
+  loaded = false;
+  // Serialize meta writes: concurrent patch/appendEvent would overwrite each other (setStatus/patch/provider_session_id run concurrently in the manager)
+  writeQ = Promise.resolve();
+  serial(fn) {
+    const p = this.writeQ.then(fn, fn);
+    this.writeQ = p.catch(() => {
+    });
+    return p;
+  }
+  /** Resolves once no meta / timeline write is queued or in flight (tests remove the data dir only after this) */
+  async idle() {
+    for (; ; ) {
+      const q = this.writeQ;
+      await q;
+      await new Promise((r) => setTimeout(r, 0));
+      if (q === this.writeQ) return;
+    }
+  }
+  constructor(dataDir) {
+    this.dir = join15(dataDir, "threads");
+    this.trashDir = join15(dataDir, "trash", "threads");
+  }
+  tdir(id2) {
+    return join15(this.dir, id2);
+  }
+  metaPath(id2) {
+    return join15(this.tdir(id2), "meta.json");
+  }
+  timelinePath(id2) {
+    return join15(this.tdir(id2), "timeline.jsonl");
+  }
+  async loadAll() {
+    if (this.loaded) return;
+    this.loaded = true;
+    let ids = [];
+    try {
+      ids = (await readdir4(this.dir)).filter((d) => validId(d));
+    } catch {
+      return;
+    }
+    for (const id2 of ids) {
+      try {
+        const m = JSON.parse(await readFile15(this.metaPath(id2), "utf8"));
+        if (m && typeof m.id === "string") this.metas.set(m.id, m);
+      } catch {
+      }
+    }
+  }
+  async list() {
+    await this.loadAll();
+    return [...this.metas.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+  async get(id2) {
+    if (!validId(id2)) return null;
+    await this.loadAll();
+    return this.metas.get(id2) ?? null;
+  }
+  async saveMeta(meta) {
+    this.metas.set(meta.id, meta);
+    await writeJsonAtomic(this.metaPath(meta.id), meta);
+  }
+  async create(o) {
+    const now = Date.now();
+    const meta = {
+      id: newId2(),
+      projectId: o.projectId,
+      title: o.title ?? tr("thread.defaultTitle"),
+      titleAuto: o.title == null,
+      provider: o.provider,
+      model: o.model ?? null,
+      mode: o.mode ?? "default",
+      effort: o.effort ?? null,
+      providerSessionId: o.providerSessionId ?? null,
+      status: "idle",
+      pinned: false,
+      archived: false,
+      createdAt: now,
+      updatedAt: now,
+      lastTurnStatus: null,
+      usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, costUsd: 0 },
+      importedFrom: o.importedFrom,
+      seq: 0
+    };
+    try {
+      await mkdir6(this.tdir(meta.id), { recursive: true });
+    } catch (e) {
+      throw new ApiError("io_error", `\u521B\u5EFA\u5BF9\u8BDD\u76EE\u5F55\u5931\u8D25\uFF1A${e?.message ?? e}`);
+    }
+    await this.saveMeta(meta);
+    return meta;
+  }
+  async patch(id2, patch) {
+    return this.serial(async () => {
+      const meta = await this.get(id2);
+      if (!meta) throw new ApiError("not_found", "\u5BF9\u8BDD\u4E0D\u5B58\u5728");
+      if (patch.title !== void 0 && patch.titleAuto === void 0) patch = { ...patch, titleAuto: false };
+      const next = { ...meta, ...patch, id: meta.id, updatedAt: Date.now() };
+      await this.saveMeta(next);
+      return next;
+    });
+  }
+  // Append an event: inside the serialized section take meta.seq+1 as seq, write the jsonl and update meta.
+  // A passed-in seq is ignored (keeps it strictly increasing); ts/threadId are filled in when missing.
+  async appendEvent(id2, ev) {
+    return this.serial(async () => {
+      const meta = await this.get(id2);
+      if (!meta) throw new ApiError("not_found", "\u5BF9\u8BDD\u4E0D\u5B58\u5728");
+      const full = {
+        ...ev,
+        seq: meta.seq + 1,
+        ts: ev.ts ?? Date.now(),
+        threadId: id2
+      };
+      await appendJsonl(this.timelinePath(id2), full);
+      meta.seq = full.seq;
+      meta.updatedAt = Date.now();
+      this.metas.set(id2, meta);
+      await writeJsonAtomic(this.metaPath(id2), meta);
+      return full;
+    });
+  }
+  async readEvents(id2, afterSeq = 0, limit = 5e3) {
+    const rows = await readJsonl(this.timelinePath(id2));
+    const out = rows.filter((e) => typeof e.seq === "number" && e.seq > afterSeq);
+    return out.slice(-limit);
+  }
+  async delete(id2) {
+    const meta = await this.get(id2);
+    if (!meta) return;
+    const stamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    await mkdir6(this.trashDir, { recursive: true });
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await rename3(this.tdir(id2), join15(this.trashDir, `${id2}-${stamp2}`));
+        break;
+      } catch (e) {
+        const code = e?.code;
+        if ((code === "EPERM" || code === "EBUSY" || code === "EACCES") && attempt < 8) {
+          await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+          continue;
+        }
+        throw new ApiError("internal", "\u79FB\u5165\u56DE\u6536\u76EE\u5F55\u5931\u8D25\uFF1A" + String(e));
+      }
+    }
+    this.metas.delete(id2);
+  }
+};
+
+// daemon/src/ws/gateway.ts
+init_security();
+init_log();
+init_i18n();
+import { WebSocketServer, WebSocket } from "ws";
+import { randomBytes as randomBytes6 } from "node:crypto";
+var Conn = class {
+  id;
+  ws;
+  authed = false;
+  subs = /* @__PURE__ */ new Set();
+  alive = true;
+  lastMsg = Date.now();
+  constructor(ws) {
+    this.id = "c_" + randomBytes6(4).toString("hex");
+    this.ws = ws;
+  }
+  send(obj) {
+    if (this.ws.readyState !== WebSocket.OPEN) return;
+    try {
+      const s = JSON.stringify(obj);
+      if (this.overflow(s.length)) {
+        log("warn", `\u8FDE\u63A5 ${this.id} \u51FA\u7AD9\u7F13\u51B2\u8D85 8MB\uFF0C\u65AD\u5F00`);
+        this.ws.close(4e3, "buffer_overflow");
+        return;
+      }
+      this.ws.send(s);
+    } catch {
+    }
+  }
+  // Look at bytes really still unsent in the socket (only grows when the client is stuck), not the cumulative amount sent
+  overflow(next) {
+    return this.ws.bufferedAmount + next > 8 * 1024 * 1024;
+  }
+  sendBinary(frame) {
+    if (this.ws.readyState !== WebSocket.OPEN) return;
+    if (this.overflow(frame.length)) {
+      log("warn", `\u8FDE\u63A5 ${this.id} \u51FA\u7AD9\u7F13\u51B2\u8D85 8MB\uFF0C\u65AD\u5F00`);
+      this.ws.close(4e3, "buffer_overflow");
+      return;
+    }
+    try {
+      this.ws.send(frame);
+    } catch {
+    }
+  }
+};
+var Gateway = class {
+  constructor(cfg2) {
+    this.cfg = cfg2;
+    this.wss = new WebSocketServer({ noServer: true });
+  }
+  cfg;
+  wss;
+  conns = /* @__PURE__ */ new Map();
+  methods = /* @__PURE__ */ new Map();
+  helloTimers = /* @__PURE__ */ new Map();
+  onTerminalInput;
+  /** Called after a connection closes, with how many are left (the preview proxy closes when none are) */
+  onConnectionClosed;
+  method(name, fn) {
+    this.methods.set(name, fn);
+  }
+  get connectionCount() {
+    return this.conns.size;
+  }
+  handleUpgrade(req, socket, head) {
+    const hostCheck = checkHost(req.headers.host, this.cfg.port);
+    if (!hostCheck.ok) {
+      socket.write("HTTP/1.1 421 Misdirected Request\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    if (classifyOrigin(req.headers.origin, this.cfg.port) === "foreign") {
+      socket.write("HTTP/1.1 403 Forbidden\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    const url = new URL(req.url ?? "/", `http://127.0.0.1:${this.cfg.port}`);
+    if (url.pathname !== "/ws") {
+      socket.write("HTTP/1.1 404 Not Found\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+    this.wss.handleUpgrade(req, socket, head, (ws) => this.onConn(ws));
+  }
+  onConn(ws) {
+    const conn = new Conn(ws);
+    this.conns.set(conn.id, conn);
+    const timer = setTimeout(() => {
+      if (!conn.authed) ws.close(4401, "auth_timeout");
+    }, 5e3);
+    this.helloTimers.set(conn.id, timer);
+    ws.on("message", (data, isBinary) => {
+      conn.lastMsg = Date.now();
+      if (isBinary) {
+        this.onBinary(conn, data);
+        return;
+      }
+      let msg;
+      try {
+        msg = JSON.parse(String(data));
+      } catch {
+        conn.send({ t: "res", id: 0, ok: false, e: { code: "bad_json", message: "\u6D88\u606F\u4E0D\u662F\u5408\u6CD5 JSON" } });
+        return;
+      }
+      this.onMessage(conn, msg);
+    });
+    ws.on("close", () => {
+      this.conns.delete(conn.id);
+      try {
+        this.onConnectionClosed?.(this.conns.size);
+      } catch {
+      }
+      const t = this.helloTimers.get(conn.id);
+      if (t) clearTimeout(t);
+      this.helloTimers.delete(conn.id);
+    });
+    ws.on("error", () => {
+    });
+  }
+  onMessage(conn, msg) {
+    if (msg.t === "hello") {
+      if (!conn.authed) {
+        if (typeof msg.token === "string" && tokenEqual(msg.token, this.cfg.token)) {
+          conn.authed = true;
+          setAppLocale(msg.lang);
+          const t = this.helloTimers.get(conn.id);
+          if (t) clearTimeout(t);
+          conn.send({ t: "hello.ok", version: this.cfg.version, serverTime: Date.now() });
+        } else {
+          conn.send({ t: "res", id: 0, ok: false, e: { code: "bad_token", message: "\u4EE4\u724C\u65E0\u6548" } });
+          conn.ws.close(4401, "bad_token");
+        }
+      }
+      return;
+    }
+    if (msg.t === "ping") {
+      conn.send({ t: "pong" });
+      return;
+    }
+    if (msg.t === "req") {
+      if (!conn.authed) {
+        conn.send({ t: "res", id: msg.id, ok: false, e: { code: "unauthorized", message: "\u672A\u9274\u6743" } });
+        return;
+      }
+      void this.dispatch(conn, msg);
+      return;
+    }
+  }
+  async dispatch(conn, msg) {
+    const fn = this.methods.get(msg.m);
+    if (!fn) {
+      conn.send({ t: "res", id: msg.id, ok: false, e: { code: "not_found", message: `\u672A\u77E5\u65B9\u6CD5 ${msg.m}` } });
+      return;
+    }
+    try {
+      const r = await fn(msg.p, { connId: conn.id, conn });
+      conn.send({ t: "res", id: msg.id, ok: true, r: r ?? null });
+    } catch (e) {
+      const err = e;
+      conn.send({
+        t: "res",
+        id: msg.id,
+        ok: false,
+        e: { code: err.code ?? "internal", message: err.message ?? "\u670D\u52A1\u5185\u90E8\u9519\u8BEF" }
+      });
+    }
+  }
+  // Terminal binary frame: [op:1][terminalIndex:2 BE][payload]
+  onBinary(conn, buf) {
+    if (buf.length < 3) return;
+    const op = buf.readUInt8(0);
+    const index = buf.readUInt16BE(1);
+    this.onTerminalInput?.(conn, index, op, buf.subarray(3));
+  }
+  publish(ch, data) {
+    for (const c of this.conns.values()) {
+      if (c.authed && c.subs.has(ch)) c.send({ t: "evt", ch, d: data });
+    }
+  }
+  publishTerminal(index, payload) {
+    const frame = Buffer.concat([Buffer.from([1, index >> 8 & 255, index & 255]), payload]);
+    for (const c of this.conns.values()) {
+      if (c.authed && c.subs.has(`terminal:${index}`)) c.sendBinary(frame);
+    }
+  }
+  subscribe(conn, ch) {
+    conn.subs.add(ch);
+  }
+  unsubscribe(conn, ch) {
+    conn.subs.delete(ch);
+  }
+  closeAll() {
+    for (const c of this.conns.values()) {
+      try {
+        c.ws.close(1001, "server_shutdown");
+      } catch {
+      }
+    }
+    this.conns.clear();
+  }
+};
+
+// daemon/src/main.ts
+init_methods();
+init_atomic();
+init_registry();
+
+// daemon/src/agents/manager.ts
+init_launch();
+init_modes();
+init_autoApprove13();
+init_autoApprove();
+init_attachmentRefs();
+init_registry();
+init_catalog();
+init_enabled();
+init_infoCache();
+init_magpieGateway();
+
+// daemon/src/timeline/coalescer.ts
+var Coalescer = class {
+  windowMs;
+  acc = /* @__PURE__ */ new Map();
+  onEmit;
+  constructor(windowMs, onEmit) {
+    this.windowMs = windowMs;
+    this.onEmit = onEmit;
+  }
+  // Push a delta; the first goes out immediately, the rest are merged within the window and sent trailing
+  push(itemId, text) {
+    const acc = this.acc.get(itemId);
+    if (!acc) {
+      this.onEmit(itemId, text);
+      this.acc.set(itemId, { text: "", timer: setTimeout(() => this.flush(itemId), this.windowMs) });
+      return;
+    }
+    acc.text += text;
+  }
+  // Must flush before the complete event arrives to keep ordering (deltas before the complete event)
+  flush(itemId) {
+    const acc = this.acc.get(itemId);
+    if (!acc) return;
+    if (acc.timer) {
+      clearTimeout(acc.timer);
+      acc.timer = null;
+    }
+    if (acc.text.length > 0) this.onEmit(itemId, acc.text);
+    this.acc.delete(itemId);
+  }
+  // Call before an itemId's complete event arrives: flush the deltas not yet sent
+  flushItem(itemId) {
+    this.flush(itemId);
+  }
+  dispose() {
+    for (const id2 of [...this.acc.keys()]) this.flush(id2);
+  }
+};
+
+// daemon/src/agents/manager.ts
+init_methods();
+init_log();
+init_i18n();
+init_agentShell();
+init_mentions();
+init_commands();
+function titleText(text) {
+  const blocks = text.trim().split(/\n{2,}/);
+  let i = 0;
+  while (i < blocks.length && blocks[i].split("\n").every((l) => l === ">" || l.startsWith("> "))) i++;
+  const rest = blocks.slice(i).join(" ").trim();
+  return (rest || text.trim().replace(/^>\s?/gm, "")).replace(/\s+/g, " ").trim();
+}
+var SLASH_CACHE_TTL_MS = 10 * 60 * 1e3;
+var MAX_WARM_IDLE = 3;
+var DELTA_TYPES = ["assistant_delta", "reasoning_delta", "tool_output_delta"];
+var deltaKey = (type, itemId) => `${type}\0${itemId}`;
+var AgentManager = class {
+  constructor(gw, threads, projects, settings, attachments) {
+    this.gw = gw;
+    this.threads = threads;
+    this.projects = projects;
+    this.settings = settings;
+    this.attachments = attachments;
+  }
+  gw;
+  threads;
+  projects;
+  settings;
+  attachments;
+  runtimes = /* @__PURE__ */ new Map();
+  recycleTimer = null;
+  slashCache = /* @__PURE__ */ new Map();
+  /** attachment.path in the frontend's thread.send is really an upload id; resolve it to the file under dataDir/attachments */
+  resolveAttachments(refs) {
+    return resolveAttachmentRefs(this.attachments, refs);
+  }
+  /** Mentions from the Files panel → absolute paths inside the project; a path that can't be used gets a notice */
+  async resolveMentionRefs(threadId, projectId, refs) {
+    if (!refs?.length) return [];
+    const proj = await this.projects.get(projectId);
+    if (!proj) return [];
+    const { mentions, warnings } = await resolveMentions(proj.path, refs);
+    if (warnings.length) {
+      await this.appendRaw(threadId, { type: "notice", level: "warn", message: tr("notice.mentionSkipped", { paths: warnings.join(", ") }) });
+    }
+    return mentions;
+  }
+  attachmentLabels(refs) {
+    return refs.map((a) => ({ id: a.path, name: (a.name ?? "").trim() || a.path, mime: a.mime }));
+  }
+  // Called at startup: running/initializing conversations are recovered as closed (§5.7.6)
+  async recoverOnStart() {
+    for (const meta of await this.threads.list()) {
+      if (meta.status === "running" || meta.status === "initializing") {
+        await this.appendRaw(meta.id, {
+          type: "notice",
+          level: "warn",
+          message: tr("notice.daemonRestart")
+        });
+        const events = await this.threads.readEvents(meta.id, 0, 5e4);
+        let open = null;
+        for (const e of events) {
+          if (e.type === "turn_started") open = e.turnId ?? "unknown";
+          else if (e.type === "user_message" && !e.steered) open = open ?? "unknown";
+          else if (e.type === "turn_ended") open = null;
+        }
+        if (open !== null) {
+          await this.appendRaw(meta.id, { type: "turn_ended", status: "interrupted", ...open && open !== "unknown" ? { turnId: open } : {} });
+        }
+        const resolved = new Set(
+          events.filter((e) => e.type === "permission_resolved").map((e) => e.requestId)
+        );
+        for (const e of events) {
+          if (e.type === "permission_request" && !resolved.has(e.requestId)) {
+            await this.appendRaw(meta.id, {
+              type: "permission_resolved",
+              requestId: e.requestId,
+              cancelled: true
+            });
+          }
+        }
+        await this.threads.patch(meta.id, { status: "closed", lastTurnStatus: "interrupted" });
+      }
+    }
+    this.recycleTimer = setInterval(() => void this.recycleIdle(), 6e4);
+    this.recycleTimer.unref?.();
+  }
+  /** Close every session; the returned Promise resolves once each close finishes (or fails). Callers add their own timeout. */
+  shutdown() {
+    if (this.recycleTimer) clearInterval(this.recycleTimer);
+    const all = [...this.runtimes.values()].map((rt) => rt.session?.close().catch(() => {
+    }));
+    this.runtimes.clear();
+    return Promise.all(all).then(() => {
+    });
+  }
+  // Idle-exit check (§5.2.7): busy if any runtime is not idle
+  anyBusy() {
+    for (const rt of this.runtimes.values()) {
+      if (rt.status === "running" || rt.status === "initializing") return true;
+    }
+    return false;
+  }
+  /** Drop a queued message that hasn't been sent yet (the × on the composer's queue list) */
+  removeQueued(threadId, queueId) {
+    const rt = this.runtimes.get(threadId);
+    if (!rt) return false;
+    const before = rt.queue.length;
+    rt.queue = rt.queue.filter((q) => q.id !== queueId);
+    if (rt.queue.length === before) return false;
+    this.gw.publish(`thread:${threadId}`, { type: "queue", queue: rt.queue });
+    return true;
+  }
+  runtimeInfo(threadId) {
+    const rt = this.runtimes.get(threadId);
+    if (!rt) return null;
+    return {
+      status: rt.status,
+      // true while startTurn runs (until session.send has returned): a "steer" sent then is queued instead
+      starting: rt.starting,
+      queue: rt.queue,
+      pending: [...rt.pending.values()].map((p) => ({
+        requestId: p.requestId,
+        kind: p.kind,
+        options: p.options
+      }))
+    };
+  }
+  rt(threadId) {
+    let r = this.runtimes.get(threadId);
+    if (!r) {
+      r = {
+        threadId,
+        session: null,
+        status: "idle",
+        currentTurnId: null,
+        queue: [],
+        pending: /* @__PURE__ */ new Map(),
+        allowAlways: /* @__PURE__ */ new Set(),
+        lastActivity: Date.now(),
+        coalescer: this.newCoalescer(threadId),
+        interruptTimer: null,
+        endedTurnIds: /* @__PURE__ */ new Set(),
+        starting: false,
+        commands: [],
+        sessionCreating: null,
+        pendingText: /* @__PURE__ */ new Map(),
+        deltasOnly: false
+      };
+      this.runtimes.set(threadId, r);
+    }
+    return r;
+  }
+  newCoalescer(threadId) {
+    return new Coalescer(60, (key, text) => {
+      const i = key.indexOf("\0");
+      const type = key.slice(0, i);
+      void this.pushEvent(threadId, { type, itemId: key.slice(i + 1), text });
+    });
+  }
+  flushDeltas(rt, itemId) {
+    for (const t of DELTA_TYPES) rt.coalescer.flushItem(deltaKey(t, itemId));
+  }
+  // ---- send ----
+  /** clientId: the page's id for its optimistic bubble; it rides on the user_message event so the page can swap the
+   *  bubble for the real one without a duplicate or a jump */
+  async send(threadId, input, behavior = "queue") {
+    const meta = await this.mustThread(threadId);
+    const mentions = await this.resolveMentionRefs(threadId, meta.projectId, input.mentions);
+    if (meta.archived) {
+      await this.threads.patch(threadId, { archived: false });
+      this.gw.publish("sidebar", { type: "thread.upsert", thread: await this.threads.get(threadId) });
+    }
+    const rt = this.rt(threadId);
+    rt.lastActivity = Date.now();
+    const attachmentRefs = input.attachments ?? [];
+    if (meta.status === "closed" && rt.session) {
+      try {
+        await rt.session.close();
+      } catch {
+      }
+      rt.session = null;
+      rt.commands = [];
+    }
+    if (!rt.starting && rt.session === null && (rt.status === "running" || rt.status === "initializing" || rt.status === "error")) {
+      rt.status = "idle";
+    }
+    if (rt.status === "running" || rt.starting || rt.status === "initializing") {
+      const provider = this.providerOf(meta);
+      if (behavior === "steer" && provider?.capabilities.steer && rt.session?.steer && !rt.starting) {
+        try {
+          const images = await this.resolveAttachments(attachmentRefs);
+          await rt.session.steer({ text: withMentions(input.text, mentions), images, mentions });
+          await this.appendRaw(threadId, {
+            type: "user_message",
+            text: input.text,
+            steered: true,
+            attachments: this.attachmentLabels(attachmentRefs),
+            ...mentions.length ? { mentions } : {},
+            ...input.clientId ? { clientId: input.clientId } : {}
+          });
+          return "steered";
+        } catch (e) {
+          log("info", `thread ${threadId} \u63D2\u8BDD\u5931\u8D25\uFF0C\u6539\u4E3A\u6392\u961F\uFF1A${String(e)}`);
+        }
+      }
+      const q = { id: "q" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text: input.text, attachments: attachmentRefs, ...mentions.length ? { mentions } : {}, ...input.clientId ? { clientId: input.clientId } : {} };
+      rt.queue.push(q);
+      this.gw.publish(`thread:${threadId}`, { type: "queue", queue: rt.queue });
+      return "queued";
+    }
+    await this.startTurn(threadId, input.text, attachmentRefs, mentions, input.clientId);
+    return "started";
+  }
+  async startTurn(threadId, text, attachmentRefs, mentions = [], clientId) {
+    const rt = this.rt(threadId);
+    rt.starting = true;
+    try {
+      await this.startTurnInner(threadId, text, attachmentRefs, mentions, clientId);
+    } finally {
+      rt.starting = false;
+    }
+  }
+  async startTurnInner(threadId, text, attachmentRefs, mentions, clientId) {
+    const meta = await this.mustThread(threadId);
+    const rt = this.rt(threadId);
+    const allowDisabled = !!meta.providerSessionId;
+    this.assertProviderAllowed(meta.provider, await this.settings.get(), { allowDisabled });
+    await this.appendRaw(threadId, {
+      type: "user_message",
+      text,
+      attachments: this.attachmentLabels(attachmentRefs),
+      ...mentions.length ? { mentions } : {},
+      ...clientId ? { clientId } : {}
+    });
+    const trimmed = titleText(text);
+    if (meta.titleAuto && trimmed) {
+      await this.threads.patch(threadId, { title: trimmed.slice(0, 40), titleAuto: true });
+      this.gw.publish("sidebar", { type: "thread.upsert", thread: await this.threads.get(threadId) });
+    }
+    if (!rt.session) {
+      await this.setStatus(threadId, "initializing");
+      try {
+        await this.assertProviderUsable(meta.provider, { allowDisabled });
+        await this.createSessionIfNeeded(threadId, { updateStatus: true });
+      } catch (e) {
+        await this.appendRaw(threadId, { type: "notice", level: "error", message: tr("notice.sessionStartFailed", { detail: String(e?.message ?? e) }) });
+        await this.appendRaw(threadId, { type: "turn_ended", status: "failed", error: String(e?.message ?? e) });
+        await this.threads.patch(threadId, { lastTurnStatus: "failed" });
+        await this.setStatus(threadId, "error");
+        throw e;
+      }
+    }
+    await this.syncDefaultModelIfNeeded(threadId, meta, rt);
+    await agentShellReady();
+    if (!rt.bashHinted && bashMissingFor(meta.provider)) {
+      rt.bashHinted = true;
+      await this.appendRaw(threadId, { type: "notice", level: "warn", code: "bash_missing", message: tr("notice.bashMissing") });
+    }
+    await this.setStatus(threadId, "running");
+    try {
+      const images = await this.resolveAttachments(attachmentRefs);
+      const payload = { text: withMentions(text, mentions), images, mentions };
+      await rt.session.send(payload);
+    } catch (e) {
+      const msg = String(e?.message ?? e);
+      await this.appendRaw(threadId, { type: "notice", level: "error", message: tr("notice.sendFailed", { detail: msg }) });
+      await this.appendRaw(threadId, { type: "turn_ended", status: "failed", error: msg });
+      await this.threads.patch(threadId, { lastTurnStatus: "failed" });
+      rt.currentTurnId = null;
+      await this.setStatus(threadId, "idle");
+      throw e;
+    }
+  }
+  // ---- event pump ----
+  async pumpEvents(threadId, session) {
+    const rt = this.rt(threadId);
+    let ended = false;
+    try {
+      for await (const ev of session.events) {
+        await this.onProviderEvent(threadId, ev);
+        if (ev.type === "turn_started") ended = false;
+        if (ev.type === "turn_ended") ended = true;
+      }
+    } catch (e) {
+      log("warn", `thread ${threadId} \u4E8B\u4EF6\u6D41\u5F02\u5E38\uFF1A${String(e)}`);
+    }
+    if (!ended && this.rt(threadId).session === session) {
+      await this.onProviderEvent(threadId, {
+        type: "turn_ended",
+        turnId: rt.currentTurnId ?? "unknown",
+        status: "failed",
+        error: tr("turn.agentExit")
+      });
+      rt.session = null;
+      await this.setStatus(threadId, "closed");
+    }
+  }
+  async onProviderEvent(threadId, ev) {
+    const rt = this.rt(threadId);
+    rt.lastActivity = Date.now();
+    if (ev.type === "provider_session_id") {
+      await this.threads.patch(threadId, { providerSessionId: ev.id });
+      return;
+    }
+    if (ev.type === "slash_commands") {
+      rt.commands = ev.commands;
+      const meta = await this.mustThread(threadId);
+      const proj = await this.projects.get(meta.projectId);
+      if (proj) this.putSlashCache(meta.provider, proj.path, ev.commands);
+      this.gw.publish(`thread:${threadId}`, { type: "commands", commands: ev.commands });
+      return;
+    }
+    if (ev.type === "turn_started") {
+      rt.currentTurnId = ev.turnId;
+      await this.appendRaw(threadId, ev);
+      return;
+    }
+    if (ev.type === "assistant_delta" || ev.type === "reasoning_delta" || ev.type === "tool_output_delta") {
+      if (rt.deltasOnly && ev.type !== "tool_output_delta") {
+        const key = `${ev.type === "assistant_delta" ? "assistant" : "reasoning"}\0${ev.itemId}`;
+        const prior = rt.pendingText.get(key);
+        rt.pendingText.set(key, { type: ev.type === "assistant_delta" ? "assistant" : "reasoning", itemId: ev.itemId, text: (prior?.text ?? "") + ev.text });
+      }
+      rt.coalescer.push(deltaKey(ev.type, ev.itemId), ev.text);
+      return;
+    }
+    const evItemId = ev.itemId;
+    if (typeof evItemId === "string") this.flushDeltas(rt, evItemId);
+    if (rt.pendingText.size && ev.type !== "usage" && ev.type !== "assistant_message" && ev.type !== "reasoning") {
+      await this.persistPendingText(threadId, rt);
+    }
+    if (ev.type === "assistant_message" || ev.type === "reasoning") {
+      rt.pendingText.delete(`${ev.type === "assistant_message" ? "assistant" : "reasoning"}\0${ev.itemId}`);
+      await this.appendRaw(threadId, ev);
+      return;
+    }
+    if (ev.type === "usage") {
+      const meta = await this.mustThread(threadId);
+      const u = meta.usage;
+      await this.threads.patch(threadId, {
+        usage: {
+          inputTokens: u.inputTokens + ev.inputTokens,
+          outputTokens: u.outputTokens + ev.outputTokens,
+          cacheReadTokens: u.cacheReadTokens + ev.cacheReadTokens,
+          costUsd: u.costUsd + ev.costUsd
+        }
+      });
+      await this.pushEvent(threadId, ev);
+      return;
+    }
+    if (ev.type === "permission_request" || ev.type === "question") {
+      const options = ev.type === "permission_request" ? ev.options : [];
+      const pending = {
+        kind: ev.type === "permission_request" ? "permission" : "question",
+        requestId: ev.requestId,
+        options,
+        resolve: () => {
+        },
+        event: ev
+      };
+      if (ev.type === "permission_request") {
+        const meta = await this.threads.get(threadId);
+        const auto = meta ? autoApproveOption(meta.mode, meta.provider, ev) : null;
+        if (auto) {
+          log("info", `thread ${threadId} \u81EA\u52A8\u540C\u610F ${ev.title.slice(0, 80)} \u2192 ${auto.id}`);
+          await this.appendRaw(threadId, { ...ev, auto: true });
+          await this.appendRaw(threadId, { type: "permission_resolved", requestId: ev.requestId, optionId: auto.id, auto: true });
+          rt.session?.respond(ev.requestId, { optionId: auto.id });
+          return;
+        }
+      }
+      const toolName = ev.detail?.toolName;
+      if (toolName && rt.allowAlways.has(toolName)) {
+        const allow = options.find((o) => o.kind === "allow_once") ?? options.find((o) => o.kind === "allow_always");
+        rt.session?.respond(ev.requestId, { optionId: allow?.id ?? "accept" });
+        return;
+      }
+      rt.pending.set(ev.requestId, pending);
+      await this.appendRaw(threadId, ev);
+      return;
+    }
+    if (ev.type === "permission_resolved" || ev.type === "question_answered") {
+      if (!rt.pending.delete(ev.requestId)) return;
+      await this.appendRaw(threadId, ev);
+      return;
+    }
+    if (ev.type === "turn_ended") {
+      if (ev.turnId && ev.turnId !== "unknown" && rt.endedTurnIds.has(ev.turnId)) return;
+      if (rt.interruptTimer) {
+        clearTimeout(rt.interruptTimer);
+        rt.interruptTimer = null;
+      }
+      if (ev.turnId && ev.turnId !== "unknown") rt.endedTurnIds.add(ev.turnId);
+      await this.cancelPending(threadId, rt, { tellSession: true });
+      rt.coalescer.dispose();
+      rt.coalescer = this.newCoalescer(threadId);
+      await this.appendRaw(threadId, ev);
+      await this.threads.patch(threadId, { lastTurnStatus: ev.status });
+      rt.currentTurnId = null;
+      if (ev.status === "failed" && rt.session && !this.alive(rt.session)) rt.session = null;
+      await this.setStatus(threadId, "idle");
+      const next = rt.queue.shift();
+      if (!next) void this.recycleIdle().catch(() => {
+      });
+      if (next) {
+        this.gw.publish(`thread:${threadId}`, { type: "queue", queue: rt.queue });
+        await this.startTurn(threadId, next.text, next.attachments, next.mentions ?? [], next.clientId).catch((e) => {
+          log("warn", `thread ${threadId} \u6392\u961F\u6D88\u606F\u542F\u52A8\u5931\u8D25\uFF1A${String(e)}`);
+        });
+      }
+      return;
+    }
+    await this.appendRaw(threadId, ev);
+  }
+  async persistPendingText(threadId, rt) {
+    const pending = [...rt.pendingText.values()];
+    rt.pendingText.clear();
+    for (const p of pending) {
+      if (!p.text) continue;
+      this.flushDeltas(rt, p.itemId);
+      await this.appendRaw(threadId, { type: p.type === "assistant" ? "assistant_message" : "reasoning", itemId: p.itemId, text: p.text });
+    }
+  }
+  alive(_s) {
+    return true;
+  }
+  // ---- respond (permission/question answers) ----
+  async respond(threadId, requestId, answer) {
+    const rt = this.rt(threadId);
+    const pending = rt.pending.get(requestId);
+    if (!pending) throw new ApiError("not_found", tr("err.requestGone"));
+    if (pending.kind === "permission" && answer.optionId) {
+      const valid = pending.options.some((o) => o.id === answer.optionId);
+      if (!valid) throw new ApiError("bad_params", tr("err.badOption", { id: String(answer.optionId) }));
+    }
+    rt.pending.delete(requestId);
+    if (pending.kind === "permission") {
+      await this.appendRaw(threadId, {
+        type: "permission_resolved",
+        requestId,
+        optionId: answer.optionId,
+        cancelled: answer.cancelled
+      });
+      const opt = pending.options.find((o) => o.id === answer.optionId);
+      if (opt?.kind === "allow_always") {
+        const toolName = pending.event.detail?.toolName;
+        if (toolName) rt.allowAlways.add(toolName);
+      }
+    } else {
+      await this.appendRaw(threadId, {
+        type: "question_answered",
+        requestId,
+        answers: answer.answers ?? {}
+      });
+    }
+    rt.session?.respond(requestId, answer);
+  }
+  /** Answer every waiting tool approval with its allow-once option (full-auto just turned on). Returns how many. */
+  async autoApprovePending(threadId, providerId, mode2) {
+    const rt = this.rt(threadId);
+    let n = 0;
+    for (const p of [...rt.pending.values()]) {
+      if (p.kind !== "permission") continue;
+      const ev = p.event;
+      const opt = autoApproveOption(mode2, providerId, { kind: ev.kind, options: p.options });
+      if (!opt) continue;
+      rt.pending.delete(p.requestId);
+      await this.appendRaw(threadId, { type: "permission_resolved", requestId: p.requestId, optionId: opt.id, auto: true });
+      rt.session?.respond(p.requestId, { optionId: opt.id });
+      n++;
+    }
+    return n;
+  }
+  /** Cancel every open permission/question: persisted as permission_resolved{cancelled} (the page marks the card
+   *  已取消 and stops waiting). tellSession: also answer the provider's own waiter (an Agent that ended its turn without
+   *  withdrawing the request would otherwise keep a dangling promise); its echo is dropped because rt.pending is empty. */
+  async cancelPending(threadId, rt, opts) {
+    if (!rt.pending.size) return;
+    const open = [...rt.pending.values()];
+    rt.pending.clear();
+    for (const p of open) {
+      await this.appendRaw(threadId, { type: "permission_resolved", requestId: p.requestId, cancelled: true });
+      p.resolve({ cancelled: true });
+      if (opts.tellSession) {
+        try {
+          rt.session?.respond(p.requestId, { cancelled: true });
+        } catch {
+        }
+      }
+    }
+  }
+  // ---- interrupt ----
+  async interrupt(threadId) {
+    const rt = this.rt(threadId);
+    if (!rt.session || rt.status !== "running") return;
+    await this.cancelPending(threadId, rt, { tellSession: false });
+    await rt.session.interrupt();
+    const turnId = rt.currentTurnId;
+    rt.interruptTimer = setTimeout(() => {
+      rt.interruptTimer = null;
+      if (rt.currentTurnId === turnId && turnId) {
+        void this.onProviderEvent(threadId, { type: "turn_ended", turnId, status: "interrupted" }).catch((e) => {
+          log("warn", `thread ${threadId} \u6253\u65AD\u515C\u5E95\u5931\u8D25\uFF1A${String(e)}`);
+        });
+      }
+    }, 1e3);
+  }
+  // ---- setModel / setMode / setEffort ----
+  async setModel(threadId, model) {
+    const meta = await this.mustThread(threadId);
+    let effort = meta.effort;
+    const p = getProvider(meta.provider);
+    if (p) {
+      const models2 = await cachedModels(p);
+      const row = models2.find((m) => model ? m.id === model : m.isDefault) ?? models2[0];
+      const opts = row?.thinkingOptions ?? [];
+      if (effort && opts.length && !opts.some((o) => o.id === effort)) {
+        effort = null;
+        await this.appendRaw(threadId, {
+          type: "notice",
+          level: "info",
+          message: tr("notice.effortResetOnModel")
+        });
+      }
+    }
+    const sessionModel = model ?? await this.resolveDefaultSessionModel(meta.provider);
+    await this.threads.patch(threadId, { model, effort });
+    const rt = this.rt(threadId);
+    let applied = true;
+    if (rt.session) {
+      if (model !== null) applied = await rt.session.setModel(sessionModel, { force: true });
+      else applied = await rt.session.setModel(sessionModel);
+    }
+    rt.syncedDefaultModel = model ? void 0 : applied === false ? void 0 : sessionModel;
+    this.gw.publish("sidebar", { type: "thread.upsert", thread: await this.threads.get(threadId) });
+  }
+  /**
+   * Default model id to push into a live session while the thread is on「默认」.
+   * dsh must use its own ACP model ids from cachedModels (never raw applied.json "magpie/…" strings).
+   */
+  async resolveDefaultSessionModel(providerId) {
+    if (providerId === "dsh") {
+      const provider = getProvider(providerId);
+      if (!provider) return null;
+      const settings = await this.settings.get();
+      const launch = launchFromSettings(settings, providerId);
+      const available = await cachedModels(provider, launch).catch(() => []);
+      const magpie = available.filter((m) => /magpie/i.test(m.id));
+      return (magpie.find((m) => m.isDefault) ?? magpie[0] ?? available.find((m) => m.isDefault))?.id ?? null;
+    }
+    return magpieDefaultModel(providerId);
+  }
+  /**
+   * Thread on「默认」+ idle live session: if Magpie's applied default changed since we last synced,
+   * push the new id into the session (never interrupts a running turn — caller only invokes while idle/before send).
+   */
+  async syncDefaultModelIfNeeded(threadId, meta, rt) {
+    if (meta.model) return;
+    if (!rt.session) return;
+    if (rt.status === "running" || rt.status === "initializing") return;
+    const current = await this.resolveDefaultSessionModel(meta.provider);
+    if (current === (rt.syncedDefaultModel ?? null)) return;
+    try {
+      const applied = await rt.session.setModel(current);
+      if (applied !== false) rt.syncedDefaultModel = current;
+    } catch (e) {
+      log("warn", `thread ${threadId} sync default model failed\uFF1A${String(e)}`);
+    }
+  }
+  async setMode(threadId, mode2) {
+    const meta = await this.threads.patch(threadId, { mode: mode2 });
+    const rt = this.rt(threadId);
+    if (mode2 === FULL_AUTO) await this.autoApprovePending(threadId, meta.provider, mode2);
+    if (rt.session) await rt.session.setMode(mode2);
+    this.gw.publish("sidebar", { type: "thread.upsert", thread: await this.threads.get(threadId) });
+  }
+  async setEffort(threadId, effort) {
+    const meta = await this.mustThread(threadId);
+    await this.threads.patch(threadId, { effort });
+    const rt = this.rt(threadId);
+    if (rt.session) await rt.session.setEffort(effort);
+    if (meta.provider === "claude" && (rt.status === "running" || rt.status === "initializing")) {
+      await this.appendRaw(threadId, {
+        type: "notice",
+        level: "info",
+        message: tr("notice.effortNextTurn")
+      });
+    }
+    this.gw.publish("sidebar", { type: "thread.upsert", thread: await this.threads.get(threadId) });
+  }
+  async setCursorOpts(threadId, patch) {
+    const meta = await this.mustThread(threadId);
+    if (meta.provider !== "cursor") throw new ApiError("bad_params", tr("err.cursorOnly"));
+    const next = await this.threads.patch(threadId, patch);
+    const rt = this.rt(threadId);
+    const sess = rt.session;
+    if (sess?.updateCursorOpts) {
+      await sess.updateCursorOpts(!!next.cursorFast, !!next.cursorAutoReview);
+    }
+    this.gw.publish("sidebar", { type: "thread.upsert", thread: next });
+  }
+  /** The Agent can be switched only before any user message and while not running */
+  async setProvider(threadId, providerId) {
+    await this.mustThread(threadId);
+    const meta = await this.threads.get(threadId);
+    if (!meta) throw new ApiError("not_found", tr("err.threadMissing"));
+    const rt = this.rt(threadId);
+    if (rt.status === "running" || rt.status === "initializing" || rt.starting) {
+      throw new ApiError("busy", tr("err.busySwitch"));
+    }
+    const events = await this.threads.readEvents(threadId, 0, 5e3);
+    const neverRan = !meta.providerSessionId && !events.some((e) => e.type === "turn_started" || e.type === "assistant_message" || e.type === "tool_call");
+    if (events.some((e) => e.type === "user_message") && !neverRan) {
+      throw new ApiError("bad_params", tr("err.hasMessages"));
+    }
+    const p = await this.assertProviderUsable(providerId);
+    if (rt.session) {
+      try {
+        await rt.session.close();
+      } catch {
+      }
+      rt.session = null;
+      rt.commands = [];
+    }
+    rt.status = "idle";
+    const guard = await guardLegacyMode(this.settings, providerId, clampMode(p.capabilities.modes, meta.mode));
+    await this.threads.patch(threadId, {
+      provider: providerId,
+      model: null,
+      mode: guard.mode,
+      effort: null,
+      providerSessionId: null,
+      status: "idle"
+    });
+    if (guard.notice) await this.appendRaw(threadId, upgradeNotice());
+    this.gw.publish("sidebar", { type: "thread.upsert", thread: await this.threads.get(threadId) });
+  }
+  async close(threadId) {
+    const rt = this.rt(threadId);
+    if (rt.session) {
+      try {
+        await rt.session.close();
+      } catch {
+      }
+      rt.session = null;
+      rt.commands = [];
+    }
+    await this.setStatus(threadId, "closed");
+  }
+  /** Slash commands: no session by default; only with load:true do we create a session for providers that need one to list them */
+  async listCommands(threadId, opts) {
+    let meta;
+    try {
+      meta = await this.mustThread(threadId);
+    } catch {
+      return [];
+    }
+    const rt = this.rt(threadId);
+    const proj = await this.projects.get(meta.projectId);
+    if (!proj) return [];
+    if (meta.provider === "codex") {
+      try {
+        const commands = codexSlashCommandsFromEntries(await loadCodexSlashEntries(proj.path));
+        rt.commands = commands;
+        this.putSlashCache(meta.provider, proj.path, commands);
+        return commands;
+      } catch {
+        return this.getSlashCache(meta.provider, proj.path) ?? rt.commands;
+      }
+    }
+    if (rt.session) {
+      try {
+        const commands = await rt.session.listCommands();
+        rt.commands = commands;
+        this.putSlashCache(meta.provider, proj.path, commands);
+        return commands;
+      } catch {
+        return rt.commands.length ? rt.commands : this.getSlashCache(meta.provider, proj.path) ?? [];
+      }
+    }
+    const cached = this.getSlashCache(meta.provider, proj.path);
+    if (cached) {
+      rt.commands = cached;
+      return cached;
+    }
+    if (!opts?.load) return [];
+    try {
+      const session = await this.createSessionIfNeeded(threadId, { updateStatus: false });
+      const commands = await session.listCommands();
+      rt.commands = commands;
+      this.putSlashCache(meta.provider, proj.path, commands);
+      return commands;
+    } catch {
+      return [];
+    }
+  }
+  slashCacheKey(provider, projectPath) {
+    return `${provider}\0${projectPath}`;
+  }
+  getSlashCache(provider, projectPath) {
+    const hit = this.slashCache.get(this.slashCacheKey(provider, projectPath));
+    if (!hit) return null;
+    if (Date.now() > hit.expires) {
+      this.slashCache.delete(this.slashCacheKey(provider, projectPath));
+      return null;
+    }
+    return hit.commands;
+  }
+  putSlashCache(provider, projectPath, commands) {
+    if (!commands.length) return;
+    this.slashCache.set(this.slashCacheKey(provider, projectPath), {
+      commands,
+      expires: Date.now() + SLASH_CACHE_TTL_MS
+    });
+  }
+  async createSessionIfNeeded(threadId, opts) {
+    const rt = this.rt(threadId);
+    if (rt.session) return rt.session;
+    if (rt.sessionCreating) return rt.sessionCreating;
+    const creating = this.createSessionInner(threadId, opts);
+    rt.sessionCreating = creating;
+    try {
+      return await creating;
+    } finally {
+      if (rt.sessionCreating === creating) rt.sessionCreating = null;
+    }
+  }
+  async createSessionInner(threadId, opts) {
+    const meta = await this.mustThread(threadId);
+    const rt = this.rt(threadId);
+    if (rt.session) return rt.session;
+    const provider = await this.assertProviderUsable(meta.provider, { allowDisabled: !!meta.providerSessionId });
+    const proj = await this.projects.get(meta.projectId);
+    if (!proj) throw new ApiError("not_found", tr("err.projectMissing"));
+    let model = meta.model;
+    if (meta.provider === "dsh" && model) {
+      const available = await cachedModels(provider).catch(() => []);
+      if (available.length && !available.some((m) => m.id === model)) {
+        model = available.find((m) => /magpie/i.test(m.id))?.id ?? available.find((m) => m.isDefault)?.id ?? null;
+        await this.threads.patch(threadId, { model });
+        this.gw.publish("sidebar", { type: "thread.upsert", thread: await this.threads.get(threadId) });
+      }
+    } else if (meta.provider === "dsh" && !model) {
+      model = await this.resolveDefaultSessionModel("dsh");
+    }
+    const sessionModel = model ?? await this.resolveDefaultSessionModel(meta.provider);
+    if (opts.updateStatus) await this.setStatus(threadId, "initializing");
+    const settings = await this.settings.get();
+    const launch = launchFromSettings(settings, meta.provider);
+    rt.deltasOnly = !!provider.capabilities.deltasOnly;
+    await agentShellReady();
+    rt.session = await provider.createSession({
+      threadId,
+      cwd: proj.path,
+      model: sessionModel,
+      mode: clampMode(provider.capabilities.modes, meta.mode),
+      effort: meta.effort,
+      resumeId: meta.providerSessionId,
+      cursorFast: meta.cursorFast,
+      cursorAutoReview: meta.cursorAutoReview,
+      launch
+    });
+    rt.syncedDefaultModel = model ? void 0 : sessionModel;
+    void this.pumpEvents(threadId, rt.session);
+    return rt.session;
+  }
+  async deleteThread(threadId) {
+    await this.close(threadId);
+    this.runtimes.delete(threadId);
+    await this.threads.delete(threadId);
+  }
+  // ---- internals ----
+  async mustThread(threadId) {
+    const meta = await this.threads.get(threadId);
+    if (!meta) throw new ApiError("not_found", tr("err.threadMissing"));
+    return meta;
+  }
+  providerOf(meta) {
+    return getProvider(meta.provider);
+  }
+  /** The checks that start nothing: a known Agent, enabled (unless allowDisabled), not a planned one */
+  assertProviderAllowed(providerId, s, opts = {}) {
+    const p = getProvider(providerId);
+    if (!p) throw new ApiError("bad_params", tr("provider.unknown", { id: providerId }));
+    if (!opts.allowDisabled && !isProviderEnabled(s, providerId)) {
+      throw new ApiError("bad_params", tr("provider.disabledNamed", { name: p.name }));
+    }
+    const entry = catalogById(providerId);
+    if (entry && !providerCreatable(entry.status)) {
+      throw new ApiError("bad_params", tr("provider.plannedNamed", { name: p.name }));
+    }
+    return p;
+  }
+  async assertProviderUsable(providerId, opts = {}) {
+    const s = await this.settings.get();
+    const p = this.assertProviderAllowed(providerId, s, opts);
+    const det = await cachedDetect(p, launchFromSettings(s, providerId));
+    if (!det.available) throw new ApiError("bad_params", det.reason ?? tr("provider.unavailable", { name: p.name }));
+    return p;
+  }
+  async setStatus(threadId, status2) {
+    const rt = this.rt(threadId);
+    rt.status = status2;
+    const meta = await this.threads.patch(threadId, { status: status2 });
+    this.gw.publish("sidebar", { type: "thread.upsert", thread: meta });
+    this.gw.publish(`thread:${threadId}`, { type: "status", status: status2 });
+  }
+  // Append an event: seq is assigned in the store's serialized section, persisted, then pushed to thread:<id>
+  async appendRaw(threadId, ev) {
+    const full = await this.threads.appendEvent(threadId, { ...ev, ts: Date.now() });
+    this.gw.publish(`thread:${threadId}`, { type: "event", event: full });
+  }
+  // Push without persisting (for coalescer deltas; usage is already accumulated above).
+  // Unpersisted events take no seq: seq=-1 so the frontend dedupes only by persisted seq,
+  // otherwise deltas would push the client's maxSeq up and the following persisted events would be dropped by mistake.
+  async pushEvent(threadId, ev) {
+    const full = { ...ev, seq: -1, ts: Date.now(), threadId };
+    this.gw.publish(`thread:${threadId}`, { type: "event", event: full });
+  }
+  /** B17: idle Agent processes are closed after idleCloseMinutes, and at most MAX_WARM_IDLE of them stay warm
+   *  (least recently used go first). A running turn, one starting, or one waiting on an approval is never touched. */
+  recycling = false;
+  async recycleIdle() {
+    if (this.recycling) return;
+    this.recycling = true;
+    try {
+      const s = await this.settings.get();
+      const minutes = Number(s.idleCloseMinutes);
+      const limit = (Number.isFinite(minutes) && minutes > 0 ? minutes : 30) * 6e4;
+      const idle = [...this.runtimes.values()].filter((rt) => rt.session && rt.status === "idle" && !rt.starting && !rt.sessionCreating && rt.pending.size === 0 && rt.queue.length === 0).sort((a, b) => b.lastActivity - a.lastActivity);
+      const now = Date.now();
+      for (const [i, rt] of idle.entries()) {
+        const expired = now - rt.lastActivity > limit;
+        if (!expired && i < MAX_WARM_IDLE) continue;
+        log("info", `idle cleanup: closing thread ${rt.threadId} (${expired ? "idle timeout" : "over the warm limit"})`);
+        try {
+          await this.close(rt.threadId);
+        } catch (e) {
+          log("info", `idle cleanup: thread ${rt.threadId}: ${String(e?.message ?? e)}`);
+          this.runtimes.delete(rt.threadId);
+        }
+      }
+    } finally {
+      this.recycling = false;
+    }
+  }
+};
+
+// daemon/src/git/service.ts
+init_i18n();
+init_decode();
+import { execFile as execFile5 } from "node:child_process";
+import { existsSync as existsSync12 } from "node:fs";
+import { cp, mkdir as mkdir7, readFile as readFile16, rename as rename4, rm, stat as stat12 } from "node:fs/promises";
+import { join as join16, normalize as normalize2, sep as sep4 } from "node:path";
+var TIMEOUT2 = 15e3;
+var DIFF_LIMIT = 1024 * 1024;
+function runGit(cwd, args) {
+  return new Promise((res) => {
+    execFile5("git", ["-c", "core.quotepath=false", ...args], { cwd, timeout: TIMEOUT2, maxBuffer: 8 * 1024 * 1024, windowsHide: true, encoding: "buffer" }, (e, stdout, stderr) => {
+      const code = e && typeof e.code === "number" ? e.code : e ? 1 : 0;
+      const missing = e?.code === "ENOENT";
+      const errText = stderr?.length ? decodeOutput(stderr) : "";
+      res({ code, out: stdout ? stdout.toString("utf8") : "", err: missing ? tr("git.missing") : errText || (e?.message ?? "") });
+    });
+  });
+}
+function insidePath(projectPath, p) {
+  const rel = normalize2(p).replace(/\\/g, "/");
+  const abs = normalize2(join16(projectPath, rel));
+  const proj = normalize2(projectPath);
+  if (abs !== proj && !abs.startsWith(proj + sep4)) return null;
+  return rel.replace(/\\/g, "/");
+}
+async function moveAcrossDevices(from, to, ops = {}) {
+  const ren = ops.rename ?? rename4;
+  try {
+    await ren(from, to);
+  } catch (e) {
+    const code = e?.code;
+    if (code !== "EXDEV") throw e;
+    await (ops.cp ?? cp)(from, to, { recursive: true, errorOnExist: true, force: false, preserveTimestamps: true });
+    await (ops.rm ?? rm)(from, { recursive: true, force: true });
+  }
+}
+var GitService = class {
+  // projectPath is resolved from projectId by the caller (the service doesn't know about the store)
+  async status(projectPath) {
+    const inside = await runGit(projectPath, ["rev-parse", "--is-inside-work-tree"]);
+    if (inside.code !== 0 || inside.out.trim() !== "true") return { isRepo: false };
+    const br = await runGit(projectPath, ["rev-parse", "--abbrev-ref", "HEAD"]);
+    const st = await runGit(projectPath, ["status", "--porcelain=v1", "-z", "-uall"]);
+    if (st.code !== 0) return { isRepo: true, branch: br.out.trim() || void 0, error: st.err.trim() || "status \u5931\u8D25" };
+    const files = [];
+    const parts = st.out.split("\0");
+    for (let i = 0; i < parts.length; i++) {
+      const rec5 = parts[i];
+      if (!rec5 || rec5.length < 4) continue;
+      const index = rec5[0];
+      const worktree = rec5[1];
+      let path5 = rec5.slice(3);
+      let kind = "modified";
+      if (index === "?" && worktree === "?") kind = "untracked";
+      else if (index === "R" || worktree === "R") {
+        kind = "renamed";
+        i++;
+      } else if (index === "A" || worktree === "A") kind = "added";
+      else if (index === "D" || worktree === "D") kind = "deleted";
+      files.push({ path: path5, index, worktree, kind });
+    }
+    return { isRepo: true, branch: br.out.trim() || void 0, files };
+  }
+  // Unified diff text; {tooLarge:true} when the diff is > 1MB
+  async diff(projectPath, p) {
+    const rel = insidePath(projectPath, p);
+    if (!rel) return { error: tr("fs.pathDenied") };
+    const ls = await runGit(projectPath, ["ls-files", "--error-unmatch", "--", rel]);
+    if (ls.code !== 0) {
+      const full = join16(projectPath, rel);
+      if (!existsSync12(full)) return { error: tr("fs.fileMissing") };
+      const s = await stat12(full);
+      if (!s.isFile()) return { error: tr("fs.notFile") };
+      if (s.size > DIFF_LIMIT) return { tooLarge: true };
+      const text = await readFile16(full, "utf8").catch(() => null);
+      if (text === null) return { error: tr("git.binary") };
+      const lines = text.split("\n").map((l) => "+" + l).join("\n");
+      return { untracked: true, diff: `--- /dev/null
++++ b/${rel}
+@@ -0,0 +1,${text.split("\n").length} @@
+${lines}` };
+    }
+    let d = await runGit(projectPath, ["diff", "--no-color", "--", rel]);
+    if (d.code !== 0) return { error: d.err.trim() || "diff \u5931\u8D25" };
+    if (!d.out.trim()) {
+      d = await runGit(projectPath, ["diff", "--cached", "--no-color", "--", rel]);
+      if (d.code !== 0) return { error: d.err.trim() || "diff \u5931\u8D25" };
+    }
+    if (d.out.length > DIFF_LIMIT) return { tooLarge: true };
+    return { diff: d.out };
+  }
+  // Tracked → git restore; untracked → move to trash/discarded/<ts>/<relpath>
+  async discard(projectPath, p, dataDir) {
+    const rel = insidePath(projectPath, p);
+    if (!rel) return { ok: false, error: tr("fs.pathDenied") };
+    if (rel === "." || rel === "" || rel === "./") return { ok: false, error: tr("fs.pathDenied") };
+    const ls = await runGit(projectPath, ["ls-files", "--error-unmatch", "--", rel]);
+    if (ls.code === 0) {
+      let r = await runGit(projectPath, ["restore", "--staged", "--worktree", "--", rel]);
+      if (r.code !== 0) r = await runGit(projectPath, ["checkout", "--", rel]);
+      if (r.code !== 0) return { ok: false, error: r.err.trim() || "\u653E\u5F03\u5931\u8D25" };
+      return { ok: true };
+    }
+    const full = join16(projectPath, rel);
+    if (!existsSync12(full)) return { ok: false, error: tr("fs.fileMissing") };
+    const stamp2 = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const dest = join16(dataDir, "trash", "discarded", stamp2, rel);
+    await mkdir7(join16(dest, ".."), { recursive: true });
+    try {
+      await moveAcrossDevices(full, dest);
+    } catch (e) {
+      return { ok: false, error: "\u79FB\u52A8\u5931\u8D25\uFF1A" + String(e?.message ?? e) };
+    }
+    return { ok: true, trashedTo: dest };
+  }
+};
+
+// daemon/src/files/service.ts
+init_i18n();
+import { readdir as readdir5, readFile as readFile17, stat as stat13 } from "node:fs/promises";
+import { join as join17, normalize as normalize3, sep as sep5, extname as extname3 } from "node:path";
+import ignore from "ignore";
+function decodeText(buf) {
+  try {
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(buf);
+    return { text, encoding: "utf8" };
+  } catch {
+  }
+  try {
+    const text = new TextDecoder("gbk", { fatal: true }).decode(buf);
+    return { text, encoding: "gbk" };
+  } catch {
+  }
+  return { text: new TextDecoder("utf-8").decode(buf), encoding: "utf8" };
+}
+var MAX_READ = 1024 * 1024;
+var MAX_PER_LEVEL = 2e3;
+var ALWAYS_IGNORE = /* @__PURE__ */ new Set([".git", "node_modules"]);
+var LANG = {
+  ".ts": "typescript",
+  ".tsx": "typescript",
+  ".js": "javascript",
+  ".jsx": "javascript",
+  ".mjs": "javascript",
+  ".cjs": "javascript",
+  ".json": "json",
+  ".md": "markdown",
+  ".py": "python",
+  ".rs": "rust",
+  ".go": "go",
+  ".java": "java",
+  ".c": "c",
+  ".h": "c",
+  ".cpp": "cpp",
+  ".hpp": "cpp",
+  ".cs": "csharp",
+  ".css": "css",
+  ".scss": "scss",
+  ".html": "xml",
+  ".htm": "xml",
+  ".xml": "xml",
+  ".svg": "xml",
+  ".yaml": "yaml",
+  ".yml": "yaml",
+  ".toml": "ini",
+  ".ini": "ini",
+  ".sh": "bash",
+  ".bash": "bash",
+  ".ps1": "powershell",
+  ".sql": "sql",
+  ".lua": "lua",
+  ".rb": "ruby",
+  ".php": "php",
+  ".swift": "swift",
+  ".kt": "kotlin",
+  ".vue": "xml",
+  ".svelte": "xml",
+  ".dockerfile": "dockerfile",
+  ".txt": "plaintext",
+  ".log": "plaintext"
+};
+function insidePath2(projectPath, p) {
+  const rel = normalize3(p || ".").replace(/\\/g, "/");
+  const abs = normalize3(join17(projectPath, rel));
+  const proj = normalize3(projectPath);
+  if (abs !== proj && !abs.startsWith(proj + sep5)) return null;
+  return rel;
+}
+var FileService = class {
+  // Cache an ignore instance per project (.gitignore changes are picked up on the next daemon restart; acceptable cost)
+  // Invalidate by .gitignore mtime: an edited .gitignore takes effect the next time a directory is expanded
+  igCache = /* @__PURE__ */ new Map();
+  async igFor(projectPath) {
+    const gi = join17(projectPath, ".gitignore");
+    const st = await stat13(gi).catch(() => null);
+    const mtime = st?.isFile() ? st.mtimeMs : -1;
+    const hit = this.igCache.get(projectPath);
+    if (hit && hit.mtime === mtime) return hit.ig;
+    let ig = null;
+    if (mtime >= 0) {
+      try {
+        ig = ignore().add(await readFile17(gi, "utf8"));
+      } catch {
+        ig = null;
+      }
+    }
+    this.igCache.set(projectPath, { mtime, ig });
+    return ig;
+  }
+  async tree(projectPath, dir) {
+    const rel = insidePath2(projectPath, dir);
+    if (rel === null) return { error: tr("fs.pathDenied") };
+    const abs = join17(projectPath, rel);
+    const s = await stat13(abs).catch(() => null);
+    if (!s?.isDirectory()) return { error: tr("fs.dirMissing") };
+    const ig = await this.igFor(projectPath);
+    const dirents = await readdir5(abs, { withFileTypes: true }).catch(() => null);
+    if (!dirents) return { error: tr("fs.dirUnreadable") };
+    const out = [];
+    for (const d of dirents) {
+      if (out.length >= MAX_PER_LEVEL) break;
+      const name = d.name;
+      if (ALWAYS_IGNORE.has(name)) continue;
+      const childRel = rel === "." ? name : `${rel}/${name}`;
+      let isDir2 = d.isDirectory();
+      if (d.isSymbolicLink()) {
+        const st = await stat13(join17(projectPath, childRel)).catch(() => null);
+        if (!st) continue;
+        isDir2 = st.isDirectory();
+      } else if (!d.isFile() && !isDir2) {
+        continue;
+      }
+      if (ig) {
+        if (ig.ignores(isDir2 ? childRel + "/" : childRel)) continue;
+      }
+      out.push({ name, path: childRel, isDir: isDir2 });
+    }
+    out.sort((a, b) => a.isDir === b.isDir ? a.name.localeCompare(b.name, "zh-CN") : a.isDir ? -1 : 1);
+    return { entries: out };
+  }
+  async read(projectPath, p) {
+    const rel = insidePath2(projectPath, p);
+    if (rel === null) return { error: tr("fs.pathDenied") };
+    const abs = join17(projectPath, rel);
+    const s = await stat13(abs).catch(() => null);
+    if (!s) return { error: tr("fs.fileMissing") };
+    if (!s.isFile()) return { error: tr("fs.notFile") };
+    if (s.size > MAX_READ) return { tooLarge: true };
+    const buf = await readFile17(abs).catch(() => null);
+    if (!buf) return { error: tr("fs.unreadable") };
+    const head = buf.subarray(0, 8192);
+    if (head.includes(0)) return { binary: true };
+    const { text, encoding } = decodeText(buf);
+    return { text, encoding, language: LANG[extname3(rel).toLowerCase()] ?? "plaintext" };
+  }
+};
+
+// daemon/src/terminal/service.ts
+init_pathscan();
+init_log();
+init_i18n();
+init_decode();
+import { spawn as spawn5, execFileSync as execFileSync2 } from "node:child_process";
+import { accessSync as accessSync2, chmodSync, constants as fsc, existsSync as existsSync13, statSync as statSync7 } from "node:fs";
+import { createRequire as moduleRequire } from "node:module";
+import { release } from "node:os";
+import { dirname as dirname7, join as join18 } from "node:path";
+var MAX_TERMS_PER_PROJECT = 8;
+var BUF_MAX = 2 * 1024 * 1024;
+var SNAP_LINES = 5e3;
+function isExecFile(file) {
+  try {
+    accessSync2(file, fsc.X_OK);
+    return statSync7(file).isFile();
+  } catch {
+    return false;
+  }
+}
+function pickShell(o = {}) {
+  const platform = o.platform ?? process.platform;
+  const env = o.env ?? process.env;
+  const find = o.find ?? ((n) => findOnPath(n, { platform, env })[0] ?? null);
+  const isExec = o.isExec ?? isExecFile;
+  if (platform === "win32") {
+    for (const s of ["pwsh", "powershell"]) {
+      const hit = find(s);
+      if (hit) return hit;
+    }
+    const sysRoot = env.SystemRoot || env.SYSTEMROOT || env.windir || "C:\\Windows";
+    const ps = `${sysRoot}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`;
+    if (isExec(ps)) return ps;
+    return env.ComSpec || env.COMSPEC || "cmd.exe";
+  }
+  if (env.SHELL && env.SHELL.startsWith("/") && isExec(env.SHELL)) return env.SHELL;
+  const order = platform === "darwin" ? ["/bin/zsh", "/bin/bash", "/bin/sh"] : ["/bin/bash", "/usr/bin/bash", "/bin/zsh", "/bin/sh"];
+  for (const s of order) if (isExec(s)) return s;
+  return "/bin/sh";
+}
+function simpleShellArgs(shell, platform = process.platform) {
+  if (platform === "win32") {
+    if (/(^|[\\/])cmd(\.exe)?$/i.test(shell)) return ["/Q"];
+    return ["-NoLogo"];
+  }
+  return ["-i"];
+}
+function fixSpawnHelper() {
+  if (process.platform !== "darwin") return;
+  try {
+    const req = moduleRequire(import.meta.url);
+    const root = dirname7(req.resolve("node-pty/package.json"));
+    for (const sub of [`prebuilds/darwin-${process.arch}`, "build/Release"]) {
+      const f = join18(root, sub, "spawn-helper");
+      if (existsSync13(f) && !isExecFile(f)) {
+        chmodSync(f, 493);
+        log("info", "\u5DF2\u4FEE\u590D node-pty spawn-helper \u7684\u53EF\u6267\u884C\u4F4D", { file: f });
+      }
+    }
+  } catch {
+  }
+}
+function conptyInfo() {
+  const build = Number(release().split(".")[2]);
+  return { backend: "conpty", buildNumber: Number.isFinite(build) ? build : 0 };
+}
+var nextIndex = 1;
+var rid5 = () => "t_" + Math.random().toString(36).slice(2, 10);
+var TerminalService = class {
+  constructor(gw) {
+    this.gw = gw;
+    gw.onTerminalInput = (conn, index, op, payload) => this.onInput(conn, index, op, payload);
+  }
+  gw;
+  terms = /* @__PURE__ */ new Map();
+  byIndex = /* @__PURE__ */ new Map();
+  ptyLib;
+  async loadPty() {
+    if (this.ptyLib !== void 0) return this.ptyLib;
+    try {
+      fixSpawnHelper();
+      this.ptyLib = await import("node-pty");
+    } catch (e) {
+      log("warn", "node-pty \u52A0\u8F7D\u5931\u8D25\uFF0C\u7EC8\u7AEF\u9000\u5316\u65E0 PTY \u65B9\u6848", { err: String(e) });
+      this.ptyLib = null;
+    }
+    return this.ptyLib;
+  }
+  list(projectId) {
+    return [...this.terms.values()].filter((t) => !projectId || t.projectId === projectId).map((t) => ({ id: t.id, index: t.index, projectId: t.projectId, title: t.title, alive: t.alive, simple: t.simple }));
+  }
+  get count() {
+    return [...this.terms.values()].filter((t) => t.alive).length;
+  }
+  async create(projectId, cwd, cols, rows) {
+    const alive = [...this.terms.values()].filter((t) => t.projectId === projectId && t.alive);
+    if (alive.length >= MAX_TERMS_PER_PROJECT) return { error: tr("term.max", { n: MAX_TERMS_PER_PROJECT }) };
+    const shell = pickShell();
+    const term = {
+      id: rid5(),
+      index: nextIndex++,
+      projectId,
+      cwd,
+      title: tr("term.title", { n: alive.length + 1 }),
+      alive: true,
+      simple: false,
+      pty: null,
+      proc: null,
+      buf: "",
+      pend: "",
+      timer: null
+    };
+    const pty = await this.loadPty();
+    if (pty) {
+      try {
+        const p = pty.spawn(shell, [], {
+          name: "xterm-256color",
+          cols: Math.max(20, cols),
+          rows: Math.max(5, rows),
+          cwd,
+          env: process.env
+        });
+        term.pty = { write: (d) => p.write(d), resize: (c, r) => p.resize(c, r), kill: () => p.kill(), onData: (cb) => p.onData(cb), onExit: (cb) => p.onExit(cb), pid: p.pid };
+        term.pty.onData((d) => this.onData(term, d));
+        term.pty.onExit(() => this.onExit(term));
+      } catch (e) {
+        log("warn", "pty.spawn \u5931\u8D25\uFF0C\u9000\u5316\u65E0 PTY \u65B9\u6848", { err: String(e) });
+      }
+    }
+    if (!term.pty) {
+      term.simple = true;
+      const args = simpleShellArgs(shell);
+      const proc = spawn5(shell, args, {
+        cwd,
+        stdio: "pipe",
+        windowsHide: true,
+        env: process.env,
+        detached: process.platform !== "win32"
+      });
+      term.proc = proc;
+      const outDec = new OutputDecoder();
+      const errDec = new OutputDecoder();
+      proc.stdout.on("data", (d) => this.onData(term, outDec.write(d)));
+      proc.stderr.on("data", (d) => this.onData(term, errDec.write(d)));
+      proc.on("exit", () => this.onExit(term));
+      proc.on("error", () => this.onExit(term));
+    }
+    this.terms.set(term.id, term);
+    this.byIndex.set(term.index, term);
+    return { id: term.id, index: term.index, simple: term.simple };
+  }
+  attach(id2) {
+    const t = this.terms.get(id2);
+    if (!t) return { error: tr("err.terminalMissing") };
+    const lines = t.buf.split("\n");
+    const snapshot = lines.length > SNAP_LINES ? lines.slice(-SNAP_LINES).join("\n") : t.buf;
+    const windowsPty = process.platform === "win32" && t.pty ? conptyInfo() : void 0;
+    return { index: t.index, snapshot, simple: t.simple, ...windowsPty ? { windowsPty } : {} };
+  }
+  indexOf(id2) {
+    return this.terms.get(id2)?.index ?? null;
+  }
+  resize(id2, cols, rows) {
+    const t = this.terms.get(id2);
+    if (!t || !t.alive) return { ok: false };
+    t.pty?.resize(Math.max(20, cols), Math.max(5, rows));
+    return { ok: true };
+  }
+  kill(id2) {
+    const t = this.terms.get(id2);
+    if (!t) return { ok: false };
+    this.killTerm(t);
+    return { ok: true };
+  }
+  killAll() {
+    for (const t of this.terms.values()) this.killTerm(t, true);
+  }
+  // ---- internals ----
+  // Killing only the shell would orphan the npm run dev etc. it started → on Windows taskkill /T kills the whole tree
+  killTree(pid, sync, group) {
+    if (!pid) return;
+    if (process.platform !== "win32") {
+      if (group) {
+        try {
+          process.kill(-pid, "SIGTERM");
+        } catch {
+        }
+        const t = setTimeout(() => {
+          try {
+            process.kill(-pid, "SIGKILL");
+          } catch {
+          }
+        }, 1500);
+        t.unref?.();
+      }
+      return;
+    }
+    const args = ["/pid", String(pid), "/T", "/F"];
+    try {
+      if (sync) execFileSync2("taskkill", args, { windowsHide: true, stdio: "ignore", timeout: 5e3 });
+      else spawn5("taskkill", args, { windowsHide: true, stdio: "ignore" }).on("error", () => {
+      });
+    } catch {
+    }
+  }
+  killTerm(t, sync = false) {
+    t.alive = false;
+    this.killTree(t.pty?.pid ?? t.proc?.pid, sync, !t.pty && !!t.proc);
+    if (t.timer) {
+      clearTimeout(t.timer);
+      t.timer = null;
+    }
+    try {
+      t.pty?.kill();
+    } catch {
+    }
+    try {
+      t.proc?.kill();
+    } catch {
+    }
+    this.terms.delete(t.id);
+    this.byIndex.delete(t.index);
+  }
+  onExit(t) {
+    if (t.timer) {
+      clearTimeout(t.timer);
+      t.timer = null;
+      if (t.pend) {
+        this.gw.publishTerminal(t.index, Buffer.from(t.pend, "utf8"));
+        t.pend = "";
+      }
+    }
+    if (t.exited) return;
+    t.exited = true;
+    t.alive = false;
+    this.terms.delete(t.id);
+    this.byIndex.delete(t.index);
+    this.gw.publish("terminals", { type: "terminal.exit", id: t.id, index: t.index });
+  }
+  onData(t, d) {
+    t.buf += d;
+    if (t.buf.length > BUF_MAX) t.buf = t.buf.slice(-BUF_MAX / 2);
+    t.pend += d;
+    if (!t.timer) {
+      t.timer = setTimeout(() => {
+        t.timer = null;
+        if (t.pend) {
+          this.gw.publishTerminal(t.index, Buffer.from(t.pend, "utf8"));
+          t.pend = "";
+        }
+      }, 16);
+    }
+  }
+  // Input frames: op 2=input, 3=resize
+  onInput(conn, index, op, payload) {
+    const t = this.byIndex.get(index);
+    if (!t || !t.alive) return;
+    if (!conn.subs.has(`terminal:${index}`)) return;
+    if (op === 2) {
+      const s = payload.toString("utf8");
+      if (t.pty) t.pty.write(s);
+      else t.proc?.stdin.write(s);
+    } else if (op === 3) {
+      try {
+        const { cols, rows } = JSON.parse(payload.toString("utf8"));
+        if (cols && rows) this.resize(t.id, cols, rows);
+      } catch {
+      }
+    }
+  }
+};
+
+// daemon/src/util/proc.ts
+init_pathscan();
+import { delimiter } from "node:path";
+function pidAlive(pid, kill = (p, s) => process.kill(p, s)) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e?.code === "EPERM";
+  }
+}
+function augmentPath(env, nodeDir, platform = process.platform, home) {
+  const win = platform === "win32";
+  const sep6 = win ? ";" : platform === process.platform ? delimiter : ":";
+  const key = Object.keys(env).find((k) => k.toUpperCase() === "PATH") ?? "PATH";
+  const cur = (env[key] ?? "").split(sep6).filter(Boolean);
+  const norm2 = (d) => win ? d.replace(/[\\/]+$/, "").toLowerCase() : d.replace(/\/+$/, "");
+  const seen = new Set(cur.map(norm2));
+  const out = [...cur];
+  for (const d of [nodeDir, ...extraBinDirs({ platform, env, home })]) {
+    if (!d || seen.has(norm2(d))) continue;
+    seen.add(norm2(d));
+    out.push(d);
+  }
+  return out.join(sep6);
+}
+
+// daemon/src/main.ts
+init_proxy();
+
+// daemon/src/preview/ports.ts
+import { readFileSync as readFileSync2 } from "node:fs";
+import { homedir as homedir11 } from "node:os";
+import { basename as basename5, dirname as dirname8, isAbsolute as isAbsolute5, join as join19 } from "node:path";
+import { fileURLToPath as fileURLToPath3 } from "node:url";
+var MAGPIE_DEFAULT_PORTS = [3425, 3430];
+var GATE_DEFAULT_PORT = 3488;
+function portOf(addr) {
+  if (!addr) return null;
+  const m = /:(\d{1,5})\/?$/.exec(addr.trim());
+  const n = m ? Number(m[1]) : NaN;
+  return Number.isInteger(n) && n > 0 && n <= 65535 ? n : null;
+}
+function magpieDirFromInstall(p) {
+  const norm2 = p.replace(/\\/g, "/");
+  const i = norm2.lastIndexOf("/plugins/node_modules/");
+  if (i <= 0) return null;
+  return p.slice(0, i);
+}
+function magpieConfigDirs(env = process.env, where = {}) {
+  const out = [];
+  const add = (d) => {
+    if (d && isAbsolute5(d) && !out.includes(d)) out.push(d);
+  };
+  let self = where.self;
+  if (self === void 0) {
+    try {
+      self = fileURLToPath3(import.meta.url);
+    } catch {
+      self = "";
+    }
+  }
+  add(magpieDirFromInstall(self));
+  const cwd = where.cwd ?? (env === process.env ? process.cwd() : "");
+  if (cwd && basename5(cwd) === "plugin-work") add(dirname8(cwd));
+  const x = env.XDG_CONFIG_HOME;
+  if (x && isAbsolute5(x)) add(join19(x, "magpie"));
+  const platform = where.platform ?? process.platform;
+  const home = where.home ?? (env === process.env ? homedir11() : platform === "win32" ? env.USERPROFILE : env.HOME);
+  if (home) add(join19(home, ".config", "magpie"));
+  return out;
+}
+function savedGatewayPort(file, read = (f) => readFileSync2(f, "utf8")) {
+  let raw;
+  try {
+    raw = read(file);
+  } catch {
+    return null;
+  }
+  try {
+    const s = JSON.parse(raw);
+    const p = typeof s?.port === "number" ? s.port : 0;
+    return Number.isInteger(p) && p >= 1024 && p <= 65535 ? p : MAGPIE_DEFAULT_PORTS[0];
+  } catch {
+    return null;
+  }
+}
+function previewDeniedPorts(cfg2, env = process.env, opts = {}) {
+  const out = /* @__PURE__ */ new Set([cfg2.port, GATE_DEFAULT_PORT, ...MAGPIE_DEFAULT_PORTS]);
+  if (cfg2.gatePort) out.add(cfg2.gatePort);
+  for (const k of ["MAGPIE_ADDR", "MAGPIE_WEB_ADDR", "MAGPIE_URL"]) {
+    const p = portOf(env[k]);
+    if (p) out.add(p);
+  }
+  for (const d of opts.configDirs ?? magpieConfigDirs(env)) {
+    const p = savedGatewayPort(join19(d, "settings.json"), opts.read);
+    if (p) out.add(p);
+  }
+  const extra = env.AGENT_CONSOLE_PREVIEW_DENY;
+  if (extra) for (const s of extra.split(/[,\s]+/)) {
+    const n = Number(s);
+    if (Number.isInteger(n) && n > 0 && n <= 65535) out.add(n);
+  }
+  out.delete(0);
+  return [...out];
+}
+
+// daemon/src/main.ts
+var nodeMajor = Number(/^v?(\d+)/.exec(process.versions.node ?? "")?.[1] ?? 0);
+if (nodeMajor < 20) {
+  console.error(`[agent-console] \u9700\u8981 Node.js 20 \u6216\u66F4\u9AD8\u7248\u672C\uFF0C\u5F53\u524D ${process.version}\uFF08${process.execPath}\uFF09`);
+  process.exit(3);
+}
+process.env.PATH = augmentPath(process.env, dirname9(process.execPath));
+var cfg = parseConfig(process.argv.slice(2));
+process.on("uncaughtException", (e) => {
+  if (e?.code === "EPIPE") return;
+  log("error", "uncaughtException", { err: String(e?.stack ?? e) });
+});
+process.on("unhandledRejection", (e) => {
+  log("error", "unhandledRejection", { err: String(e) });
+});
+async function main() {
+  initLog(cfg.dataDir);
+  for (const d of ["threads", "attachments", "trash", "logs"]) {
+    mkdirSync2(join21(cfg.dataDir, d), { recursive: true });
+  }
+  const appDir = join21(dirname9(fileURLToPath4(import.meta.url)), "..", "..", "app");
+  const attachments = new AttachmentStore(join21(cfg.dataDir, "attachments"));
+  const { bindAttachmentStore: bindAttachmentStore2 } = await Promise.resolve().then(() => (init_attachmentRefs(), attachmentRefs_exports));
+  bindAttachmentStore2(attachments);
+  const settings = new SettingsStore(cfg.dataDir);
+  const projects = new ProjectsStore(cfg.dataDir);
+  const threads = new ThreadsStore(cfg.dataDir);
+  const gateway = new Gateway(cfg);
+  initProviders(cfg.version);
+  const { migrateLegacy: migrateLegacy2 } = await Promise.resolve().then(() => (init_legacy(), legacy_exports));
+  try {
+    await migrateLegacy2(cfg.dataDir, { settings, projects, threads });
+  } catch (e) {
+    log("error", "\u65E7\u6570\u636E\u8FC1\u79FB\u5931\u8D25", { err: String(e) });
+  }
+  try {
+    const { migrateAutoApprove13: migrateAutoApprove132 } = await Promise.resolve().then(() => (init_autoApprove13(), autoApprove13_exports));
+    await migrateAutoApprove132({ settings, threads });
+  } catch (e) {
+    log("error", "\u5168\u90E8\u81EA\u52A8\u540C\u610F\u8FC1\u79FB\u5931\u8D25", { err: String(e) });
+  }
+  const manager = new AgentManager(gateway, threads, projects, settings, attachments);
+  await manager.recoverOnStart();
+  const terminals = new TerminalService(gateway);
+  const preview = new PreviewProxy({
+    deniedPorts: () => previewDeniedPorts(cfg),
+    log: (level, msg) => log(level, msg)
+  });
+  gateway.onConnectionClosed = (left) => {
+    if (left === 0) preview.closeAll();
+  };
+  registerMethods(gateway, {
+    cfg,
+    settings,
+    gateway,
+    projects,
+    threads,
+    manager,
+    git: new GitService(),
+    files: new FileService(),
+    terminals,
+    preview,
+    runtime: (id2) => manager.runtimeInfo(id2)
+  });
+  const server = createHttpServer(cfg, appDir, attachments, {
+    onUpgrade: (req, socket, head) => gateway.handleUpgrade(req, socket, head)
+  });
+  let attempts = 0;
+  await new Promise((resolveListen, rejectListen) => {
+    const tryListen = () => {
+      attempts++;
+      server.once("error", (e) => {
+        if (e.code === "EADDRINUSE" && attempts < 6) {
+          log("warn", `\u7AEF\u53E3 ${cfg.port} \u88AB\u5360\u7528\uFF0C500ms \u540E\u91CD\u8BD5\uFF08\u7B2C ${attempts} \u6B21\uFF09`);
+          setTimeout(tryListen, 500);
+        } else {
+          rejectListen(e);
+        }
+      });
+      server.listen(cfg.port, "127.0.0.1");
+    };
+    server.once("listening", () => resolveListen());
+    tryListen();
+  }).catch((e) => {
+    log("error", `\u7AEF\u53E3 ${cfg.port} \u65E0\u6CD5\u76D1\u542C`, { err: String(e) });
+    process.exit(2);
+  });
+  const bound = server.address();
+  if (bound && typeof bound === "object") cfg.port = bound.port;
+  process.stdout.write(JSON.stringify({ agentConsoleReady: true, port: cfg.port, pid: process.pid }) + "\n");
+  void settings.get().then((s) => refreshAgentShell(typeof s.bashPath === "string" ? s.bashPath : ""));
+  void (async () => {
+    const { warmProviderCache: warmProviderCache2 } = await Promise.resolve().then(() => (init_warm(), warm_exports));
+    await warmProviderCache2(await settings.get());
+  })().catch((e) => log("warn", "Provider \u9884\u70ED\u5931\u8D25", { err: String(e) }));
+  const daemonJsonPath = join21(cfg.dataDir, "daemon.json");
+  await writeJsonAtomic(daemonJsonPath, {
+    pid: process.pid,
+    port: cfg.port,
+    token: cfg.token,
+    version: cfg.version,
+    buildStamp: cfg.buildStamp,
+    startedAt: Date.now()
+  });
+  chmodSync2(daemonJsonPath, 384);
+  log("info", `daemon \u5DF2\u542F\u52A8 \u7AEF\u53E3 ${cfg.port} \u6570\u636E\u76EE\u5F55 ${cfg.dataDir} \u7248\u672C ${cfg.version} pid ${process.pid}`);
+  if (!cfg.parentPid) {
+    console.log(process.stdout.isTTY ? `[agent-console] open http://127.0.0.1:${cfg.port}/#t=${cfg.token}` : `[agent-console] listening on http://127.0.0.1:${cfg.port}/ (token not printed: stdout is not a terminal)`);
+  }
+  let idleSince = Date.now();
+  setInterval(() => {
+    const busy = gateway.connectionCount > 0 || manager.anyBusy() || terminals.count > 0;
+    if (busy) idleSince = Date.now();
+    if (Date.now() - idleSince > cfg.idleExitMinutes * 60 * 1e3) {
+      log("info", "\u7A7A\u95F2\u8D85\u65F6\uFF0Cdaemon \u9000\u51FA");
+      shutdown(0);
+    }
+  }, 60 * 1e3).unref();
+  let shuttingDown = false;
+  function shutdown(code) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    log("info", "daemon \u5173\u95ED\u4E2D");
+    terminals.killAll();
+    preview.closeAll();
+    gateway.closeAll();
+    try {
+      rmSync2(daemonJsonPath, { force: true });
+    } catch {
+    }
+    const sessionsClosed = Promise.race([manager.shutdown(), new Promise((r) => setTimeout(r, 2500))]);
+    void sessionsClosed.then(() => server.close(() => process.exit(code)));
+    setTimeout(() => process.exit(code), 4e3).unref();
+  }
+  process.on("SIGINT", () => shutdown(0));
+  process.on("SIGTERM", () => shutdown(0));
+  if (cfg.parentPid) {
+    const parentPid = cfg.parentPid;
+    const parentWatch = setInterval(() => {
+      if (!pidAlive(parentPid)) {
+        clearInterval(parentWatch);
+        log("info", `\u7236\u8FDB\u7A0B ${parentPid} \u5DF2\u9000\u51FA\uFF0Cdaemon \u8DDF\u968F\u9000\u51FA`);
+        shutdown(0);
+      }
+    }, 2e3);
+    parentWatch.unref();
+    let lifelineGone = false;
+    const lifelineClosed = () => {
+      if (lifelineGone) return;
+      lifelineGone = true;
+      log("info", "plugin host closed the lifeline (stdin); daemon exiting with it");
+      shutdown(0);
+    };
+    process.stdin.on("end", lifelineClosed);
+    process.stdin.on("close", lifelineClosed);
+    process.stdin.on("error", lifelineClosed);
+    process.stdin.resume();
+  }
+}
+main().catch((e) => {
+  console.error("[agent-console] \u542F\u52A8\u5931\u8D25", e);
+  process.exit(1);
+});
+//# sourceMappingURL=main.js.map
