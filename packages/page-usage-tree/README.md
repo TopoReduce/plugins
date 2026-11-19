@@ -4,7 +4,7 @@
 Token、缓存和费用。它补充「用量速览」没有的账号层：数据由插件自己的本地服务
 向 Magpie 网关查询，页面不直接读取 Magpie 的配置文件。
 
-# @magpie-community/page-usage-tree
+# @jianmu-plugins/page-usage-tree
 
 ## English
 
@@ -12,14 +12,14 @@ A page in Magpie's window that shows usage as a three-level tree:
 **provider -> account -> model**. Each level expands into the next, with
 calls, errors, tokens, cache and cost at every level.
 
-Usage Glance (`@magpie-community/page-usage`) shows totals and per-model usage
+Usage Glance (`@jianmu-plugins/page-usage`) shows totals and per-model usage
 from `usage:summary`. This page adds the provider -> account -> model tree,
 including calls, errors and cost for each account. `usage:summary` deliberately
 contains no per-account data, so this page asks Magpie's local gateway for the
 usage it already counted.
 
 ```sh
-magpie plugin add @magpie-community/page-usage-tree
+magpie plugin add @jianmu-plugins/page-usage-tree
 ```
 
 ## Architecture

@@ -9,7 +9,7 @@ GoAnyAPI's complete, publicly advertised **read-only MCP API catalog** as Magpie
 Use **Plugins → Discover → Tools for agents** or:
 
 ```sh
-magpie plugin add @magpie-community/tools-goanyapi
+magpie plugin add @jianmu-plugins/tools-goanyapi
 ```
 
 Sign in with **GoAnyAPI → Sign in** (OAuth, recommended):

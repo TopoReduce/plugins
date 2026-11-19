@@ -23,7 +23,7 @@ test("starts PiG on the provider connect writes", () => {
 
 test("declares the standard community Agent entry and no host plugin", () => {
   const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8"))
-  expect(pkg.name).toBe("@magpie-community/agent-pig")
+  expect(pkg.name).toBe("@jianmu-plugins/agent-pig")
   expect(pkg.magpie.agent).toBe("./pig.agent.js")
   expect(pkg.magpie.icon).toBe(agent.icon)
   expect(pkg.main).toBeUndefined()

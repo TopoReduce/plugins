@@ -4,7 +4,7 @@ Adds [Deepzora](https://github.com/SivanCola/deepzora) Desktop, CLI and ACP to
 Magpie's Agents page as **Deepzora**, ID `deepzora`.
 
 ```sh
-magpie plugin add @magpie-community/agent-deepzora
+magpie plugin add @jianmu-plugins/agent-deepzora
 ```
 
 Choose a model on its Agent row, wait about a second with Magpie running, then
@@ -41,7 +41,7 @@ while the package is still enabled before removing it:
 magpie deepzora default
 magpie plugin list --json
 # Remove after restoration completes:
-magpie plugin rm @magpie-community/agent-deepzora
+magpie plugin rm @jianmu-plugins/agent-deepzora
 ```
 
 The one-shot fallback is `node cli.mjs sync` from this package. After a forced

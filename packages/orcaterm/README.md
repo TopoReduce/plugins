@@ -1,4 +1,4 @@
-# @magpie-community/opencode-orcaterm-auth
+# @jianmu-plugins/opencode-orcaterm-auth
 
 Signs in to **Tencent Cloud OrcaTerm** (腾讯云遨驰终端) and serves its AI assistant's models —
 DeepSeek, Hunyuan, GLM and Kimi — in OpenCode and magpie. Provider id: `orcaterm`.
@@ -12,7 +12,7 @@ DeepSeek, Hunyuan, GLM and Kimi — in OpenCode and magpie. Provider id: `orcate
 ## Install
 
 ```sh
-magpie plugin add @magpie-community/opencode-orcaterm-auth
+magpie plugin add @jianmu-plugins/opencode-orcaterm-auth
 magpie plugin login orcaterm
 ```
 

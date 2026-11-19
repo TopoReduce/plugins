@@ -1,11 +1,11 @@
-# @magpie-community/agent-wave
+# @jianmu-plugins/agent-wave
 
 [Wave Terminal](https://waveterm.dev) as a magpie agent. magpie has no setup of
 its own for Wave; with this plugin it is on magpie's Agents page like the agents
 magpie ships with.
 
 ```sh
-magpie plugin add @magpie-community/agent-wave
+magpie plugin add @jianmu-plugins/agent-wave
 ```
 
 Then pick one of magpie's models in Wave's row. magpie writes one mode,

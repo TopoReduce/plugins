@@ -56,8 +56,8 @@ Anywhere, Nowledge Cloud or self-hosted endpoint works the same way over HTTPS.
 Configure it in the plugin page, or with the CLI:
 
 ```sh
-magpie plugin add @magpie-community/gateway-nowledge-mem
-magpie plugin options @magpie-community/gateway-nowledge-mem '{"serverUrl":"http://127.0.0.1:14242"}'
+magpie plugin add @jianmu-plugins/gateway-nowledge-mem
+magpie plugin options @jianmu-plugins/gateway-nowledge-mem '{"serverUrl":"http://127.0.0.1:14242"}'
 ```
 
 The hook reads its endpoint and key from the option first, then from the

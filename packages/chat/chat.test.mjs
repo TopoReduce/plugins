@@ -1022,7 +1022,7 @@ test("the plugin starts nothing on import and serves the option's port", async (
   const mod = await import("./index.mjs")
   expect(typeof mod.default.server).toBe("function")
   const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))
-  expect(pkg.name).toBe("@magpie-community/page-chat")
+  expect(pkg.name).toBe("@jianmu-plugins/page-chat")
   expect(pkg.magpie.page.file).toBe("page/index.html")
   expect(pkg.scripts?.postinstall).toBeUndefined()
   expect(pkg.scripts?.install).toBeUndefined()

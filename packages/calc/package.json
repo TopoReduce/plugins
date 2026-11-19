@@ -4,25 +4,8 @@
   "description": "Exact arithmetic, unit conversion and calendar date math as tools for every coding agent, through magpie's MCP server",
   "type": "module",
   "main": "./index.mjs",
-  "files": [
-    "index.mjs",
-    "calc.mjs",
-    "README.md"
-  ],
-  "keywords": [
-    "magpie",
-    "magpie-tools",
-    "mcp",
-    "opencode",
-    "opencode-plugin",
-    "calculator",
-    "units",
-    "dates"
-  ],
+  "files": ["index.mjs", "calc.mjs", "README.md"],
+  "keywords": ["magpie", "magpie-tools", "mcp", "opencode", "opencode-plugin", "calculator", "units", "dates"],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
-    "directory": "packages/calc"
-  }
+  "repository": { "type": "git", "url": "git+https://github.com/magpie-community/plugins.git", "directory": "packages/calc" }
 }

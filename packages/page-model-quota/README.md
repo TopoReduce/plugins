@@ -4,10 +4,10 @@
 它把每个额度窗口换算成 token，再按模型在窗口内的占比摊开，最后跨账号、跨供应商合并。
 
 ```sh
-magpie plugin add @magpie-community/page-model-quota
+magpie plugin add @jianmu-plugins/page-model-quota
 ```
 
-# @magpie-community/page-model-quota
+# @jianmu-plugins/page-model-quota
 
 ## English
 
@@ -20,7 +20,7 @@ split by each model's share inside that window, and then added up per model
 across accounts and providers.
 
 ```sh
-magpie plugin add @magpie-community/page-model-quota
+magpie plugin add @jianmu-plugins/page-model-quota
 ```
 
 ## How the number is made

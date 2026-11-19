@@ -1,4 +1,4 @@
-// @magpie-community/page-chat：在 magpie 窗口里加一个「对话」页面。
+// @jianmu-plugins/page-chat：在 magpie 窗口里加一个「对话」页面。
 //
 // 两件事：
 //   1. 作为 OpenCode v1 插件被 magpie 的 Bun 宿主加载（不注册任何供应商，只借宿主的进程起服务）。

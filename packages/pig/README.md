@@ -1,6 +1,6 @@
 # agent-pig
 
-`@magpie-community/agent-pig` adds [PiG (Pi in Go)](https://github.com/MichaelKinsy/PiG) to Magpie. It supplies Magpie's endpoint and model catalog in `~/.pig/agent/models.json`, and the Agents row picks the model PiG starts on, as Pi's does: Magpie writes `defaultProvider: "magpie"` and `defaultModel` in `~/.pig/agent/settings.json`, PiG's own startup default ([PiG's settings reference](https://github.com/MichaelKinsy/PiG/blob/main/docs/site/docs/settings.md)). This needs a Magpie with the Agent contract's `startup` field (v0.1.3008 or later); an older Magpie reads 0.1.1 as 0.1.0 was, connect-only, and you choose the model with `/model` in PiG.
+`@jianmu-plugins/agent-pig` adds [PiG (Pi in Go)](https://github.com/MichaelKinsy/PiG) to Magpie. It supplies Magpie's endpoint and model catalog in `~/.pig/agent/models.json`, and the Agents row picks the model PiG starts on, as Pi's does: Magpie writes `defaultProvider: "magpie"` and `defaultModel` in `~/.pig/agent/settings.json`, PiG's own startup default ([PiG's settings reference](https://github.com/MichaelKinsy/PiG/blob/main/docs/site/docs/settings.md)). This needs a Magpie with the Agent contract's `startup` field (v0.1.3008 or later); an older Magpie reads 0.1.1 as 0.1.0 was, connect-only, and you choose the model with `/model` in PiG.
 
 The Agents row identifies PiG with the project's pixel-pig icon from its official site. The image is not bundled: Magpie references it by URL and keeps its own cache. This is an unofficial integration; PiG is a project by Michael Kinsy and is not affiliated with, or endorsing, Magpie.
 
@@ -9,7 +9,7 @@ The Agents row identifies PiG with the project's pixel-pig icon from its officia
 With a Magpie release that supports connect-only Agent plugins:
 
 ```sh
-magpie plugin add @magpie-community/agent-pig
+magpie plugin add @jianmu-plugins/agent-pig
 ```
 
 1. Open Magpie's Agents page and pick one of Magpie's models in **PiG**'s row. CLI equivalent: `magpie pig model magpie/<provider>/<model>`.
@@ -68,7 +68,7 @@ The repository's `scripts/check.mjs` skips Agent packages; `pig.test.mjs` checks
 
 ## 中文
 
-这是 PiG 的适配插件。通过 `magpie plugin add @magpie-community/agent-pig` 安装后，在 Magpie 的 Agent 页 **PiG** 一行里直接选 Magpie 的模型，和 Pi 一样：Magpie 把 `~/.pig/agent/models.json` 里的 `providers.magpie` 和 `settings.json` 里的 `defaultProvider`/`defaultModel` 写好，新开的 PiG 会话就从这个模型开始；PiG 里的 `/model` 仍可切换。需要支持 Agent 契约 `startup` 字段的 Magpie（v0.1.3008 及以后）；更早的 Magpie 把 0.1.1 当作 0.1.0，只能在 PiG 里用 `/model` 选。
+这是 PiG 的适配插件。通过 `magpie plugin add @jianmu-plugins/agent-pig` 安装后，在 Magpie 的 Agent 页 **PiG** 一行里直接选 Magpie 的模型，和 Pi 一样：Magpie 把 `~/.pig/agent/models.json` 里的 `providers.magpie` 和 `settings.json` 里的 `defaultProvider`/`defaultModel` 写好，新开的 PiG 会话就从这个模型开始；PiG 里的 `/model` 仍可切换。需要支持 Agent 契约 `startup` 字段的 Magpie（v0.1.3008 及以后）；更早的 Magpie 把 0.1.1 当作 0.1.0，只能在 PiG 里用 `/model` 选。
 
 插件不修改 `auth.json`，也不设置思考等级或模型范围。若 `enabledModels` 不包含所选模型，PiG 会从范围里的第一个模型启动。断开时 `settings.json` 的两个键还原为原值（若之后在 PiG 里保存了其他 provider 的模型，则保留你的选择）。断开时，原先有同名 provider 就恢复原对象，原先没有就移除整个 provider，避免空 provider 导致 PiG 解析失败。
 

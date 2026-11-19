@@ -4,12 +4,12 @@ Select a model in **Magpie → Agents → Nowledge Mem / AI Now** for Nowledge's
 
 [中文说明](README.zh-CN.md)
 
-This differs from [`@magpie-community/gateway-nowledge-mem`](../nowledge-mem): that package recalls memories/Context Bundles for other harnesses and optionally imports conversations. This Agent controls the models **Nowledge itself uses**, performs no recall/capture, and needs no gateway memory plugin. Its directory is `nowledge-mem-agent` because `packages/nowledge-mem` already contains that separate package.
+This differs from [`@jianmu-plugins/gateway-nowledge-mem`](../nowledge-mem): that package recalls memories/Context Bundles for other harnesses and optionally imports conversations. This Agent controls the models **Nowledge itself uses**, performs no recall/capture, and needs no gateway memory plugin. Its directory is `nowledge-mem-agent` because `packages/nowledge-mem` already contains that separate package.
 
 ## Connect
 
 ```sh
-magpie plugin add @magpie-community/agent-nowledge-mem
+magpie plugin add @jianmu-plugins/agent-nowledge-mem
 magpie nowledge-mem <provider/model>
 ```
 

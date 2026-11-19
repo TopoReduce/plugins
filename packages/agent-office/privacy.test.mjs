@@ -61,9 +61,9 @@ const noSecrets = (live) => {
 // magpie writes npm specs with @latest (or a pinned @version); a local
 // folder is written as its absolute path.
 const specs = [
-  "@magpie-community/page-agent-office@latest",
-  "@magpie-community/page-agent-office@0.1.0",
-  "@magpie-community/page-agent-office",
+  "@jianmu-plugins/page-agent-office@latest",
+  "@jianmu-plugins/page-agent-office@0.1.0",
+  "@jianmu-plugins/page-agent-office",
   "QingJ01/magpie-agent-office",
   dir,
 ]
@@ -83,13 +83,13 @@ for (const spec of specs) {
 }
 
 test("a portable magpie's plugins.json in the host cwd is read", () => {
-  const live = runHost("@magpie-community/page-agent-office@latest", { text: false }, "", "cwd")
+  const live = runHost("@jianmu-plugins/page-agent-office@latest", { text: false }, "", "cwd")
   expect(snapshot(live).text).toBe(false)
   noSecrets(live)
 })
 
 test("no plugins.json fails closed", () => {
-  const live = runHost("@magpie-community/page-agent-office@latest", { text: true }, "", "none")
+  const live = runHost("@jianmu-plugins/page-agent-office@latest", { text: true }, "", "none")
   expect(snapshot(live).text).toBe(false)
   noSecrets(live)
 })
@@ -109,14 +109,14 @@ test("a request's ctx.options can turn text on after failing closed", () => {
 
 test("a request without ctx.options keeps text:false", () => {
   const call = `await h.onRequest({ model: "m", tools: [{ name: "Bash" }], messages: [{ role: "user", content: "x" }] }, { origin: "local", protocol: "anthropic", agent: "cursor", session: "g1", cwd: "/tmp", model: "m", query: "SECRET-GATEWAY-PROMPT", state: {}, report() {} });`
-  const live = runHost("@magpie-community/page-agent-office", { text: false }, call)
+  const live = runHost("@jianmu-plugins/page-agent-office", { text: false }, call)
   const snap = JSON.parse(live.slice("globalThis.AgentOfficeLive = ".length).replace(/;\s*$/, ""))
   expect(snap.text).toBe(false)
   expect(live).not.toContain("SECRET-GATEWAY-PROMPT")
 })
 
 test("text:true still shows what the session says", () => {
-  const live = runHost("@magpie-community/page-agent-office@latest", { text: true })
+  const live = runHost("@jianmu-plugins/page-agent-office@latest", { text: true })
   expect(live).toContain("SECRET-PROMPT")
   expect(live).toContain("SECRET-REPLY")
   expect(live).toContain("SECRET-CMD")

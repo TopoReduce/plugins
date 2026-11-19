@@ -1,4 +1,4 @@
-# @magpie-community/middleware-empty-reply
+# @jianmu-plugins/middleware-empty-reply
 
 Some chat models return reasoning and no text. magpie passes that on as a
 finished reply: `end_turn` for Anthropic clients, `response.completed` for
@@ -9,7 +9,7 @@ This middleware drops the end of such a reply. The client sees the stream
 break before the answer and retries.
 
 ```sh
-magpie plugin add @magpie-community/middleware-empty-reply
+magpie plugin add @jianmu-plugins/middleware-empty-reply
 ```
 
 No options.

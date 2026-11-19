@@ -13,7 +13,7 @@ magpie cowork default                            # 把 Cowork 交还给它自己
 装：
 
 ```sh
-magpie plugin add @magpie-community/agent-cowork
+magpie plugin add @jianmu-plugins/agent-cowork
 ```
 
 `seed.mjs` 需要 Node 18 以上（用了顶层 await 和全局 `fetch`），magpie 自己带的那套不影响它。
@@ -55,11 +55,11 @@ id（不改的话 `magpie cowork <模型 id>` 选不中它）；如果这条正�
 插件本身只维护 `ide-settings.json` 这一个文件——magpie 的 agent 插件按契约只能碰一个配置文件，
 而清单那个文件里是数组，magpie 的写入器碰到 `customModels: []` 会写成 `{"0": {…}}`，Cowork 读不了。
 所以模型清单由包里的 `seed.mjs` 从 magpie 的 `/v1/models` 一次性搬过去。装完之后它在 magpie 的插件目录
-`~/.config/magpie/plugins/node_modules/@magpie-community/agent-cowork/`（设了 `XDG_CONFIG_HOME` 的把
+`~/.config/magpie/plugins/node_modules/@jianmu-plugins/agent-cowork/`（设了 `XDG_CONFIG_HOME` 的把
 `~/.config` 换成它）：
 
 ```sh
-cd ~/.config/magpie/plugins/node_modules/@magpie-community/agent-cowork
+cd ~/.config/magpie/plugins/node_modules/@jianmu-plugins/agent-cowork
 node seed.mjs            # 第一次写之前把原文件留成 settings.json.pre-magpie，只留这一次
 node seed.mjs --check    # 只报漂移，不写；有漂移（含被扣下的条目）时退出码 1
 node seed.mjs --prune    # 允许删掉记录里已不在 magpie 目录中的条目（见下）
@@ -131,4 +131,4 @@ cat ~/.codely/ide-settings.json     # defaultChatModelTitle 应当已经变成�
 没有对应条目——再跑一次 `node seed.mjs`。
 
 图标取自 Cowork 安装包里的 `app/resource/dist/branding/logo_dark.png`，缩到 112px 后内联成 data URI
-（和 `@magpie-community/agent-kimi-desktop` 一样的做法，好处是不依赖仓库先建好），同图另存一份 `icon.png` 随包发。
+（和 `@jianmu-plugins/agent-kimi-desktop` 一样的做法，好处是不依赖仓库先建好），同图另存一份 `icon.png` 随包发。

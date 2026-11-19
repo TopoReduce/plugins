@@ -1,4 +1,4 @@
-# @magpie-community/agent-zycode
+# @jianmu-plugins/agent-zycode
 
 [zycode](https://github.com/zy1233/pi-python) (the ACP agent `pi-agent-cli-lc`,
 the terminal UI `zypi` and the VS Code extension `zycode.zycode`) as a magpie
@@ -6,7 +6,7 @@ agent. magpie has no setup of its own for zycode; with this plugin it is on
 magpie's Agents page like the agents magpie ships with. Unofficial.
 
 ```sh
-magpie plugin add @magpie-community/agent-zycode
+magpie plugin add @jianmu-plugins/agent-zycode
 ```
 
 Then pick one of magpie's models in zycode's row. zycode keeps its model in

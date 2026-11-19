@@ -1,4 +1,4 @@
-# @magpie-community/opencode-autoclaw-auth
+# @jianmu-plugins/opencode-autoclaw-auth
 
 中文 | [English](README.en.md)
 
@@ -24,7 +24,7 @@
 ## 怎么登录
 
 ```sh
-magpie plugin add @magpie-community/opencode-autoclaw-auth
+magpie plugin add @jianmu-plugins/opencode-autoclaw-auth
 magpie plugin login autoclaw                   # Google / z.ai 网页登录
 magpie plugin login autoclaw-cn                # 手机验证码
 magpie provider test autoclaw zai_auto
@@ -84,9 +84,9 @@ OpenCode 同样可加载（`opencode auth login`）。登录信息保存在 magp
 
 ```sh
 # 通道 1：插件 options（magpie CLI）
-magpie plugin options @magpie-community/opencode-autoclaw-auth '{"signin": false}'        # 关闭自动补签总开关
-magpie plugin options @magpie-community/opencode-autoclaw-auth '{"signinHour": 8}'        # 只在 8:00–8:59 补签
-magpie plugin options @magpie-community/opencode-autoclaw-auth '{"signinOnUsage": true}'  # 开启查额度/刷新自动补签
+magpie plugin options @jianmu-plugins/opencode-autoclaw-auth '{"signin": false}'        # 关闭自动补签总开关
+magpie plugin options @jianmu-plugins/opencode-autoclaw-auth '{"signinHour": 8}'        # 只在 8:00–8:59 补签
+magpie plugin options @jianmu-plugins/opencode-autoclaw-auth '{"signinOnUsage": true}'  # 开启查额度/刷新自动补签
 
 # 通道 2：配置文件 ~/.config/magpie/autoclaw.json（保存即生效，热读取）
 cat > ~/.config/magpie/autoclaw.json <<'EOF'

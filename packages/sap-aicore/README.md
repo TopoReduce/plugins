@@ -58,7 +58,7 @@ magpie plugin login sap-aicore
 
 When prompted, enter the **absolute path** to your credential file. Sign-in checks the credentials with SAP before saving the account.
 
-For a released community version, install `@magpie-community/opencode-sap-aicore-auth` instead of the local folder. New packages are available through the community repository's `dist` channel after merge, even before their first npm publication (requires Magpie 0.1.1243 or newer).
+For a released community version, install `@jianmu-plugins/opencode-sap-aicore-auth` instead of the local folder. New packages are available through the community repository's `dist` channel after merge, even before their first npm publication (requires Magpie 0.1.1243 or newer).
 
 This package uses the OpenCode plugin shape, but its credential-file sign-in and account-scoped mixed-protocol catalog are verified in **Magpie only**. Standalone OpenCode compatibility is not claimed.
 

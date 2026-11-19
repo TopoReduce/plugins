@@ -32,7 +32,7 @@ if (process.versions.bun) {
   new Function(readFileSync('page/settings.js', 'utf8'));
 } else for (const file of [...readdirSync('.').filter(f => f.endsWith('.mjs')), 'page/settings.js']) execFileSync(process.execPath, ['--check', file]);
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
-if (pkg.name.startsWith('@magpie-community/')) {
+if (pkg.name.startsWith('@jianmu-plugins/')) {
   assert.equal(pkg.repository.url, 'git+https://github.com/magpie-community/plugins.git');
   assert.equal(pkg.repository.directory, 'packages/respire-memory');
 }

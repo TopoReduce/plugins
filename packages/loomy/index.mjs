@@ -1,4 +1,4 @@
-// @magpie-community/opencode-loomy-auth — the Loomy (讯飞) provider plugin
+// @jianmu-plugins/opencode-loomy-auth — the Loomy (讯飞) provider plugin
 // for OpenCode and magpie.
 //
 // Signs in with a Loomy account (SMS code or a pasted session), forwards
@@ -34,6 +34,34 @@ const OK = "000000"
 const AUTH_CODES = new Set(["020002", "100002"])
 
 const REQUEST_TIMEOUT = 20_000
+
+// the session the client asks for at sign-in (expire: 1209600, as Loomy's
+// own client sends it); there is no endpoint that renews one
+const SESSION_TTL = 14 * 86400e3
+
+// when an account's session began: the time an SMS sign-in kept, else its
+// 14-day end less 14 days (accounts signed in before 0.1.12); 0 when not
+// known (a pasted session)
+function signedInAt(a) {
+  const at = Number(a?.signedInAt)
+  if (Number.isFinite(at) && at > 0) return at
+  const exp = Number(a?.expires)
+  return Number.isFinite(exp) && exp > SESSION_TTL ? exp - SESSION_TTL : 0
+}
+
+// what a lapsed account says: the vendor refused the session, with the day
+// it was signed in. No lifetime is claimed: the client asks for 14 days, but
+// agent2api found sessions still served past that, so the day is the fact
+// and the reader can set it beside the drop
+function lapsedText(a, said) {
+  const at = signedInAt(a)
+  let when = ""
+  if (at) {
+    const d = new Date(at + 8 * 3600e3) // Beijing
+    when = `；这次登录在 ${d.getUTCMonth() + 1} 月 ${d.getUTCDate()} 日`
+  }
+  return `Loomy 登录态已失效（${said || "code=100002"}${when}），请重新登录`
+}
 
 
 // the chat models the live /api/v1/models returned on 2026-10-16 (the image
@@ -80,8 +108,11 @@ const beijingMidnight = () => Math.floor((Date.now() + 8 * 3600e3) / 86400e3) * 
 // wallet has spent; the permanent balance has nothing spent to tell, so the
 // total is spent of spent + left, and with nothing left it is all used. It
 // renews with the daily wallet at Beijing midnight, when the daily credits
-// left are lost (runsOutAt, runsOut), so routing spends those first. null
-// with neither wallet told.
+// left are lost (runsOutAt, runsOut), so routing spends those first. With
+// the daily credits spent and permanent ones left, midnight loses nothing,
+// so the total names no reset: smart routing puts an account whose reset
+// does lose credits first (plugins#1153). Used up, it names midnight, when
+// it is back. null with neither wallet told.
 function totalOf(dailyWallet, dailyLeft, permanent) {
   if (dailyLeft == null && permanent == null) return null
   const spent = dailyWallet?.amount ?? 0
@@ -96,8 +127,12 @@ function totalOf(dailyWallet, dailyLeft, permanent) {
     unit: "credits",
   }
   if (dailyWallet) {
-    w.resetsAt = beijingMidnight()
-    if (dailyWallet.span) w.span = dailyWallet.span
+    // no span either: magpie reads a window with a span and no reset as
+    // renewing a span from now, which would rank it again
+    if (dailyLeft > 0 || left === 0) {
+      w.resetsAt = beijingMidnight()
+      if (dailyWallet.span) w.span = dailyWallet.span
+    }
     if (dailyLeft > 0) Object.assign(w, { runsOutAt: w.resetsAt, runsOut: dailyLeft })
   }
   return w
@@ -142,6 +177,81 @@ function retryableRefusal(status, body) {
     status,
     headers: { "content-type": "application/json", "x-loomy-vendor-status": String(status) },
   })
+}
+
+// The gateway refuses a session with HTTP 200 and a business code, on the
+// model paths as on the others: a made-up or dropped session on
+// /api/v1/chat/completions, asked for a stream, got 200 application/json
+// {"code":"100002","desc":"登录已失效，请重新登录"} (measured 2026-11-16).
+// Passed through, that 200 was no answer for the agent, magpie didn't try
+// the next account, and as a success it took the account's signed-out mark
+// off, which the next usage read (100002) put back: the account was signed
+// out and in again over and over (jenxingyoung on X, "轮着掉登录").
+// So a JSON 200 with a code other than 000000 is a refusal: a sign-in code
+// is a 401 that says the sign-in expired, and any other a 502 with the
+// vendor's words. A model's own answer (an SSE stream, or a completion or
+// a draw, neither of which has a top-level code) goes through as it came.
+const REFUSAL_MAX = 64 << 10
+async function businessRefusal(res, a) {
+  const ct = res.headers.get("content-type") ?? ""
+  if (!/json/i.test(ct) || /event-stream/i.test(ct)) return res
+  const text = await res.text()
+  const headers = new Headers(res.headers)
+  headers.delete("content-length")
+  headers.delete("content-encoding")
+  const same = () => new Response(text, { status: res.status, statusText: res.statusText, headers })
+  if (text.length > REFUSAL_MAX) return same()
+  let payload
+  try {
+    payload = JSON.parse(text)
+  } catch {
+    return same()
+  }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return same()
+  const code = codeOf(payload)
+  if (!code || code === OK) return same()
+  const said = messageOf(payload)
+  if (AUTH_CODES.has(code)) {
+    const r = errorResponse(401, lapsedText(a, said || `code=${code}`))
+    r.headers.set("x-magpie-sign-in", "expired")
+    return r
+  }
+  return errorResponse(502, `Loomy 拒绝了请求：${said || "无错误说明"}（code=${code}）`)
+}
+
+// The gateway's verdict on a session is its business code: a made-up,
+// dropped or missing token gets HTTP 200 with 100002 on every path (chat,
+// draw, models, points and first-login; measured 2026-11-16 and again
+// 2026-11-17), never a 401 or a 403. A 401 or 403 that doesn't carry a
+// sign-in code came from something on the way, a proxy or a firewall
+// turning the exit address away, and says nothing about the session.
+// Read as "signed out", it marked a good account for sign-in again
+// whenever the user's proxy was refused, a different account each time
+// (jenxingyoung on X: four accounts on a proxy, "今天这个掉，明天那个掉").
+// So such a status is a failure of this try that leaves the sign-in as it
+// is ("kept"), and only a sign-in code in its body says the session ended.
+async function deniedStatus(res, a) {
+  const text = await res.text().catch(() => "")
+  let code = ""
+  let said = ""
+  try {
+    const payload = JSON.parse(text)
+    code = codeOf(payload)
+    said = messageOf(payload)
+  } catch {}
+  if (AUTH_CODES.has(code)) {
+    const r = errorResponse(401, lapsedText(a, said || `code=${code}`))
+    r.headers.set("x-magpie-sign-in", "expired")
+    return r
+  }
+  const r = errorResponse(502, deniedText(res.status, said || text))
+  r.headers.set("x-magpie-sign-in", "kept")
+  return r
+}
+
+function deniedText(status, said) {
+  const words = String(said ?? "").replace(/\s+/g, " ").trim().slice(0, 300)
+  return `Loomy 网关返回 HTTP ${status}，不是登录失效（Loomy 的登录失效是 HTTP 200 加业务码 100002），多半是代理或网络拦截了这次请求${words ? `：${words}` : ""}`
 }
 
 async function bodyText(input, init) {
@@ -216,13 +326,28 @@ async function tokenRequest(method, path, session, body) {
     init.body = JSON.stringify(body)
   }
   const res = await fetch(integrationBase() + path, init)
-  if (res.status === 401 || res.status === 403) throw expired("Loomy 登录态已失效，请重新登录")
+  if (res.status === 401 || res.status === 403) {
+    // only a sign-in code says the session ended (deniedStatus)
+    const text = await res.text().catch(() => "")
+    let payload = null
+    try {
+      payload = JSON.parse(text)
+    } catch {}
+    if (AUTH_CODES.has(codeOf(payload))) throw expired(messageOf(payload) || `code=${codeOf(payload)}`)
+    throw new Error(deniedText(res.status, messageOf(payload) || text))
+  }
   const payload = await res.json().catch(() => null)
   if (!res.ok) throw new Error(`Loomy 接口返回 HTTP ${res.status}`)
   if (!payload) throw new Error("Loomy 接口返回了无法解析的内容")
   return payload
 }
 
+
+// a pasted session's account name: its last six characters, as the token
+// tails other subscriptions show
+function pastedName(session) {
+  return `手动粘贴 ···${String(session).slice(-6)}`
+}
 
 // the phone number as the client normalizes it (agent2api login.rs)
 function normalizePhone(raw) {
@@ -270,11 +395,12 @@ function foldReasoning(body) {
 // data-URI images are turned into the marker and merged into the text before
 // them (agent2api images.rs). DeepSeek-V4.1-Flash takes image_url parts and
 // reads the marker as plain text (10k prompt tokens, an empty reply), so it
-// keeps the parts as sent (plugins#811)
+// keeps the parts as sent (plugins#811), and so does deepseek-v4-flash-1017
+// (plugins#1139). Loomy renames these freely, so only the old line the marker
+// was made for gets it; any other DeepSeek id keeps OpenAI's shape.
 function prefersTagFormat(model) {
-  const m = String(model ?? "").toLowerCase()
-  if (!m.includes("deepseek")) return false
-  return !/v4[.-]1(?![0-9])/.test(m)
+  const m = String(model ?? "").toLowerCase().replace(/^.*\//, "")
+  return /^deepseek-v4-flash(?:-0731)?$/.test(m)
 }
 function toTagText(part) {
   const kind = String(part?.type ?? "").trim().toLowerCase()
@@ -340,6 +466,32 @@ function catalogModel(entry) {
   return { id, config }
 }
 
+// listedModel is the vendor's entry as the models hook gives it: the
+// config's fields, and the capabilities OpenCode (and magpie's host) read
+// a listed model by. The config's fields alone left the vendor's vision,
+// reasoning and tool calls unread, so deepseek-v4-flash-1017, which
+// models.dev doesn't know, went as a text-only model of no known
+// vision (plugins#1141). What the vendor doesn't say keeps what was known
+// of the model (models.dev, the static table).
+function listedModel(was, m, entry) {
+  const caps = entry?.capabilities ?? {}
+  const had = was?.capabilities ?? { temperature: true, toolcall: true, input: { text: true }, output: { text: true } }
+  const capabilities = { ...had, input: { ...(had.input ?? { text: true }) } }
+  if (typeof caps.reasoning === "boolean") capabilities.reasoning = caps.reasoning
+  if (typeof caps.function_calling === "boolean") capabilities.toolcall = caps.function_calling
+  if (typeof caps.vision === "boolean") {
+    capabilities.input.image = caps.vision
+    capabilities.attachment = caps.vision
+  }
+  return {
+    ...(was ?? {}),
+    ...m.config,
+    id: m.id,
+    limit: { ...(was?.limit ?? {}), ...(m.config.limit ?? {}) },
+    capabilities,
+  }
+}
+
 // ── the plugin ─────────────────────────────────────────────────────────────
 
 export async function LoomyAuthPlugin({ client } = {}) {
@@ -379,13 +531,19 @@ export async function LoomyAuthPlugin({ client } = {}) {
             if (codeOf(answer) !== OK) return { type: "failed", error: `登录失败：${messageOf(answer) || `code=${codeOf(answer)}`}` }
             const session = String(answer?.data?.session ?? "").trim()
             if (!session) return { type: "failed", error: "登录成功但上游没有返回 session" }
+            const userId = String(answer?.data?.userid ?? "")
+            const now = Date.now()
             return {
               type: "success",
               refresh: "",
               access: session,
-              expires: Date.now() + 14 * 86400e3, // the session the client asks for is 14 days
+              expires: now + SESSION_TTL, // the session the client asks for is 14 days
+              signedInAt: now,
               accountId: `${phone.slice(0, 3)}****${phone.slice(-4)}`,
-              userId: String(answer?.data?.userid ?? ""),
+              // two phones masked alike stay two accounts (magpie's host
+              // tells accounts of one name apart by uid)
+              ...(userId ? { uid: userId } : {}),
+              userId,
               source: "sms",
             }
           } catch (e) {
@@ -409,7 +567,10 @@ export async function LoomyAuthPlugin({ client } = {}) {
         url: "",
         instructions: "已取到粘贴的 session，确认即完成登录。",
         method: "auto",
-        callback: async () => ({ type: "success", refresh: "", access: session, expires: 0, accountId: "手动粘贴", source: "manual" }),
+        // each pasted session its own name: magpie's host keeps one account
+        // per name, so one name for every paste put a second pasted account
+        // over the first, and signing one in again dropped another
+        callback: async () => ({ type: "success", refresh: "", access: session, expires: 0, accountId: pastedName(session), source: "manual" }),
       }
     },
   })
@@ -417,8 +578,10 @@ export async function LoomyAuthPlugin({ client } = {}) {
   return {
     auth: {
       provider: ID,
-      // Loomy has no renewal: a session lives 14 days, and its end is
-      // refreshed only by signing in again (SMS or import)
+      // Loomy has no renewal: its own client (0.9.39), web app and every
+      // port of it (agent2api, magpie-providers-hub) only sign in again. A
+      // session is asked for 14 days, and its end is refreshed only by
+      // signing in again (SMS or paste)
       async loader(getAuth) {
         const a = await getAuth()
         if (a?.type !== "oauth") return {}
@@ -429,7 +592,8 @@ export async function LoomyAuthPlugin({ client } = {}) {
         // the body goes as magpie wrote it (the chat path's rewrites are
         // about messages, which a draw has none of)
         const draw = async (body, signal) => {
-          const session = (await getAuth())?.access ?? a.access
+          const now = (await getAuth()) ?? a
+          const session = now?.access ?? a.access
           if (!session) return errorResponse(401, "Loomy 登录态缺失，请重新登录")
           let res
           try {
@@ -447,12 +611,12 @@ export async function LoomyAuthPlugin({ client } = {}) {
           } catch (e) {
             return errorResponse(502, e?.message ?? String(e))
           }
-          if (res.status === 401 || res.status === 403) return errorResponse(401, "Loomy 登录态已失效，请重新登录")
+          if (res.status === 401 || res.status === 403) return deniedStatus(res, now)
           if (!res.ok) {
             const raw = await res.text().catch(() => "")
             return errorResponse(res.status, `Loomy 上游返回 ${res.status}: ${raw.slice(0, 4096) || "无错误说明"}`)
           }
-          return res
+          return businessRefusal(res, now)
         }
         return {
           baseURL: modelBase(),
@@ -472,7 +636,8 @@ export async function LoomyAuthPlugin({ client } = {}) {
             } catch {
               return errorResponse(400, "a request that isn't JSON")
             }
-            const session = (await getAuth())?.access ?? a.access
+            const now = (await getAuth()) ?? a
+            const session = now?.access ?? a.access
             if (!session) return errorResponse(401, "Loomy 登录态缺失，请重新登录")
 
             // the body as Loomy's own client writes it: reasoning folded to
@@ -499,25 +664,27 @@ export async function LoomyAuthPlugin({ client } = {}) {
             } catch (e) {
               return errorResponse(502, e?.message ?? String(e))
             }
-            if (res.status === 401 || res.status === 403) return errorResponse(401, "Loomy 登录态已失效，请重新登录")
+            if (res.status === 401 || res.status === 403) return deniedStatus(res, now)
             if (!res.ok) {
               const raw = await res.text().catch(() => "")
               const refusal = retryableRefusal(res.status, raw)
               if (refusal) return refusal
               return errorResponse(res.status, `Loomy 上游返回 ${res.status}: ${raw.slice(0, 4096) || "无错误说明"}`)
             }
-            // the answer streams through as it came (OpenAI-shaped)
-            return res
+            // the answer streams through as it came (OpenAI-shaped); a 200
+            // that is a refusal in the vendor's envelope is said as one
+            return businessRefusal(res, now)
           },
         }
       },
       async usage(getAuth) {
+        let a
         try {
-          const a = await getAuth()
+          a = await getAuth()
           if (a?.type !== "oauth") return { error: "not signed in", signIn: "kept" }
           const payload = await tokenRequest("GET", "/api/v2/points/records?pageNo=1&pageSize=1&direction=debit&granularity=chat", a.access)
           const code = codeOf(payload)
-          if (AUTH_CODES.has(code)) return { error: "Loomy 登录态已失效，请重新登录", signIn: "expired" }
+          if (AUTH_CODES.has(code)) return { error: lapsedText(a, messageOf(payload) || `code=${code}`), signIn: "expired" }
           if (code !== OK) return { error: `积分查询失败：${messageOf(payload) || `code=${code}`}`, signIn: "kept" }
           const data = payload?.data?.data ?? payload?.data ?? {}
           const daily = toNum(data.dailyBalance)
@@ -572,7 +739,8 @@ export async function LoomyAuthPlugin({ client } = {}) {
           // "kept" here would leave a transient 401's lapse on forever)
           return { plan: NAME, user: a.name || a.accountId, windows }
         } catch (e) {
-          return { error: String(e?.message ?? e), signIn: e?.signIn === "expired" ? "expired" : "kept" }
+          if (e?.signIn === "expired") return { error: lapsedText(a, e.message), signIn: "expired" }
+          return { error: String(e?.message ?? e), signIn: "kept" }
         }
       },
       // the daily grant: the first login of the vendor's day refreshes the
@@ -635,25 +803,35 @@ export async function LoomyAuthPlugin({ client } = {}) {
         if (auth?.type !== "oauth" || !auth.access) return p.models
         try {
           const payload = await tokenRequest("GET", "/api/v1/models", auth.access)
-          if (codeOf(payload) && codeOf(payload) !== OK) return p.models
+          // a refusal in a 200 lists nothing: what was given (the static
+          // table at first) isn't the account's list, so magpie keeps the
+          // one it had and the models picked from it
+          if (codeOf(payload) && codeOf(payload) !== OK) return fellBack(p.models)
           const entries = Array.isArray(payload?.data) ? payload.data : []
           for (const entry of entries) {
             const m = catalogModel(entry)
             if (!m) continue
-            p.models[m.id] = m.config
+            p.models[m.id] = listedModel(p.models[m.id], m, entry)
           }
           return p.models
         } catch {
-          return p.models
+          return fellBack(p.models)
         }
       },
     },
   }
 }
 
+// fellBack marks a list that isn't the account's own (magpie's plugin
+// host reads Symbol.for("magpie.fellBack"))
+function fellBack(models) {
+  return Object.defineProperty(models, Symbol.for("magpie.fellBack"), { value: true, configurable: true })
+}
+
 // for tests
 export const _internal = {
   retryableRefusal,
+  businessRefusal,
   ID,
   NAME,
   STATIC_MODELS,

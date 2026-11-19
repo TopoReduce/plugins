@@ -103,7 +103,7 @@ test("--json prints the same snapshot and honours --private", () => {
   const cfg = tmp()
   mkdirSync(join(cfg, "magpie"), { recursive: true })
   writeFileSync(join(cfg, "magpie", "plugins.json"), JSON.stringify({
-    plugins: [{ spec: "@magpie-community/page-agent-office", options: { text: true, jumpRequest: { key: "claude|s1", session: "s1", at: Date.now() } } }],
+    plugins: [{ spec: "@jianmu-plugins/page-agent-office", options: { text: true, jumpRequest: { key: "claude|s1", session: "s1", at: Date.now() } } }],
   }))
   const envWithMagpie = { ...envFor(h), XDG_CONFIG_HOME: cfg }
   const r = Bun.spawnSync({ cmd: [process.execPath, script, "--json", "--hours", "1", "--private"], cwd: dir, env: envWithMagpie, stdout: "pipe", stderr: "pipe" })
@@ -119,7 +119,7 @@ test("the authenticated standalone page, bridge, live data and JSON options work
   try {
     const ping = await (await fetch(s.url + "api/ping")).json()
     expect(ping.name).toBe("agent-office")
-    expect(ping.version).toBe("0.3.5")
+    expect(ping.version).toBe("0.3.6")
     const page = await fetch(s.url)
     expect(page.status).toBe(200)
     expect(await page.text()).toContain('src="_magpie/bridge.js"')

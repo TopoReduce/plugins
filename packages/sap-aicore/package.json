@@ -33,11 +33,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/sap-aicore"
   },
   "bugs": {
-    "url": "https://github.com/TopoReduce/plugins/issues"
+    "url": "https://github.com/magpie-community/plugins/issues"
   },
   "scripts": {
     "test": "bun test"

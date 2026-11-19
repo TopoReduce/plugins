@@ -21,7 +21,7 @@ const RUNTIME = ["@agentclientprotocol/sdk", "ignore", "ws", "zod"]
 const BUNDLED = ["@tanstack/react-virtual", "@xterm/addon-fit", "@xterm/xterm", "clsx", "dompurify", "highlight.js", "lucide-react", "marked", "react", "react-dom", "zustand"]
 
 test("package.json: name, page, permissions and files", () => {
-  expect(pkg.name).toBe("@magpie-community/page-agent-console")
+  expect(pkg.name).toBe("@jianmu-plugins/page-agent-console")
   expect(pkg.type).toBe("module")
   expect(pkg.main).toBe("./index.mjs")
   expect(pkg.magpie.page.title).toBe("Agent Console")

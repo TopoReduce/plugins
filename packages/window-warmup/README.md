@@ -13,7 +13,7 @@ Window Warmup is a page plugin for [magpie](https://usemagpie.ai) that sends a s
 ## 安装
 
 ```sh
-magpie plugin add @magpie-community/page-window-warmup
+magpie plugin add @jianmu-plugins/page-window-warmup
 ```
 
 也可以在 magpie 插件页的搜索框里搜 `warmup` 或「窗口预热」找到它。装好后在侧边栏 Plugins 下出现 **Window Warmup**（窗口预热）标签页。页面界面的语言跟随 Magpie 本身（zh / zh-TW / en / ja），不单独设置。

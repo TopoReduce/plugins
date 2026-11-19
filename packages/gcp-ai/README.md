@@ -36,7 +36,7 @@ that is why; macOS has likewise not been tried with a real account.
 ## Install and sign in
 
 ```bash
-magpie plugin add @magpie-community/opencode-gcp-ai-auth
+magpie plugin add @jianmu-plugins/opencode-gcp-ai-auth
 ```
 
 Then click sign in on the **GCP AI** row, or run:

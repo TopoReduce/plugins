@@ -19,7 +19,7 @@ page for the five things Usage does not show:
 Everything else is convenience around those: daily and per-provider charts, 24-hour
 cache-hit and token curves, per-account detail for the remote side.
 
-Where [`@magpie-community/page-usage`](https://github.com/magpie-community/plugins/tree/main/packages/usage)
+Where [`@jianmu-plugins/page-usage`](https://github.com/magpie-community/plugins/tree/main/packages/usage)
 is a bridge-only glance at magpie's summary totals, this page is the full board. Where
 [`page-usage-tree`](https://github.com/magpie-community/plugins/tree/main/packages/page-usage-tree)
 drills provider → account → model, this one puts quotas, costs and quality on one screen.
@@ -83,7 +83,7 @@ gate.
 Requires Node 22+. Inside magpie (once the package is merged into the community registry):
 
 ```sh
-magpie plugin add @magpie-community/page-usage-board
+magpie plugin add @jianmu-plugins/page-usage-board
 ```
 
 Standalone, from a checkout or the npm package:

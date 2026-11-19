@@ -1,11 +1,11 @@
-# @magpie-community/agent-aider
+# @jianmu-plugins/agent-aider
 
 [Aider](https://aider.chat) as a magpie agent. magpie has no setup of its own
 for Aider; with this plugin it is on magpie's Agents page like the agents
 magpie ships with.
 
 ```sh
-magpie plugin add @magpie-community/agent-aider
+magpie plugin add @jianmu-plugins/agent-aider
 ```
 
 Then pick one of magpie's models in Aider's row. magpie writes into

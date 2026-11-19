@@ -37,7 +37,7 @@ test("uses the same offline Eta artwork for agent and installed-package discover
   expect(agent.icon).toBe(dataUri);
   expect(pkg.magpie.icon).toBe(dataUri);
   expect(pkg.magpie.name).toBe("Eta");
-  expect(pkg.name).toBe("@magpie-community/agent-eta");
+  expect(pkg.name).toBe("@jianmu-plugins/agent-eta");
   expect(pkg.magpie.summary.en).toBeTruthy();
   expect(pkg.magpie.summary.zh).toBeTruthy();
   // A pure agent must not be sent to the separate Bun/provider host.

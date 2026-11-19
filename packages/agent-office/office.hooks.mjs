@@ -32,7 +32,7 @@ const PREFIX = "globalThis.AgentOfficeLive = "
 const EVERY = 1500
 
 // the package's own name, so plugins.json's spec is found however it was
-// written: @magpie-community/page-agent-office, QingJ01/magpie-agent-office,
+// written: @jianmu-plugins/page-agent-office, QingJ01/magpie-agent-office,
 // a folder, or the short name alone
 let packageName = ""
 let packageOptions = {}

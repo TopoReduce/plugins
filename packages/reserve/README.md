@@ -1,8 +1,8 @@
-# @magpie-community/middleware-reserve
+# @jianmu-plugins/middleware-reserve
 
 Two routings for [magpie](https://usemagpie.ai) that keep something in reserve. Pick one for a provider's accounts or keys, or for a routing group's members, and magpie's gateway tries them in the order it gives.
 
-Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @magpie-community/middleware-reserve`. While it is on, every routing picker offers `reserve/ceiling` and `reserve/accounts-first`. From the command line, a group takes one with:
+Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @jianmu-plugins/middleware-reserve`. While it is on, every routing picker offers `reserve/ceiling` and `reserve/accounts-first`. From the command line, a group takes one with:
 
 ```sh
 magpie group set <id> routing=reserve/ceiling

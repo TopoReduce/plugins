@@ -1,4 +1,4 @@
-# @magpie-community/opencode-catpaw-auth
+# @jianmu-plugins/opencode-catpaw-auth
 
 [OpenCode](https://opencode.ai) / [magpie](https://usemagpie.ai) provider 插件：**妙手（CatPaw，美团 `ai.catpaw.meituan.com`）**——登录、模型清单、聊天转发、余额查询。
 
@@ -7,7 +7,7 @@
 ## 安装
 
 ```
-magpie plugin add @magpie-community/opencode-catpaw-auth
+magpie plugin add @jianmu-plugins/opencode-catpaw-auth
 magpie plugin login catpaw     # 选「网页登录」/「妙手桌面端登录态」/「手动粘贴 token」
 ```
 

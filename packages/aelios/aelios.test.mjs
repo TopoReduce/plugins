@@ -74,7 +74,7 @@ const anthropicTool = () => ({ model: "claude-opus-4-5", stream: true, messages:
 
 test("the shipped hook and settings service use separate host entry points", async () => {
   const pkg = await Bun.file(new URL("./package.json", import.meta.url)).json()
-  expect(pkg.name).toBe("@magpie-community/gateway-aelios")
+  expect(pkg.name).toBe("@jianmu-plugins/gateway-aelios")
   expect(pkg.main).toBe("./service.mjs")
   expect(pkg.magpie.page.file).toBe("page/settings.html")
   expect(pkg.magpie.page.service).toEqual({ port: 3481, option: "port" })

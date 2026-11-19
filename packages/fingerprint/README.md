@@ -24,7 +24,7 @@ Install **Fingerprint** from **Plugins → Discover**, or use the CLI. Requires
 a current Magpie release with `page.service` support and Bun 1.4.2+:
 
 ```sh
-magpie plugin add @magpie-community/page-fingerprint
+magpie plugin add @jianmu-plugins/page-fingerprint
 ```
 
 Open **Fingerprint** in the sidebar, or choose **Fingerprint** from a provider's menu.

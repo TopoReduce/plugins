@@ -22,16 +22,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/opendesign"
   },
   "magpie": {
     "icon": "https://open-design.ai/favicon.svg"
   },
-  "exports": {
-    ".": "./opencode2.mjs"
-  },
-  "jianmu": {
-    "icon": "https://open-design.ai/favicon.svg"
-  }
+  "exports": { ".": "./opencode2.mjs" }
 }

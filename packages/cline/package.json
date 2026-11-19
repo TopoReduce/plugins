@@ -4,26 +4,9 @@
   "description": "Cline (cline.bot) on your own account — usage billing, ClinePass and the free models — in OpenCode and magpie",
   "type": "module",
   "main": "./opencode.mjs",
-  "exports": {
-    ".": "./opencode2.mjs"
-  },
-  "files": [
-    "index.mjs",
-    "opencode.mjs",
-    "opencode2.mjs",
-    "README.md"
-  ],
-  "keywords": [
-    "opencode",
-    "opencode-plugin",
-    "magpie",
-    "cline",
-    "clinepass"
-  ],
+  "exports": { ".": "./opencode2.mjs" },
+  "files": ["index.mjs", "opencode.mjs", "opencode2.mjs", "README.md"],
+  "keywords": ["opencode", "opencode-plugin", "magpie", "cline", "clinepass"],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
-    "directory": "packages/cline"
-  }
+  "repository": { "type": "git", "url": "git+https://github.com/magpie-community/plugins.git", "directory": "packages/cline" }
 }

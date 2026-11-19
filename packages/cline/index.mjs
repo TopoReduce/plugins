@@ -1157,7 +1157,7 @@ export const ClinePlugin = async ({ client } = {}, options = {}) => {
 									errorResponse({
 										status: 403,
 										message:
-												`Cline refused the providerOptions pin (HTTP 403: client-supplied "providerOptions" model routing is not supported). Turn off the plugin's pinUpstream option (in magpie: magpie plugin options @magpie-community/opencode-cline-auth '{"pinUpstream": false}'; in OpenCode: the plugin's or provider.cline's options) and let Cline route the model itself; glm-5.3-flash still works, but Cline ignores its top-level provider field, so it is not actually pinned.`,
+												`Cline refused the providerOptions pin (HTTP 403: client-supplied "providerOptions" model routing is not supported). Turn off the plugin's pinUpstream option (in magpie: magpie plugin options @jianmu-plugins/opencode-cline-auth '{"pinUpstream": false}'; in OpenCode: the plugin's or provider.cline's options) and let Cline route the model itself; glm-5.3-flash still works, but Cline ignores its top-level provider field, so it is not actually pinned.`,
 									}),
 									renewed(cred),
 								)

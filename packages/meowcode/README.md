@@ -1,4 +1,4 @@
-# @magpie-community/agent-meowcode
+# @jianmu-plugins/agent-meowcode
 
 [MeowCode](https://github.com/MuLiuSaMa/MeowCode) as a magpie agent.
 

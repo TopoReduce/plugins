@@ -1,4 +1,4 @@
-# @magpie-community/opencode-cline-auth
+# @jianmu-plugins/opencode-cline-auth
 
 Cline (cline.bot) on your own Cline account: the models Cline's gateway
 serves — usage-billed models, ClinePass's and Cline's free models alike.
@@ -107,7 +107,7 @@ again without a plugin change. A request with `provider` or
 
 The option is off by default. Turn it on (or back off, with `false`):
 
-- in magpie: `magpie plugin options @magpie-community/opencode-cline-auth
+- in magpie: `magpie plugin options @jianmu-plugins/opencode-cline-auth
   '{"pinUpstream": true}'`, which keeps it in magpie's plugins.json. The
   provider editor's Upstream tick ("DeepSeek and GLM models only from their
   makers' own APIs") is magpie's own setting and never sets this option;
@@ -115,7 +115,7 @@ The option is off by default. Turn it on (or back off, with `false`):
   for the tick either;
 - in OpenCode: `"provider": {"cline": {"options": {"pinUpstream": true}}}` in
   `opencode.json`, or the plugin's own options:
-  `"plugin": [["@magpie-community/opencode-cline-auth", {"pinUpstream": true}]]`.
+  `"plugin": [["@jianmu-plugins/opencode-cline-auth", {"pinUpstream": true}]]`.
 
 ## Models
 

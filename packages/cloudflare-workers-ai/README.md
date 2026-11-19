@@ -1,8 +1,8 @@
-# @magpie-community/opencode-cloudflare-workers-ai-auth
+# @jianmu-plugins/opencode-cloudflare-workers-ai-auth
 
 English | [简体中文](README.zh-CN.md) | [日本語](README.ja.md)
 
-[![npm version](https://img.shields.io/badge/npm%20version-0.0.4-EA4335.svg)](https://www.npmjs.com/package/@magpie-community/opencode-cloudflare-workers-ai-auth)
+[![npm version](https://img.shields.io/badge/npm%20version-0.0.4-EA4335.svg)](https://www.npmjs.com/package/@jianmu-plugins/opencode-cloudflare-workers-ai-auth)
 [![License: MIT](https://img.shields.io/badge/License-MIT-FBBC05.svg)](https://opensource.org/licenses/MIT)
 
 A provider plugin for [OpenCode](https://opencode.ai) 1.x and
@@ -32,7 +32,7 @@ informational; only a confirmed Free plan stops routing when it is spent.
 ## Install in magpie
 
 ```sh
-magpie plugin add @magpie-community/opencode-cloudflare-workers-ai-auth   # from npm
+magpie plugin add @jianmu-plugins/opencode-cloudflare-workers-ai-auth   # from npm
 magpie plugin add /path/to/folder                                        # local copy
 ```
 
@@ -76,7 +76,7 @@ Models are named `cloudflare-workers-ai/@cf/<org>/<model>` — the same IDs
 `opencode.json`:
 
 ```json
-{ "plugin": ["@magpie-community/opencode-cloudflare-workers-ai-auth"] }
+{ "plugin": ["@jianmu-plugins/opencode-cloudflare-workers-ai-auth"] }
 ```
 
 then `opencode auth login` → Cloudflare Workers AI (same two fields).

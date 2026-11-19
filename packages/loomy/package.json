@@ -1,12 +1,10 @@
 {
   "name": "@jianmu-plugins/opencode-loomy-auth",
-  "version": "0.1.6",
+  "version": "0.1.12",
   "description": "OpenCode & Magpie provider plugin for Loomy (讯飞, loomyad.xunfei.cn): SMS sign-in, chat, models, the two point wallets and the daily first-login grant",
   "type": "module",
   "main": "./opencode.mjs",
-  "exports": {
-    ".": "./opencode2.mjs"
-  },
+  "exports": { ".": "./opencode2.mjs" },
   "files": [
     "index.mjs",
     "opencode.mjs",
@@ -24,7 +22,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/loomy"
   }
 }

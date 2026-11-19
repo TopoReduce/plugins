@@ -3,7 +3,7 @@
 Use the ordinary **Kimi desktop Work subscription** as a provider in Magpie or OpenCode. This is separate from Kimi Code's subscription/API and from the Kimi agent package, which sends Kimi's inference in the opposite direction to Magpie.
 
 ```sh
-magpie plugin add @magpie-community/opencode-kimi-work-auth
+magpie plugin add @jianmu-plugins/opencode-kimi-work-auth
 magpie plugin login kimi-work
 ```
 
@@ -18,7 +18,7 @@ Request-body buffering for schema conversion also follows the caller's abort sig
 The [Kimi desktop agent](../kimi-desktop/README.md) points the ordinary Kimi desktop app's Work page at a model selected in Magpie, so Work runs an external model instead of a Kimi one. Install that agent package for this direction:
 
 ```sh
-magpie plugin add @magpie-community/agent-kimi-desktop
+magpie plugin add @jianmu-plugins/agent-kimi-desktop
 ```
 
 On Magpie's Agents page select **Kimi**, pick an external model and connect, then use Kimi's **Work** page. The model is selected in Magpie, so Kimi's native model menu can still show its official label. Kimi's sign-in and the desktop's own tool authorization are kept as they are; only inference goes to the selected external service. This provider and that agent are independent packages and can be installed together.
@@ -29,7 +29,7 @@ The desktop agent's [primary and secondary model settings](../kimi-desktop/READM
 
 The account's models and reasoning options come from the two lists Kimi's desktop reads: Work's model menu, `kimi.gateway.config.v1.ConfigService/DescribeKimiWorkConfig` on `www.kimi.com` (asked with the desktop's web sign-in), and `https://agent-gw.kimi.com/coding/v1/models`. The menu lists the models a membership tier adds (K3.1 Pro on the 99 plan) that `/models` leaves out; since 0.1.7 both are listed, the menu's names first, and either one failing leaves the other. Since 0.1.9 the menu is asked with the headers the desktop sends it (`x-msh-platform` `mac` or `windows`, `x-msh-version`, `R-Timezone`): asked without them, Kimi answers with the web menu, which has no K3.1 Pro (`k3d1-agent`). Since 0.1.10, when the menu can't be had with the web sign-in (Kimi's file holds a web sign-in www.kimi.com no longer takes, answered 401, or another failure or an empty reply), it is asked again without one, as the desktop asks it before signing in, which gives the same desktop menu; each failure is written to Magpie's log, without the token. Chat completions, streaming, tool calls and cancellation use the same Work gateway, with the headers Kimi's own Work client sends it (0.1.8). It never uses `api.kimi.com` or a Kimi Code API key.
 
-Version 0.1.4 preserves the calling agent's shared instructions, prompts, history and tools unchanged. Since 0.1.5 one exception: tool schemas Kimi's "moonshot flavored json schema" check refuses are rewritten to an equivalent it takes (#287). A `$ref` beside a `type`, as zod writes a schema derived from a reused one, gets its target written in; a `type` beside an `anyOf` is left out; an untyped `enum`, `const` or `$ref` target gets the type its values or keywords say. A request with none of these goes byte for byte. Instructions, MCP and skills are assigned to that agent in Magpie's Library; the provider does not create a second target or enable resources on its own. The ordinary Kimi agent's Library support starts at `@magpie-community/agent-kimi-desktop` 0.1.1.
+Version 0.1.4 preserves the calling agent's shared instructions, prompts, history and tools unchanged. Since 0.1.5 one exception: tool schemas Kimi's "moonshot flavored json schema" check refuses are rewritten to an equivalent it takes (#287). A `$ref` beside a `type`, as zod writes a schema derived from a reused one, gets its target written in; a `type` beside an `anyOf` is left out; an untyped `enum`, `const` or `$ref` target gets the type its values or keywords say. A request with none of these goes byte for byte. Instructions, MCP and skills are assigned to that agent in Magpie's Library; the provider does not create a second target or enable resources on its own. The ordinary Kimi agent's Library support starts at `@jianmu-plugins/agent-kimi-desktop` 0.1.1.
 
 An inference HTTP 401 marks the provider sign-in as expired (`kimi_work_login_expired`). Sign in to desktop Work if needed, then **reconnect Kimi Work in Magpie** (or run `magpie plugin login kimi-work`); signing in to the desktop alone does not reconnect the provider. A 403 whose body says the allowance is spent (Kimi's "You've reached your usage limit for this billing cycle", `resource_exhausted` "insufficient balance") goes to Magpie as a 429 with Kimi's body and headers, so Magpie rests that account until its allowance is back and asks another one (#465); any other 403 passes through as a 403. Other HTTP errors, including 429 and 5xx, pass through unchanged with Kimi's status, headers, body and Retry-After. This preserves the distinction between concurrency limits and exhausted allowance, including any upstream reset details. Network failures use `kimi_work_connection_failed` and retain the underlying cause code or fetch error message for diagnosis. Rate limits and service failures do not invalidate the desktop sign-in. Cancellation stays cancellation. No automatic retry sends a conversation twice or falls back to Code.
 

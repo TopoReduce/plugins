@@ -1,4 +1,4 @@
-# @magpie-community/agent-opencodereview
+# @jianmu-plugins/agent-opencodereview
 
 [Open Code Review](https://github.com/alibaba/open-code-review) (`ocr`),
 Alibaba's AI code review CLI, as a magpie agent. With this plugin it is on
@@ -10,7 +10,7 @@ plugin is not affiliated with or endorsed by Alibaba. The icon is Open Code
 Review's own logo, which magpie references by URL.
 
 ```sh
-magpie plugin add @magpie-community/agent-opencodereview
+magpie plugin add @jianmu-plugins/agent-opencodereview
 ```
 
 Then pick one of magpie's models in Open Code Review's row. magpie writes into

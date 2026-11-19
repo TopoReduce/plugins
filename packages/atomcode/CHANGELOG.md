@@ -3,6 +3,24 @@
 All notable changes to this project are documented here. The format follows
 Keep a Changelog and the project uses semantic versioning.
 
+## 0.3.1 - 2026-11-15
+
+### Fixed
+
+- `glm5.3-flash` (and the other reasoning model groups the gateway treats the
+  same way, e.g. `lumen-alpha`) answered 403 "access disabled by request
+  policy" on every request: the upstream now requires an
+  `x-atomcode-session-id` header on that group, and no signed request from
+  this plugin carried one.
+- The new `chat.headers` hook fills the header from magpie's own
+  per-conversation session id (`input.sessionID`), the same scope the official
+  client sends. On hosts or paths where that hook does not run (OpenCode entry
+  points), the loader falls back to one stable UUID per signed-in account.
+- Verified against the live gateway: the identical signed body passes with the
+  header and fails without it.
+- Ported from upstream `aqiu817/magpie-atomcode` (2026-11-15), where it was
+  diagnosed and verified with three controlled probes.
+
 ## 0.3.0 - 2026-11-03
 
 ### Added
@@ -24,7 +42,7 @@ Keep a Changelog and the project uses semantic versioning.
 ### Changed
 
 - The package now ships from `magpie-community/plugins` as
-  `@magpie-community/opencode-atomcode-auth`, with separate OpenCode 1.x and
+  `@jianmu-plugins/opencode-atomcode-auth`, with separate OpenCode 1.x and
   2.x entry points.
 - Minimum Magpie version is now `0.1.2629`, which provides native provider
   switches and page services.
@@ -94,7 +112,7 @@ Keep a Changelog and the project uses semantic versioning.
 ### Changed
 
 - Package name and layout are migration-ready for
-  `@magpie-community/opencode-atomcode-auth` under
+  `@jianmu-plugins/opencode-atomcode-auth` under
   `magpie-community/plugins/packages/atomcode`.
 - Minimum Magpie version is now `0.1.2563`; OpenCode loading remains supported
   but is explicitly experimental pending a real host-contract test.

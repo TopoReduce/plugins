@@ -40,7 +40,7 @@ test("no mock content committed", () => {
 test("package declares page + NOTICE", () => {
   assert.equal(pkg.magpie.page.file, "page/index.html");
   assert.ok(pkg.files.includes("NOTICE"));
-  if (String(pkg.name).startsWith("@magpie-community/")) assert.equal(pkg.repository.directory, "packages/free-tokens");
+  if (String(pkg.name).startsWith("@jianmu-plugins/")) assert.equal(pkg.repository.directory, "packages/free-tokens");
 });
 
 test("app.js delegates click decisions to view.actionOf", () => {

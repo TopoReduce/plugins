@@ -16,7 +16,7 @@ The built-in OpenAI provider serves Chat/Responses; this provider calls
 Install a released community package through Magpie:
 
 ```sh
-magpie plugin add @magpie-community/opencode-openai-decisions-auth
+magpie plugin add @jianmu-plugins/opencode-openai-decisions-auth
 magpie plugin login openai-decisions
 ```
 
@@ -187,7 +187,7 @@ MIT. Not affiliated with OpenAI.
 安装社区发行包并使用 OpenAI API key 登录：
 
 ```sh
-magpie plugin add @magpie-community/opencode-openai-decisions-auth
+magpie plugin add @jianmu-plugins/opencode-openai-decisions-auth
 magpie plugin login openai-decisions
 ```
 

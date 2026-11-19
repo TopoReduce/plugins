@@ -1,4 +1,4 @@
-# @magpie-community/tools-specstream
+# @jianmu-plugins/tools-specstream
 
 [SpecStream](https://specstream.ai) Search API and Extract API for every agent magpie connects, and as a web search API in Settings > Models > Web search.
 
@@ -6,7 +6,7 @@
 - `extract`: `POST https://api.specstream.ai/v1/extract`, up to 20 URLs a call, $0.80 per 1,000 pages. Returns each page's text as markdown or plain text, with its title and the date it says it was published. A page with no text is not charged.
 
 ```sh
-magpie plugin add @magpie-community/tools-specstream
+magpie plugin add @jianmu-plugins/tools-specstream
 ```
 
 Set `SPECSTREAM_API_KEY` for the tools (a key from [Agents & API](https://specstream.ai/workspace/agents?tab=keys) in a SpecStream workspace). The web search entry uses only the key magpie keeps for it, asks for the `count` magpie passes, and trims the sources to it.

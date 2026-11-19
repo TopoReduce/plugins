@@ -8,11 +8,11 @@ import path, { join, resolve } from "node:path";
 
 /**
  * 本插件在 Magpie 配置目录里的安装位置特征（moduleDir 的末尾几段）：
- * 现在的作用域包名装成 node_modules/@magpie-community/page-window-warmup/dist；
+ * 现在的作用域包名装成 node_modules/@jianmu-plugins/page-window-warmup/dist；
  * 旧独立包名（≤0.3.7）还可能留在 node_modules/magpie-window-warmup/dist。
  */
 const PLUGIN_DIR_TAILS = [
-  ["plugins", "node_modules", "@magpie-community", "page-window-warmup", "dist"],
+  ["plugins", "node_modules", "@jianmu-plugins", "page-window-warmup", "dist"],
   ["plugins", "node_modules", "magpie-window-warmup", "dist"],
 ];
 /** providers.json 解析失败的固定文案：原异常信息可能夹带文件内容（含 key 原文），不能透传 */

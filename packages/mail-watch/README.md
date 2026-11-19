@@ -1,8 +1,8 @@
-# @magpie-community/hooks-mail-watch
+# @jianmu-plugins/hooks-mail-watch
 
 Email alerts from [magpie](https://usemagpie.ai)'s gateway: a provider error the user should know about, a subscription quota close to or past its line — sent as plain mail through your own SMTP account, with your own words in it.
 
-Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @magpie-community/hooks-mail-watch`. It has no page and no tab; it watches from beside the gateway.
+Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @jianmu-plugins/hooks-mail-watch`. It has no page and no tab; it watches from beside the gateway.
 
 ## What it watches
 

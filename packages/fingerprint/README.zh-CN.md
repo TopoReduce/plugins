@@ -18,7 +18,7 @@
 在 Magpie 的 **Plugins → Discover** 中安装 **Fingerprint**，也可执行：
 
 ```sh
-magpie plugin add @magpie-community/page-fingerprint
+magpie plugin add @jianmu-plugins/page-fingerprint
 ```
 
 需要支持 `page.service` 的当前 Magpie 版本和 Bun 1.4.2+。启用后，从侧栏「模型指纹」或 provider 菜单「检测指纹」进入。点击开始会为每个模型发送三条采样请求，消耗对应通道的额度。

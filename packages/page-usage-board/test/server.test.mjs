@@ -671,7 +671,7 @@ test('the board page ships both languages', () => {
 
 test('package metadata matches the community page spec', () => {
   const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(pkg.name, '@magpie-community/page-usage-board');
+  assert.equal(pkg.name, '@jianmu-plugins/page-usage-board');
   assert.equal(pkg.license, 'MIT');
   assert.ok(pkg.files.includes('LICENSE'));
   assert.ok(pkg.scripts.test);

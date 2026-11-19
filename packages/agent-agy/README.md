@@ -1,9 +1,9 @@
-# @magpie-community/agent-agy
+# @jianmu-plugins/agent-agy
 
 [Antigravity CLI](https://antigravity.google) (`agy`) as a magpie agent.
 
 ```sh
-magpie plugin add @magpie-community/agent-agy
+magpie plugin add @jianmu-plugins/agent-agy
 ```
 
 Pick one of magpie's models in the Antigravity CLI row. magpie writes a file

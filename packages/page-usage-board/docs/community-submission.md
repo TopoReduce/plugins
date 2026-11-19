@@ -16,7 +16,7 @@ things:
 
 ```json
 {
-  "package": "@magpie-community/page-usage-board",
+  "package": "@jianmu-plugins/page-usage-board",
   "name": "Usage Board",
   "kind": "page",
   "community": true,

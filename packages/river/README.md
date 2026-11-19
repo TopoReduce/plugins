@@ -45,7 +45,7 @@ numbers; spend and balance live in the [River Console](https://console.river.ai/
 ## Install
 
 ```sh
-magpie plugin add @magpie-community/opencode-river-auth
+magpie plugin add @jianmu-plugins/opencode-river-auth
 magpie plugin login river
 magpie provider test river
 ```

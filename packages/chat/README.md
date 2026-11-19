@@ -1,4 +1,4 @@
-# @magpie-community/page-chat
+# @jianmu-plugins/page-chat
 
 A chat page in [magpie](https://usemagpie.ai)'s window. Talk to magpie's own models with your MCP servers, instructions and skills, with images and LaTeX, without starting an agent.
 
@@ -11,7 +11,7 @@ Made by **Magic_zero** ([Magiczerowxy](https://github.com/Magiczerowxy)), from [
 From magpie's **Plugins › Discover**, or:
 
 ```sh
-magpie plugin add @magpie-community/page-chat
+magpie plugin add @jianmu-plugins/page-chat
 ```
 
 It then has a tab, **Chat** (对话, 對話, チャット), under Plugins in the sidebar.

@@ -1,11 +1,11 @@
-# @magpie-community/agent-kilo
+# @jianmu-plugins/agent-kilo
 
 [Kilo Code](https://kilo.ai) as a magpie agent. magpie has no setup of its own
 for Kilo Code; with this plugin it is on magpie's Agents page like the agents
 magpie ships with.
 
 ```sh
-magpie plugin add @magpie-community/agent-kilo
+magpie plugin add @jianmu-plugins/agent-kilo
 ```
 
 Then pick one of magpie's models in Kilo Code's row. Kilo Code is a fork of

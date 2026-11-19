@@ -53,7 +53,7 @@ test("community package entries use the provider package name and an HTTPS/data 
   const exports = await import("../index.mjs");
   assert.deepEqual(Object.keys(exports), ["OpenAIDecisionsPlugin"]);
   const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url)));
-  assert.equal(packageJson.name, "@magpie-community/opencode-openai-decisions-auth");
+  assert.equal(packageJson.name, "@jianmu-plugins/opencode-openai-decisions-auth");
   assert.match(packageJson.magpie.icon, /^(https:\/\/|data:image\/)/);
   assert.equal(packageJson.main, "./opencode.mjs");
   const legacy = await import("../opencode.mjs");

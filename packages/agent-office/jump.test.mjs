@@ -309,7 +309,7 @@ fi
       plugins: [
         { spec: "other-plugin", options: { apiKey: "secret-api-key" } },
         {
-          spec: "@magpie-community/page-agent-office",
+          spec: "@jianmu-plugins/page-agent-office",
           options: {
             text: true,
             jumpRequest: {
@@ -415,7 +415,7 @@ fi
     run(at) {
       writeFileSync(join(magpieCfg, "plugins.json"), JSON.stringify({
         plugins: [{
-          spec: "@magpie-community/page-agent-office",
+          spec: "@jianmu-plugins/page-agent-office",
           options: { jumpRequest: { key: "claude|11111111-2222-3333-4444-555555555555", session: "11111111-2222-3333-4444-555555555555", preferredHostId: "herdr-cli", at } },
         }],
       }), { mode: 0o600 })

@@ -135,7 +135,7 @@ permitted: …`）。magpie 对这种错误的处理是**问组里的下一个�
 ## 安装
 
 ```sh
-magpie plugin add @magpie-community/opencode-inkstone-auth
+magpie plugin add @jianmu-plugins/opencode-inkstone-auth
 ```
 
 然后在 magpie 里给 `书生·端砚` 登录。

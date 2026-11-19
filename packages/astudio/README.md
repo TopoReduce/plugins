@@ -1,4 +1,4 @@
-# @magpie-community/opencode-astudio-auth
+# @jianmu-plugins/opencode-astudio-auth
 
 把 **AStudio（科大讯飞 Astron Studio）** 的账号额度接入 [magpie](https://usemagpie.ai/) 与 [OpenCode](https://opencode.ai/)：浏览器登录或复用桌面端登录态，直连云端模型网关（OpenAI Responses 协议），agent 以 `astudio/<model>` 使用它的模型；支持每日登录积分自动签到、积分余额与到期时间显示，每个账号各占账号池一格。
 
@@ -82,7 +82,7 @@ AStudio 有「每日登录积分」：账号面 `client-popups/pending` 里的 `
 ## 安装与开发
 
 ```
-magpie plugin add @magpie-community/opencode-astudio-auth
+magpie plugin add @jianmu-plugins/opencode-astudio-auth
 magpie plugin login astudio                 # 选「浏览器登录」「读取 AStudio 桌面端登录态」或「粘贴 modelBearerToken」
 magpie provider test astudio spark-x2.6-4b  # 限免模型，验收一发
 ```

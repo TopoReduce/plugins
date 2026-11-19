@@ -365,7 +365,7 @@ describe("request and host compatibility", () => {
 
   test("OpenCode entrypoints expose plugins and keep optional fields optional", async () => {
     expect(Object.keys(legacy)).toEqual(["GumloopPlugin"])
-    expect(modern.id).toBe("@magpie-community/opencode-gumloop-auth")
+    expect(modern.id).toBe("@jianmu-plugins/opencode-gumloop-auth")
     expect(typeof modern.setup).toBe("function")
     const p = await legacy.GumloopPlugin()
     const fields = fieldsOf(p.auth.methods[0].prompts)

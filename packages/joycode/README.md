@@ -7,7 +7,7 @@
 ## 安装
 
 ```bash
-magpie plugin add @magpie-community/opencode-joycode-auth
+magpie plugin add @jianmu-plugins/opencode-joycode-auth
 ```
 
 ```bash

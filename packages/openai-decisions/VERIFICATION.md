@@ -10,7 +10,7 @@ The revision addresses the six requests in
 - Per-question refusals are omitted, while ordinary answers and usage are retained.
   Duplicate, missing and unrequested answers still fail validation.
 - Omitted, null and blank System One instructions receive a non-empty default.
-- The package is `@magpie-community/opencode-openai-decisions-auth`, with an
+- The package is `@jianmu-plugins/opencode-openai-decisions-auth`, with an
   inline SVG data icon, a single-line registry entry and English code comments.
 - README, registry summaries, changelog and notice reflect the API-key-only
   behavior. Third-party provider repository references are removed.

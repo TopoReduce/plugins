@@ -2,7 +2,7 @@
 
 <img src="https://raw.githubusercontent.com/webkubor/fovea/main/brand/assets/banner.svg" alt="fovea — keep the recent window sharp" width="820"/>
 
-# @magpie-community/middleware-fovea
+# @jianmu-plugins/middleware-fovea
 
 **magpie 网关中间件：最近窗口看得清，之前的旧历史只带轮廓。**
 
@@ -38,7 +38,7 @@
 ## ⚡ 30 秒上手
 
 ```sh
-magpie plugin add @magpie-community/middleware-fovea
+magpie plugin add @jianmu-plugins/middleware-fovea
 magpie plugin options fovea '{"state_marker":"<!-- fovea:state -->"}'
 ```
 

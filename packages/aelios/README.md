@@ -58,7 +58,7 @@ provider. It needs **Magpie 0.1.1273 or newer** and Bun; from **Magpie
 ## Install and configure
 
 ```sh
-magpie plugin add @magpie-community/gateway-aelios
+magpie plugin add @jianmu-plugins/gateway-aelios
 ```
 
 Then open **Plugins › Aelios** in Magpie. On first use, enter the server URL

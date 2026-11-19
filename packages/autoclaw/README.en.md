@@ -1,4 +1,4 @@
-# @magpie-community/opencode-autoclaw-auth
+# @jianmu-plugins/opencode-autoclaw-auth
 
 [中文](README.md) | English
 
@@ -24,7 +24,7 @@ Both providers support magpie's multi-account pools, failover, automatic token r
 ## Signing in
 
 ```sh
-magpie plugin add @magpie-community/opencode-autoclaw-auth
+magpie plugin add @jianmu-plugins/opencode-autoclaw-auth
 magpie plugin login autoclaw                   # Google / z.ai web sign-in
 magpie plugin login autoclaw-cn                # phone SMS
 magpie provider test autoclaw zai_auto
@@ -84,9 +84,9 @@ The legacy path has **two switches** (plugin options first, config file fallback
 
 ```sh
 # Channel 1: plugin options (magpie CLI)
-magpie plugin options @magpie-community/opencode-autoclaw-auth '{"signin": false}'        # master off
-magpie plugin options @magpie-community/opencode-autoclaw-auth '{"signinHour": 8}'        # only 8:00–8:59
-magpie plugin options @magpie-community/opencode-autoclaw-auth '{"signinOnUsage": true}'  # sign on quota reads / refreshes
+magpie plugin options @jianmu-plugins/opencode-autoclaw-auth '{"signin": false}'        # master off
+magpie plugin options @jianmu-plugins/opencode-autoclaw-auth '{"signinHour": 8}'        # only 8:00–8:59
+magpie plugin options @jianmu-plugins/opencode-autoclaw-auth '{"signinOnUsage": true}'  # sign on quota reads / refreshes
 
 # Channel 2: config file ~/.config/magpie/autoclaw.json (hot-read)
 cat > ~/.config/magpie/autoclaw.json <<'EOF'

@@ -1,4 +1,4 @@
-# @magpie-community/agent-junie
+# @jianmu-plugins/agent-junie
 
 Junie CLI through Magpie's OpenAI-compatible gateway, without LiteLLM or a
 background plugin runtime. This follows the community Cowork package: an
@@ -9,18 +9,18 @@ ordinary agent module plus an explicit catalog seed script.
 Install from Magpie's Plugins tab, or with the CLI:
 
 ```sh
-magpie plugin add @magpie-community/agent-junie
+magpie plugin add @jianmu-plugins/agent-junie
 ```
 
 After installation, `seed.mjs` is at
-`~/.config/magpie/plugins/node_modules/@magpie-community/agent-junie/seed.mjs`.
+`~/.config/magpie/plugins/node_modules/@jianmu-plugins/agent-junie/seed.mjs`.
 If `XDG_CONFIG_HOME` is set, replace `~/.config` with that directory.
 The seed command requires Node.js 18 or later. With Junie closed, connect a
 model and seed the catalog before starting Junie:
 
 ```sh
 magpie junie <provider/model>
-JUNIE_SEED="${XDG_CONFIG_HOME:-$HOME/.config}/magpie/plugins/node_modules/@magpie-community/agent-junie/seed.mjs"
+JUNIE_SEED="${XDG_CONFIG_HOME:-$HOME/.config}/magpie/plugins/node_modules/@jianmu-plugins/agent-junie/seed.mjs"
 node "$JUNIE_SEED" --eco on
 junie
 ```

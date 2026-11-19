@@ -69,7 +69,7 @@ test("connect gives zycode the gateway and its own key", () => {
 
 test("declares a plain agent package with a host part and no dependencies", () => {
   const pkg = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"))
-  expect(pkg.name).toBe("@magpie-community/agent-zycode")
+  expect(pkg.name).toBe("@jianmu-plugins/agent-zycode")
   expect(pkg.magpie.agent).toBe("./zycode.agent.js")
   expect(pkg.main).toBe("./index.mjs")
   expect(pkg.dependencies).toBeUndefined()

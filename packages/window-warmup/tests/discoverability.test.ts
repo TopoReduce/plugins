@@ -80,7 +80,7 @@ describe("registry.json 收录", () => {
 
 describe("包契约（magpie 宿主与社区仓库约定）", () => {
   test("包名、入口、仓库目录", () => {
-    expect(pkg.name).toBe("@magpie-community/page-window-warmup");
+    expect(pkg.name).toBe("@jianmu-plugins/page-window-warmup");
     expect(pkg.repository.directory).toBe("packages/window-warmup");
     expect(pkg.main === undefined || existsSync(join(pkgDir, pkg.main))).toBe(true);
   });

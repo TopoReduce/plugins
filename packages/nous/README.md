@@ -1,4 +1,4 @@
-# @magpie-community/opencode-nous-auth
+# @jianmu-plugins/opencode-nous-auth
 
 Signs in to [Nous Portal](https://portal.nousresearch.com) with its OAuth
 Device Authorization flow and sends model requests in
@@ -10,7 +10,7 @@ Device Authorization flow and sends model requests in
 Once the package is available from magpie's plugin registry:
 
 ```sh
-magpie plugin add @magpie-community/opencode-nous-auth
+magpie plugin add @jianmu-plugins/opencode-nous-auth
 magpie plugin login nous-portal
 ```
 
@@ -19,7 +19,7 @@ approve the code there; finish any CAPTCHA in your browser. The plugin polls
 for approval and completes sign-in without a local callback server.
 Hermes Agent does not need to be installed or running.
 
-In OpenCode, add `"@magpie-community/opencode-nous-auth"` to the `plugin`
+In OpenCode, add `"@jianmu-plugins/opencode-nous-auth"` to the `plugin`
 array in `opencode.json`, then run `opencode auth login`.
 
 The flow uses Nous Portal's `/api/oauth/device/code` and `/api/oauth/token`

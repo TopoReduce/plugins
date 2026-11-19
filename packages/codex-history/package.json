@@ -19,17 +19,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/codex-history"
   },
   "magpie": {
-    "middleware": "./codex-history.middleware.js",
-    "options": {
-      "providers": {},
-      "aliases": {}
-    }
-  },
-  "jianmu": {
     "middleware": "./codex-history.middleware.js",
     "options": {
       "providers": {},

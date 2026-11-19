@@ -16,7 +16,7 @@ test("is published as a repository tagged magpie-plugin", () => {
 
 // The community's listing: name and where it lives (PUBLISHING.md, route B).
 test("is named and placed as a community page package", () => {
-  assert.equal(pkg.name, "@magpie-community/page-usage-tree");
+  assert.equal(pkg.name, "@jianmu-plugins/page-usage-tree");
   assert.equal(pkg.repository.url, "git+https://github.com/magpie-community/plugins.git");
   assert.equal(pkg.repository.directory, "packages/page-usage-tree");
 });

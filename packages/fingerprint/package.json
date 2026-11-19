@@ -74,11 +74,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/fingerprint"
   },
   "bugs": {
-    "url": "https://github.com/TopoReduce/plugins/issues"
+    "url": "https://github.com/magpie-community/plugins/issues"
   },
   "author": "KaranocaVe (https://github.com/KaranocaVe)",
   "homepage": "https://github.com/KaranocaVe/magpie-fingerprint#readme",
@@ -93,38 +93,5 @@
   "publishConfig": {
     "access": "public"
   },
-  "packageManager": "bun@1.4.4",
-  "jianmu": {
-    "page": {
-      "title": "Fingerprint",
-      "titles": {
-        "zh": "模型指纹",
-        "zh-TW": "模型指紋",
-        "ja": "モデル指紋",
-        "de": "Modell-Fingerabdruck"
-      },
-      "file": "page/index.html",
-      "service": {
-        "port": 3488,
-        "option": "port"
-      }
-    },
-    "actions": [
-      {
-        "id": "fingerprint",
-        "menu": "provider",
-        "title": "Fingerprint",
-        "titles": {
-          "zh": "检测指纹",
-          "zh-TW": "檢測指紋",
-          "ja": "指紋を検査",
-          "de": "Fingerabdruck prüfen"
-        }
-      }
-    ],
-    "options": {
-      "port": 3488
-    },
-    "permissions": []
-  }
+  "packageManager": "bun@1.4.4"
 }

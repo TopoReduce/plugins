@@ -42,7 +42,7 @@ afterAll(() => { for (const d of tmps) rmSync(d, { recursive: true, force: true 
 // ---- the package --------------------------------------------------------
 
 test("a page magpie serves, with a host part and no reads", () => {
-  expect(pkg.name).toBe("@magpie-community/page-agent-office")
+  expect(pkg.name).toBe("@jianmu-plugins/page-agent-office")
   expect(pkg.main).toBeUndefined()
   expect(pkg.magpie.page.file).toBe("page/index.html")
   expect(pkg.magpie.hooks).toBe("./office.hooks.mjs")

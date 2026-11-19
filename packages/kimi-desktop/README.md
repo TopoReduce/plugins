@@ -3,7 +3,7 @@
 Use the ordinary **Kimi desktop application's local Work agent** with a model selected in Magpie. This is not Kimi Code CLI, a Kimi subscription provider, or a way to spend Kimi Work subscription credits in other agents.
 
 ```sh
-magpie plugin add @magpie-community/agent-kimi-desktop
+magpie plugin add @jianmu-plugins/agent-kimi-desktop
 ```
 
 Open and sign in to Kimi desktop. On Magpie's Agents page select **Kimi**, pick a model, and connect. The adapter waits for the local Work runtime to be ready and idle, then applies the connection without restarting either application. Use Kimi's **Work** page. Chat and cloud Claw are outside its scope. Kimi's native model menu remains visible; its selections do not choose the external inference model or reasoning effort. Configure those in Magpie. This package does not modify Kimi's application resources or install a custom model-menu patch.

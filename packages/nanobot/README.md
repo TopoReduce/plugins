@@ -1,6 +1,6 @@
 # agent-nanobot
 
-`@magpie-community/agent-nanobot` adds [nanobot](https://github.com/HKUDS/nanobot) to Magpie's Agents page. Pick one of Magpie's models in its row and Magpie writes it into nanobot's configuration; Library gives it MCP servers and workspace skills. Upstream credentials stay in Magpie. This is an unofficial integration and implies no endorsement by the nanobot project.
+`@jianmu-plugins/agent-nanobot` adds [nanobot](https://github.com/HKUDS/nanobot) to Magpie's Agents page. Pick one of Magpie's models in its row and Magpie writes it into nanobot's configuration; Library gives it MCP servers and workspace skills. Upstream credentials stay in Magpie. This is an unofficial integration and implies no endorsement by the nanobot project.
 
 The original integration was tested on Windows with Magpie 0.1.3384 and 0.1.3373, and nanobot 0.4.1. The parent-symlink and exit-lifecycle changes have been regression-tested on Linux x86_64 with Bun 1.4.2, including a symlinked `TMPDIR`; they have not yet been retested in a full Magpie/nanobot installation. Full integration on Linux, macOS and WSL, and other nanobot versions, remains untested.
 
@@ -10,7 +10,7 @@ The original integration was tested on Windows with Magpie 0.1.3384 and 0.1.3373
 uv tool install --python 3.12 nanobot-ai
 nanobot onboard
 
-magpie plugin add @magpie-community/agent-nanobot
+magpie plugin add @jianmu-plugins/agent-nanobot
 ```
 
 ## Use
@@ -67,7 +67,7 @@ Linux x86_64 / Bun 1.4.2 validation: `bun test packages/nanobot` from the reposi
 
 把 [nanobot](https://github.com/HKUDS/nanobot) 加到 Magpie 的 Agent 页。在 **nanobot** 一行选 Magpie 的模型，Magpie 会写进 nanobot 的配置；资源库里可以为它勾选 MCP 服务和技能。上游凭证仍留在 Magpie。这是非官方集成。
 
-先装 nanobot 并执行 `nanobot onboard`，再执行 `magpie plugin add @magpie-community/agent-nanobot`。选中的模型就是 nanobot 的默认 preset，之后启动的会话从它开始；已在运行的会话可能保留自己的模型。MCP 变更后要重启 nanobot。资源库的 **How** 建议仅对 nanobot 设为 Copy，避免工作区限制读不到技能附带文件。
+先装 nanobot 并执行 `nanobot onboard`，再执行 `magpie plugin add @jianmu-plugins/agent-nanobot`。选中的模型就是 nanobot 的默认 preset，之后启动的会话从它开始；已在运行的会话可能保留自己的模型。MCP 变更后要重启 nanobot。资源库的 **How** 建议仅对 nanobot 设为 Copy，避免工作区限制读不到技能附带文件。
 
 受管字段只有配置里的 `providers.magpie`、`modelPresets.magpie`、`agents.defaults.modelPreset`，以及勾选服务的 `tools.mcpServers` 条目和相应的 loopback 白名单。手写的同名条目不会被接管；手改受管字段会暂停同步并保留恢复记录。
 

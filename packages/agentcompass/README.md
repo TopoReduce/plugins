@@ -31,7 +31,7 @@ Magpie's own rules see a model name and pool state, not the task. This plugin re
 Install (any of the three sources):
 
 ```sh
-magpie plugin add @magpie-community/gateway-agentcompass
+magpie plugin add @jianmu-plugins/gateway-agentcompass
 # or: magpie plugin add github:akiiwa-games/magpie-agentcompass-router
 # or: magpie plugin add /path/to/magpie-agentcompass-router
 magpie plugin list
@@ -95,7 +95,7 @@ Magpie 自带的规则只看到模型名和号池状态，看不到任务。本�
 安装（三种来源任选其一）：
 
 ```sh
-magpie plugin add @magpie-community/gateway-agentcompass
+magpie plugin add @jianmu-plugins/gateway-agentcompass
 # 或：magpie plugin add github:akiiwa-games/magpie-agentcompass-router
 # 或：magpie plugin add /path/to/magpie-agentcompass-router
 magpie plugin list

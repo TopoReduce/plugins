@@ -1,8 +1,8 @@
-# @magpie-community/middleware-think-tags
+# @jianmu-plugins/middleware-think-tags
 
 A model's thinking, where its reply's text is, as [magpie](https://usemagpie.ai) gateway middleware. It either takes thinking out of the text, or puts it in (New API's `thinking_to_content`).
 
-Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @magpie-community/middleware-think-tags`. Set its options under **Plugins › Installed › Options**, or with `magpie plugin options think-tags '<json>'`.
+Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @jianmu-plugins/middleware-think-tags`. Set its options under **Plugins › Installed › Options**, or with `magpie plugin options think-tags '<json>'`.
 
 ## Options
 

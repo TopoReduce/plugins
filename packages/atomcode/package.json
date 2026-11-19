@@ -1,6 +1,6 @@
 {
   "name": "@jianmu-plugins/opencode-atomcode-auth",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "AtomCode (AtomGit CodingPlan) for Magpie and OpenCode: browser OAuth or local CLI sign-in, signed requests, persistent diagnostics, native plan claim, live models and quota windows",
   "type": "module",
   "main": "./opencode.mjs",
@@ -53,12 +53,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TopoReduce/plugins",
+    "url": "https://github.com/magpie-community/plugins",
     "directory": "packages/atomcode"
   },
-  "homepage": "https://github.com/TopoReduce/plugins/tree/main/packages/atomcode#readme",
+  "homepage": "https://github.com/magpie-community/plugins/tree/main/packages/atomcode#readme",
   "bugs": {
-    "url": "https://github.com/TopoReduce/plugins/issues"
+    "url": "https://github.com/magpie-community/plugins/issues"
   },
   "engines": {
     "node": ">=20",
@@ -83,38 +83,10 @@
     },
     "page": {
       "title": "AtomCode diagnostics",
-      "titles": {
-        "zh": "AtomCode 诊断"
-      },
+      "titles": { "zh": "AtomCode 诊断" },
       "file": "page/index.html",
       "icon": "page/icon.svg",
-      "service": {
-        "port": 3478,
-        "option": "diagnosticsPort"
-      }
-    }
-  },
-  "jianmu": {
-    "icon": "https://atomgit.com/favicon.ico",
-    "maxConcurrency": 8,
-    "options": {
-      "locale": "auto",
-      "clientVersion": "5.2.3",
-      "quotaTtlMs": 60000,
-      "maxOutputTokens": 32768,
-      "diagnosticsPort": 3478
-    },
-    "page": {
-      "title": "AtomCode diagnostics",
-      "titles": {
-        "zh": "AtomCode 诊断"
-      },
-      "file": "page/index.html",
-      "icon": "page/icon.svg",
-      "service": {
-        "port": 3478,
-        "option": "diagnosticsPort"
-      }
+      "service": { "port": 3478, "option": "diagnosticsPort" }
     }
   }
 }

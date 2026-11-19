@@ -1,4 +1,4 @@
-# @magpie-community/agent-bub
+# @jianmu-plugins/agent-bub
 
 (中文说明在下面。)
 
@@ -7,7 +7,7 @@ Bub; with this plugin it is on magpie's Agents page like the agents magpie
 ships with.
 
 ```sh
-magpie plugin add @magpie-community/agent-bub
+magpie plugin add @jianmu-plugins/agent-bub
 ```
 
 Then pick one of magpie's models in Bub's row. magpie writes into
@@ -52,7 +52,7 @@ How agent plugins work: [usemagpie.ai/docs/plugins#agents](https://usemagpie.ai/
 [Bub](https://bub.build) 作为 magpie 的 Agent。magpie 没有内置 Bub 的接入；装上这个插件后，Bub 就和 magpie 自带的 Agent 一样出现在 Agent 页。
 
 ```sh
-magpie plugin add @magpie-community/agent-bub
+magpie plugin add @jianmu-plugins/agent-bub
 ```
 
 然后在 Bub 那一行选一个 magpie 的模型。magpie 会改写 `~/.bub/config.yml`：

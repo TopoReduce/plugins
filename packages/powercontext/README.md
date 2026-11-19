@@ -49,8 +49,8 @@ Gateway clients need no separate PowerContext MCP or skill.
 Install with Magpie 0.1.1273 or newer:
 
 ```sh
-magpie plugin add @magpie-community/gateway-powercontext
-magpie plugin options @magpie-community/gateway-powercontext '{"serverUrl":"http://127.0.0.1:8000"}'
+magpie plugin add @jianmu-plugins/gateway-powercontext
+magpie plugin options @jianmu-plugins/gateway-powercontext '{"serverUrl":"http://127.0.0.1:8000"}'
 ```
 
 Alternatively, find **PowerContext** in Magpie's Plugins discovery tab.

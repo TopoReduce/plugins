@@ -2,7 +2,7 @@ import { test } from "bun:test";
 import assert from "node:assert/strict";
 import "../page/view.js";
 const V = globalThis.FTView;
-const MAP = { "阿里云 Qoder": { pid: ["qoder", "qoder-cn"], npm: "@magpie-community/opencode-qoder-auth", name: "Qoder" } };
+const MAP = { "阿里云 Qoder": { pid: ["qoder", "qoder-cn"], npm: "@jianmu-plugins/opencode-qoder-auth", name: "Qoder" } };
 const ctx = (over = {}) => ({ mapping: MAP, demoState: { configKnown: true, installed: {} }, icons: {}, ...over });
 
 test("V is exposed as a global (classic script)", () => { assert.ok(V && typeof V.rowHtml === "function"); });
@@ -43,7 +43,7 @@ test("rowHtml ready checkin states + yuan", () => {
 test("rowHtml setup install/login buttons", () => {
   const b = { provider: "阿里云 Qoder", url: "https://qoder.cn/x", kind: "daily", title: "t" };
   const ins = V.rowHtml(b, ctx());
-  assert.match(ins, /安装插件/); assert.match(ins, /data-npm="@magpie-community\/opencode-qoder-auth"/); assert.match(ins, /data-pid="qoder-cn"/);
+  assert.match(ins, /安装插件/); assert.match(ins, /data-npm="@jianmu-plugins\/opencode-qoder-auth"/); assert.match(ins, /data-pid="qoder-cn"/);
   assert.match(V.rowHtml(b, ctx({ demoState: { configKnown: true, installed: { "qoder-cn": { signedIn: false } } } })), /去登录/);
 });
 test("rowHtml none with/without url", () => {
@@ -56,15 +56,15 @@ test("rowHtml escapes kind/title (xss)", () => {
   assert.ok(!/<b>/.test(r)); assert.match(r, /&lt;b&gt;evil&lt;\/b&gt;/);
 });
 test("installSteps uses full npm; loginSteps given", () => {
-  const s = V.installSteps("@magpie-community/opencode-zed-auth");
-  assert.match(s[1], /magpie plugin add @magpie-community\/opencode-zed-auth/);
+  const s = V.installSteps("@jianmu-plugins/opencode-zed-auth");
+  assert.match(s[1], /magpie plugin add @jianmu-plugins\/opencode-zed-auth/);
   const l = V.loginSteps("Qoder", "qoder-cn"); assert.match(l[0], /Qoder/);
 });
 
 test("actionOf builds install/login/copy payloads from dataset", () => {
-  const ins = V.actionOf({ act: "install", name: "Zed", npm: "@magpie-community/opencode-zed-auth" });
-  assert.equal(ins.copyText, "@magpie-community/opencode-zed-auth");
-  assert.match(ins.steps[1], /magpie plugin add @magpie-community\/opencode-zed-auth/);
+  const ins = V.actionOf({ act: "install", name: "Zed", npm: "@jianmu-plugins/opencode-zed-auth" });
+  assert.equal(ins.copyText, "@jianmu-plugins/opencode-zed-auth");
+  assert.match(ins.steps[1], /magpie plugin add @jianmu-plugins\/opencode-zed-auth/);
   const lg = V.actionOf({ act: "login", name: "Qoder", pid: "qoder-cn" });
   assert.equal(lg.copyText, "magpie plugin login qoder-cn");
   const cp = V.actionOf({ act: "copy", url: "https://e/x" }); assert.equal(cp.copyText, "https://e/x");

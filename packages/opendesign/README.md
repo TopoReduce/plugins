@@ -1,4 +1,4 @@
-# @magpie-community/opencode-opendesign-auth
+# @jianmu-plugins/opencode-opendesign-auth
 
 Open Design (open-design.ai) Cloud as a magpie / OpenCode provider: sign in
 with the Open Design account, use the models its **Design Plan** entitles the
@@ -9,14 +9,14 @@ Works in [magpie](https://usemagpie.ai) (which runs OpenCode provider plugins)
 and in OpenCode.
 
 ```
-magpie plugin add @magpie-community/opencode-opendesign-auth
+magpie plugin add @jianmu-plugins/opencode-opendesign-auth
 magpie plugin login opendesign
 ```
 
 In OpenCode, `opencode.json`:
 
 ```json
-{ "plugin": ["@magpie-community/opencode-opendesign-auth"] }
+{ "plugin": ["@jianmu-plugins/opencode-opendesign-auth"] }
 ```
 
 then `opencode auth login`.

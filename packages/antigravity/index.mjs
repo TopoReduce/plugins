@@ -38,6 +38,7 @@ const SCOPES = [
   "https://www.googleapis.com/auth/userinfo.profile",
   "https://www.googleapis.com/auth/cclog",
   "https://www.googleapis.com/auth/experimentsandconfigs",
+  "https://www.googleapis.com/auth/aicode",
 ]
 const AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 const TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -53,9 +54,14 @@ const BASE = DAILY + "/v1beta"
 const NPM = "@ai-sdk/google"
 
 const VERSION_URL = "https://antigravity-hub-auto-updater-974169037036.us-central1.run.app/manifest/latest-arm64-mac.yml"
-// the manifest's version on 2026-11-12; Google serves Gemini 4 only to
+// the manifest's version on 2026-11-14; Google serves Gemini 4 only to
 // releases about this new (2.9.1 got no Gemini 4, #1057)
-const DEFAULT_VERSION = "2.31.2"
+const DEFAULT_VERSION = "2.32.1"
+// CLS is the build changelist each release's language server puts in its
+// User-Agent (cl=), read from the shipped binary's requests. The manifest
+// names only the version, so a newer release goes with the newest known
+// changelist until it is added here.
+const CLS = { "2.32.1": "1021296516" }
 
 const SIGN_IN_TIMEOUT = 10 * 60 * 1000
 const MODELS_TTL = 10 * 60 * 1000
@@ -107,7 +113,8 @@ class SignedOut extends Error {}
 
 const GOOS = { darwin: "darwin", linux: "linux", win32: "windows" }
 const GOARCH = { arm64: "arm64", x64: "amd64" }
-const platform = () => `${GOOS[process.platform] ?? process.platform}/${GOARCH[process.arch] ?? process.arch}`
+const goos = () => GOOS[process.platform] ?? process.platform
+const goarch = () => GOARCH[process.arch] ?? process.arch
 
 const ver = { v: "", at: 0, pending: null }
 
@@ -146,7 +153,28 @@ async function version() {
   return ver.pending
 }
 
-const userAgent = async () => `antigravity/hub/${await version()} ${platform()}`
+// clOf is the changelist of a release: its own when known, else the
+// newest known release's
+function clOf(v) {
+  if (CLS[v]) return CLS[v]
+  const newest = Object.keys(CLS).sort((a, b) => cmpVersion(b, a))[0]
+  return CLS[newest]
+}
+
+function cmpVersion(a, b) {
+  const x = a.split(".").map(Number)
+  const y = b.split(".").map(Number)
+  for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) - (y[i] || 0)
+  return 0
+}
+
+// userAgent is the app's language server's, as 2.32.1 sends it on every
+// Code Assist call:
+// antigravity/hub/2.32.1 (aidev_client; os_type=darwin; arch=arm64; cl=1021296516)
+const userAgent = async () => {
+  const v = await version()
+  return `antigravity/hub/${v} (aidev_client; os_type=${goos()}; arch=${goarch()}; cl=${clOf(v)})`
+}
 
 // ---- the sign-in as it is kept ---------------------------------------------------------
 
@@ -284,12 +312,9 @@ async function resolveProject(s) {
   if (own) return { id: own, plan: planOf(load), tier, paid, credits, at: Date.now() }
   const t = { ...defaultTier(load) }
   if (!t.id || t.id === "legacy-tier") t.id = "free-tier"
-  const ua = await userAgent()
-  const id = await onboard(
-    s,
-    { tier_id: t.id, metadata: { ide_type: "ANTIGRAVITY", ide_version: await version(), ide_name: "antigravity" } },
-    { "User-Agent": ua + " google-api-nodejs-client/10.3.0", "X-Goog-Api-Client": "gl-node/22.21.1" },
-  )
+  // as the app's language server asks it: camelCase, the IDE type only,
+  // and no headers of its own
+  const id = await onboard(s, { tierId: t.id, metadata: { ideType: "ANTIGRAVITY" } })
   if (!id) {
     const why = (load.ineligibleTiers ?? []).find((x) => x?.reasonMessage)?.reasonMessage
     throw new Error(why ? "Antigravity won't serve this Google account: " + why : "Antigravity hasn't set this Google account up (it gave no project); sign in to the Antigravity app with it once, then try again")
@@ -415,6 +440,7 @@ function listed(res) {
   let out = []
   for (const id of Object.keys(models).sort()) {
     const m = models[id] ?? {}
+    if (typeof m.model === "string" && m.model) enums.set(id, { model: m.model, provider: typeof m.modelProvider === "string" ? m.modelProvider : "" })
     if (HIDDEN.has(id) || id.startsWith("chat_") || id.startsWith("tab_") || m.disabled) continue
     const mi = { id, name: m.displayName ?? "", context: m.maxTokens || 0, output: m.maxOutputTokens || 0, imageInput: typeof m.supportsImages === "boolean" ? m.supportsImages : undefined, remaining: -1, resets: "" }
     if (isObj(m.quotaInfo)) {
@@ -896,14 +922,54 @@ function plainSchema(root) {
 // ---- system prompts Antigravity turns away -----------------------------------------------
 
 // TURNED_AWAY are the lines, lower-cased, Antigravity answers a 429 to
-// whatever quota is left. Each goes as SAID_AS says instead.
+// whatever quota is left. Each goes as SAID_AS says instead. The last four
+// are turned away since the evening of 11-14 (Lmohn39 and ZhouYimingsjtu on
+// X), each 3 of 3 or 5 of 5 on a real account, on gemini-3-flash and
+// claude-sonnet-4-6 alike:
+//   - "You are Hermes Agent": Hermes' current persona ("You are Hermes
+//     Agent, built by Nous Research.") and its earlier one, and the earlier
+//     one as magpie reworded it up to 0.1.15 ("… built by Nous Research").
+//     The earlier one ("…, an intelligent AI assistant created by Nous
+//     Research.") is turned away as "You're Hermes Agent, …" too, 3 of 3,
+//     so its "created by" goes "built by" as before as well.
+//   - "You are OpenCode", whichever of OpenCode 2.0.25's lines follows it
+//     ("a coding agent that helps users…", "an interactive CLI tool…", "the
+//     best coding agent on the planet").
+//   - "You are a coding agent running in the Codex CLI", Codex's prompt for
+//     a model it has no prompt of its own for (Codex 0.165).
+//   - "a coding assistant running inside pi", pi 1.5.0's default prompt
+//     ("You are a coding assistant running inside pi, a coding agent
+//     harness."), as "agent" for "assistant" and "that runs inside pi" are.
+// Two lines of DeepSeek Harness's system prompt are turned away too, as
+// agy-cli's cloak.mjs has them: its first line, "You are an AI agent powered
+// by DeepSeek Harness." (since 11-15, #1171), and "The browser provides no
+// implicit DOM, route, or screenshot context." in its Web GUI paragraph
+// (#1105, LayFz, on an Ultra account). Each 3 of 3 on gemini-3.8-flash and
+// gemini-4-hydrogen-sonar on 11-17, the paragraph whole as well; without
+// its period, without the comma before "or" or without "implicit" the
+// browser sentence went through.
+// Since 11-15 Claude Code's identity line, "You are Claude Code,
+// Anthropic's official CLI for Claude." (its CLI's, and with ", running
+// within the Claude Agent SDK" its SDK's), is turned away too, as agy-cli's
+// cloak.mjs has it (#1151; 3 of 3 here on gemini-3.8-flash on 11-17, and
+// "You're …" 3 of 3 through).
+// Codex's prompt for GPT-6 ("You are Codex, an agent based on GPT-6."),
+// the rest of Claude Code's, Gemini CLI's, Qwen Code's, Cline's, Kilo's, goose's, Amp's,
+// Droid's, Kimi CLI's, Aider's and Cursor's went through as written.
 const TURNED_AWAY = [
   "x-anthropic-billing-header:",
   "built on anthropic's claude agent sdk",
   "you are codex, an agent based on gpt-5",
   "you are codex, a coding agent based on gpt-5",
-  "hermes agent, an intelligent ai assistant created by nous research",
   "rfc 2119 keywords: must, required, should, recommended, may, optional.",
+  "you are hermes agent",
+  "an intelligent ai assistant created by nous research",
+  "you are opencode",
+  "you are a coding agent running in the codex cli",
+  "a coding assistant running inside pi",
+  "you are an ai agent powered by deepseek harness",
+  "you are claude code, anthropic's official cli for claude",
+  "the browser provides no implicit dom, route, or screenshot context.",
 ]
 
 // INVISIBLE are the characters Google's check reads past: since 11-14 a
@@ -952,17 +1018,31 @@ const turnsAway = (system) => TURNED_AWAY_RE.some((re) => has(system, re))
 //     line (Claude Desktop's Code tab and its subagents), goes as "built on
 //     the Claude Agent SDK by Anthropic".
 //   - Codex's GPT-5 lines go "built on GPT-5" for "based on GPT-5".
-//   - Hermes' earlier persona goes "built by Nous Research", as Hermes'
-//     current one says it, for "created by".
+//   - "You are Hermes Agent", "You are OpenCode" and Codex CLI's line go
+//     as "You're …" (5 of 5 each), and Hermes' earlier "created by Nous
+//     Research" as "built by" (3 of 3 together).
+//   - pi's line goes "running within pi" (5 of 5 on both models).
 //   - omp's RFC 2119 line goes as "key words", the RFC's own term (10 of 10
 //     on 11-14, eric_li8983 on X).
+//   - Claude Code's identity line goes as "You're …" (#1151).
+//   - DeepSeek Harness's first line goes as "You're …", and its browser
+//     sentence "gives no implicit DOM, …" for "provides" (3 of 3 each on
+//     11-17).
+const youre = (line) => line.replace(/^(you)\s+are/i, "$1're")
 const SAID_AS = {
   "x-anthropic-billing-header:": () => "",
   "built on anthropic's claude agent sdk": (line) => line.replace(/^(built\s+on\s+)anthropic's(\s+)(claude\s+agent\s+sdk)$/i, "$1the$2$3 by Anthropic"),
   "you are codex, an agent based on gpt-5": (line) => line.replace(/based(\s+)on/i, "built$1on"),
   "you are codex, a coding agent based on gpt-5": (line) => line.replace(/based(\s+)on/i, "built$1on"),
-  "hermes agent, an intelligent ai assistant created by nous research": (line) => line.replace(/created(\s+)by/i, "built$1by"),
   "rfc 2119 keywords: must, required, should, recommended, may, optional.": (line) => line.replace(/(key)(words)/i, "$1 $2"),
+  "you are hermes agent": youre,
+  "an intelligent ai assistant created by nous research": (line) => line.replace(/created(\s+)by/i, "built$1by"),
+  "you are opencode": youre,
+  "you are a coding agent running in the codex cli": youre,
+  "a coding assistant running inside pi": (line) => line.replace(/inside/i, "within"),
+  "you are an ai agent powered by deepseek harness": youre,
+  "you are claude code, anthropic's official cli for claude": youre,
+  "the browser provides no implicit dom, route, or screenshot context.": (line) => line.replace(/provides/i, "gives"),
 }
 
 // USER_TURNED_AWAY are the lines Antigravity also turns away in a user's
@@ -997,7 +1077,17 @@ const HINT =
 const CODEX_HINT =
   "Antigravity answers this 429 to Codex's own system prompt for GPT-5 models whatever quota is left, so it is not a quota and waiting won't help; a Codex chat begun on a GPT model keeps that prompt after a model switch or a fork, so start a new chat on this model"
 const HERMES_HINT =
-  "Antigravity answers this 429 to Hermes Agent's earlier default persona (its SOUL.md) whatever quota is left, so it is not a quota and waiting won't help; Hermes' current default persona goes through, so put it in SOUL.md, or use another provider for these chats"
+  "Antigravity answers this 429 to Hermes Agent's default persona (\"You are Hermes Agent, …\" in its SOUL.md), the current one and the earlier one alike, whatever quota is left, so it is not a quota and waiting won't help; magpie sends it as \"You're Hermes Agent, …\", which goes through, so start SOUL.md another way, or use another provider for these chats"
+
+const PI_HINT =
+  "Antigravity answers this 429 to pi's default system prompt (\"You are a coding assistant running inside pi\") whatever quota is left, so it is not a quota and waiting won't help; magpie sends that line as \"running within pi\", which goes through, so give pi a system prompt of your own (--system-prompt) or use another provider for these chats"
+const OPENCODE_HINT =
+  "Antigravity answers this 429 to OpenCode's system prompt (\"You are OpenCode, …\") whatever quota is left, so it is not a quota and waiting won't help; magpie sends that line as \"You're OpenCode, …\", which goes through, so use another provider for these chats, or put one after Antigravity in a routing group"
+const CODEX_CLI_HINT =
+  "Antigravity answers this 429 to Codex's prompt for a model it has none of its own for (\"You are a coding agent running in the Codex CLI\") whatever quota is left, so it is not a quota and waiting won't help; magpie sends that line as \"You're …\", which goes through, so use another provider for these chats, or put one after Antigravity in a routing group"
+
+const DSH_HINT =
+  "Antigravity answers this 429 to DeepSeek Harness's system prompt (\"You are an AI agent powered by DeepSeek Harness.\", or \"The browser provides no implicit DOM, route, or screenshot context.\" in its Web GUI's) whatever quota is left, so it is not a quota and waiting won't help; magpie sends those lines as \"You're …\" and \"The browser gives …\", which go through, so use another provider for these chats, or put one after Antigravity in a routing group"
 
 const RFC_HINT =
   "Antigravity answers this 429 to the line \"RFC 2119 keywords: MUST, REQUIRED, SHOULD, RECOMMENDED, MAY, OPTIONAL.\" that starts oh-my-pi (omp)'s system prompt, and to any prompt that has it, whatever quota is left, so it is not a quota and waiting won't help; magpie sends that line as \"RFC 2119 key words: …\", which goes through, so this one came from a copy of it that was worded another way"
@@ -1005,7 +1095,11 @@ const RFC_HINT =
 function hint(system) {
   if (said(system, "rfc 2119 keywords: must, required, should, recommended, may, optional.")) return RFC_HINT
   if (said(system, "you are codex, an agent based on gpt-5") || said(system, "you are codex, a coding agent based on gpt-5")) return CODEX_HINT
-  if (said(system, "hermes agent, an intelligent ai assistant created by nous research")) return HERMES_HINT
+  if (said(system, "you are a coding agent running in the codex cli")) return CODEX_CLI_HINT
+  if (said(system, "you are hermes agent") || said(system, "an intelligent ai assistant created by nous research")) return HERMES_HINT
+  if (said(system, "you are opencode")) return OPENCODE_HINT
+  if (said(system, "a coding assistant running inside pi")) return PI_HINT
+  if (said(system, "you are an ai agent powered by deepseek harness") || said(system, "the browser provides no implicit dom, route, or screenshot context.")) return DSH_HINT
   return HINT
 }
 
@@ -1159,6 +1253,10 @@ function shape(req, sent, at, effort) {
           else if (e === "minimal" && at) level = "minimal"
           else if ((e === "none" || e === "minimal") && !draws(m)) level = "low"
           else if (e === "medium" && (m.includes("flash") || g > 3)) level = "medium"
+          // a variant at xhigh (Gemini 4 Hydrogen) is asked at xhigh, which
+          // Google lists for it (LOW, MEDIUM, HIGH, XHIGH); a model with no
+          // such variant stays at high (#1169)
+          if (at === "xhigh") level = "xhigh"
           tc.thinkingLevel = level
         } else delete tc.thinkingLevel
       } else if (typeof tc.thinkingLevel === "string") {
@@ -1202,15 +1300,58 @@ function sessionOf(req, headers) {
   return "-" + n.toString()
 }
 
+// enums is each model id's enum and maker, as fetchAvailableModels lists
+// them (gemini-3-flash is MODEL_PLACEHOLDER_M18, made by
+// MODEL_PROVIDER_GOOGLE); the app labels each request with them
+const enums = new Map()
+
+// uuidOf is a UUID-shaped id made from text, the same for the same text
+function uuidOf(text) {
+  const h = crypto.createHash("sha256").update(text).digest("hex")
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${((parseInt(h[16], 16) & 3) | 8).toString(16)}${h.slice(17, 20)}-${h.slice(20, 32)}`
+}
+
+// envelope is the request as the app's language server sends it, keys in
+// its order (2.32.1): project, requestId, request, model, userAgent,
+// requestType. A conversation is one cascade with one trajectory, so its
+// ids are made from its session; the step is how far into it the request
+// is.
 function envelope(req, sent, projectID, credits = false, headers = undefined) {
+  const sessionId = sessionOf(req, headers)
+  const rawSession = headerOf(headers, SESSION).trim()
+  const cascade = uuidOf("cascade\0" + sessionId)
+  const root = headerOf(headers, SUBAGENT).trim() && rawSession ? uuidOf("cascade\0" + rawSession) : cascade
+  const trajectory = uuidOf("trajectory\0" + sessionId)
+  const contents = Array.isArray(req?.contents) ? req.contents : []
+  const step = Math.max(0, contents.length - 1)
+  const turns = contents.filter((c) => c?.role === "model").length
+  const known = enums.get(sent)
+  const claude = known?.provider === "MODEL_PROVIDER_ANTHROPIC" || /^claude/.test(sent)
+  const gemini = known ? known.provider === "MODEL_PROVIDER_GOOGLE" : /^gemini/.test(sent)
+  const labels = {
+    cascade_id: cascade,
+    last_step_index: String(step),
+    ...(known ? { model_enum: known.model } : {}),
+    request_id: `${trajectory}-${turns}`,
+    root_cascade_id: root,
+    trajectory_id: trajectory,
+    used_claude: String(claude),
+    used_claude_conservative: String(claude),
+    used_non_gemini_model: String(!gemini),
+  }
+  // the request's own keys in the app's order, labels before
+  // generationConfig, the session last
+  const { sessionId: _, labels: __, contents: c, systemInstruction, tools, toolConfig, generationConfig, ...rest } = isObj(req) ? req : {}
+  const request = { contents: c, systemInstruction, tools, toolConfig, ...rest, labels, generationConfig, sessionId }
+  for (const k of Object.keys(request)) if (request[k] === undefined) delete request[k]
   return {
-    model: sent,
     project: projectID,
+    requestId: `agent/${cascade}/${Date.now()}/${trajectory}/${step + 1}`,
+    request,
+    model: sent,
     ...(credits ? { enabled_credit_types: [CREDIT] } : {}),
     userAgent: "antigravity",
     requestType: "agent",
-    requestId: "agent-" + crypto.randomBytes(6).toString("hex"),
-    request: { ...req, sessionId: sessionOf(req, headers) },
   }
 }
 
@@ -1240,15 +1381,21 @@ function errorResponse(status, message, signIn) {
 }
 
 // unwrap turns Code Assist's stream, each chunk {response: <chunk>}, back
-// into Gemini's own
-function unwrap(body) {
+// into Gemini's own. With say, an INVALID_ARGUMENT error in it, as a data
+// event or a bare line, is told in say's words
+function unwrap(body, say) {
   const dec = new TextDecoder()
   const enc = new TextEncoder()
   let buf = ""
   const line = (l) => {
-    if (!l.startsWith("data:")) return l
-    const j = parse(l.slice(5).trim())
-    if (isObj(j) && isObj(j.response)) return "data: " + JSON.stringify(j.response)
+    const data = l.startsWith("data:")
+    if (!data && !(say && l.trimStart().startsWith("{"))) return l
+    const j = parse(data ? l.slice(5).trim() : l)
+    if (say && isObj(j) && isObj(j.error) && badCall(JSON.stringify(j))) {
+      const e = { ...j.error, message: say(j.error.message) }
+      return (data ? "data: " : "") + JSON.stringify({ ...j, error: e })
+    }
+    if (data && isObj(j) && isObj(j.response)) return "data: " + JSON.stringify(j.response)
     return l
   }
   return body.pipeThrough(
@@ -1284,6 +1431,15 @@ const RETRY_BAD_CALL = 2
 // after that reaches the client as it is.
 const retry400 = { floorMs: 3000, pauseMs: 300, holdMax: 512 * 1024, holdMs: 10_000 }
 const isGemini4 = (id) => /^gemini-4/i.test(String(id ?? ""))
+
+// badCallSaid is what the client is told of Gemini 4's INVALID_ARGUMENT
+// after the model ran, asked n times: the vendor's words alone read as a
+// request magpie got wrong, or a region block (Lawson0112 on X), which
+// Google refuses at once and names (FAILED_PRECONDITION "User location is
+// not supported…"). The words stay clear of what magpie's gateway reads as
+// another fault: "model" before "invalid" reads as a model not served
+const badCallSaid = (id, n) => (message) =>
+  `${id} turned down a call it built while thinking, asked ${n} time${n === 1 ? "" : "s"} (Google: ${String(message ?? "").trim() || "INVALID_ARGUMENT"}). Not a region or account refusal: Google names those`
 
 // badCall is whether a reply's body is Google's INVALID_ARGUMENT
 function badCall(text) {
@@ -1325,13 +1481,24 @@ async function holdThoughts(res, signal) {
   let pending
   let timer
   const late = new Promise((r) => (timer = setTimeout(r, retry400.holdMs, LATE)))
+  // loose is the lines of a JSON value written with no "data:" before it,
+  // as Code Assist writes its late error: after the thinking events, a
+  // line of its own, {"error":{"code":400,…,"status":"INVALID_ARGUMENT"}}
+  // (zRain's capture, magpie's sse_bare.go), maybe over several lines
+  let loose = ""
   const scan = (final) => {
     let i
-    while (!release && ((i = buf.indexOf("\n")) >= 0 || (final && buf))) {
-      const l = i >= 0 ? buf.slice(0, i) : buf
+    while (!release && !bad && ((i = buf.indexOf("\n")) >= 0 || (final && buf))) {
+      const l = (i >= 0 ? buf.slice(0, i) : buf).replace(/\r$/, "")
       buf = i >= 0 ? buf.slice(i + 1) : ""
-      if (!l.startsWith("data:")) continue
-      const j = parse(l.slice(5).trim())
+      let j
+      if (l.startsWith("data:")) j = parse(l.slice(5).trim())
+      else if (loose || l.trimStart().startsWith("{")) {
+        loose += l + "\n"
+        j = parse(loose)
+        if (j === undefined && loose.length <= retry400.holdMax) continue
+        loose = ""
+      } else continue
       if (!isObj(j)) continue
       if ((j.error || j.response?.error) && badCall(JSON.stringify(j))) bad = true
       else if (showsAnswer(j)) release = true
@@ -1403,7 +1570,8 @@ async function complete(s, url, init, magpie) {
   let effort = headerOf(init?.headers, EFFORT).toLowerCase()
   // a variant's level, where OpenCode asked for one
   const tl = raw.generationConfig?.thinkingConfig?.thinkingLevel
-  if (!effort && typeof tl === "string" && LEVELS.includes(tl)) effort = tl
+  // Gemini's own clients write it in capitals ("XHIGH")
+  if (!effort && typeof tl === "string" && LEVELS.includes(tl.toLowerCase())) effort = tl.toLowerCase()
   let l
   try {
     l = await modelInfo(s)
@@ -1426,7 +1594,7 @@ async function complete(s, url, init, magpie) {
   const send = (credits) =>
     fetch(`${DAILY}/v1internal:streamGenerateContent?alt=sse`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "text/event-stream", Authorization: "Bearer " + tok, "User-Agent": ua },
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok, "User-Agent": ua },
       body: JSON.stringify(envelope(req, sent, l.project.id, credits, init?.headers)),
       signal: init?.signal,
     })
@@ -1464,16 +1632,22 @@ async function complete(s, url, init, magpie) {
   // comes back fast is the request's own fault and is returned as it is.
   const again400 = isGemini4(sent) || isGemini4(model)
   let res, refusal
+  // asks is how many times the model was asked; slow, whether the last
+  // 400 took long enough to be the model's own (retry400.floorMs)
+  let asks = 0
+  let slow = false
   for (let n = 0; ; n++) {
     const t0 = Date.now()
     ;({ res, refusal } = await attempt())
+    asks = n + 1
+    slow = Date.now() - t0 >= retry400.floorMs
     const left = again400 && n < RETRY_BAD_CALL && !init?.signal?.aborted
     if (!left) break
     if (!res.ok) {
       if (res.status !== 400) break
       const text = refusal ?? (await res.text())
       refusal = text
-      if (!badCall(text) || Date.now() - t0 < retry400.floorMs) break
+      if (!badCall(text) || !slow) break
       await sleep(retry400.pauseMs)
       continue
     }
@@ -1488,6 +1662,7 @@ async function complete(s, url, init, magpie) {
   if (!res.ok) {
     const text = refusal ?? (await res.text())
     const msg = apiError(text, res.status)
+    if (again400 && res.status === 400 && slow && badCall(text)) return errorResponse(400, badCallSaid(sent, asks)(msg))
     if (res.status === 401) return errorResponse(401, `Antigravity: ${msg}`, "kept")
     if (res.status === 404) return errorResponse(404, `model ${sent} not found`)
     if (res.status === 429 && /resource has been exhausted/i.test(text) && turnsAway(system)) {
@@ -1497,11 +1672,16 @@ async function complete(s, url, init, magpie) {
       return errorResponse(400, `Antigravity answered 429 to this system prompt: ${msg} — ${hint(system)}`)
     }
     if (res.status === 429 && l.project.credits && !usesCredits(magpie)) {
-      return new Response(withNote(text, CREDITS_NOTE), { status: 429, headers: { "content-type": "application/json" } })
+      // the credits note only where the model's quota may be what ran
+      // out: a 429 with quota left is something else, and credits would
+      // not change it (plugins#1148)
+      const left = await quotaLeft(s, sent)
+      const note = left > 0 ? quotaLeftNote(left) : CREDITS_NOTE
+      return new Response(withNote(text, note), { status: 429, headers: { "content-type": "application/json" } })
     }
     return new Response(text, { status: res.status, headers: { "content-type": res.headers.get("content-type") ?? "application/json" } })
   }
-  if (stream) return new Response(unwrap(res.body), { status: 200, headers: RESPONSE_HEADERS })
+  if (stream) return new Response(unwrap(res.body, again400 ? badCallSaid(sent, asks) : undefined), { status: 200, headers: RESPONSE_HEADERS })
   return new Response(JSON.stringify(await whole(res)), { status: 200, headers: { "content-type": "application/json" } })
 }
 
@@ -1512,6 +1692,22 @@ async function complete(s, url, init, magpie) {
 const CREDITS_OPTION = "use-ai-credits"
 const CREDITS_NOTE =
   "this account has Google AI credits; turn on the Use AI credits switch in magpie's Antigravity editor to spend them when the plan's quota is used up, as the app's Use AI Credits does"
+
+// quotaLeft is the fraction of the model's quota fetchAvailableModels
+// reads now, or -1 when it can't say. The cached list may be from before
+// the quota ran out, so a failed read is unknown, not the cached value.
+async function quotaLeft(s, model) {
+  try {
+    const mi = (await modelInfo(s, true)).infos.find((m) => m.id === model)
+    return mi ? mi.remaining : -1
+  } catch {
+    return -1
+  }
+}
+
+function quotaLeftNote(left) {
+  return `this model still has ${Math.max(1, Math.round(left * 100))}% of its quota left, so this 429 is not the plan's quota running out, and Google AI credits would not change it`
+}
 
 function usesCredits(magpie) {
   try {
@@ -2015,7 +2211,7 @@ async function webSearch({ query, count } = {}, ctx = {}) {
   const ua = await userAgent()
   const res = await fetch(`${DAILY}/v1internal:streamGenerateContent?alt=sse`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "text/event-stream", Authorization: "Bearer " + tok, "User-Agent": ua },
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok, "User-Agent": ua },
     body: JSON.stringify(envelope(req, sent, l.project.id, false)),
     signal: ctx.abort,
   })
@@ -2158,4 +2354,8 @@ export const _internal = {
   VERSION_TTL,
   VERSION_RETRY,
   DEFAULT_VERSION,
+  CLS,
+  clOf,
+  enums,
+  userAgent,
 }

@@ -21,10 +21,10 @@ A Magpie page plugin that drives real local Agent CLIs (Claude Code, Codex, Curs
 Requires [Magpie](https://usemagpie.ai) ≥ 0.1.1340 and Node.js ≥ 20.
 
 ```bash
-magpie plugin add @magpie-community/page-agent-console
+magpie plugin add @jianmu-plugins/page-agent-console
 ```
 
-Or in Magpie: **Settings → Plugins → Add plugin**, enter `@magpie-community/page-agent-console` (or find **Agent Console** in Discover). After install, **Agent Console** appears in the sidebar plugin group.
+Or in Magpie: **Settings → Plugins → Add plugin**, enter `@jianmu-plugins/page-agent-console` (or find **Agent Console** in Discover). After install, **Agent Console** appears in the sidebar plugin group.
 
 Install the Agent CLIs you want to use (for example `claude` or `codex`). Missing CLIs show an install hint in Settings.
 

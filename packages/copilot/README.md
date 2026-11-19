@@ -16,7 +16,7 @@ or local file is needed.
 ## Install and sign in
 
 ```sh
-magpie plugin add @magpie-community/opencode-copilot-auth
+magpie plugin add @jianmu-plugins/opencode-copilot-auth
 magpie plugin login github-copilot
 ```
 
@@ -27,7 +27,7 @@ query strings or custom ports. As in the upstream plugin, Enterprise API and
 inference hosts are `api.<host>` and `copilot-api.<host>`; deployments with
 different endpoint layouts are not covered.
 
-For OpenCode, add `@magpie-community/opencode-copilot-auth` to `plugin` in
+For OpenCode, add `@jianmu-plugins/opencode-copilot-auth` to `plugin` in
 `opencode.json`, then run `opencode auth login`.
 
 The provider id is `github-copilot` for both deployments. GitHub's OAuth token
@@ -41,7 +41,7 @@ If the original `opencode-copilot-auth` is already installed in magpie, keep
 it and explicitly choose which plugin serves the existing provider:
 
 ```sh
-magpie plugin use @magpie-community/opencode-copilot-auth github-copilot
+magpie plugin use @jianmu-plugins/opencode-copilot-auth github-copilot
 ```
 
 The shared provider id lets the new plugin reuse the existing sign-in and

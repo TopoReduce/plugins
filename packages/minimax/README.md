@@ -1,4 +1,4 @@
-# @magpie-community/opencode-minimax-auth
+# @jianmu-plugins/opencode-minimax-auth
 
 Signs in to MiniMax Code (mcode) accounts so their credits and M Plan can be
 used. That covers the free credits and the daily check-in's credits. There is
@@ -131,7 +131,7 @@ to `true`, and keeps only `list_tools`, `tool_schema`, `call_tool`, and
 still checks arguments against the account's live catalog. Turn it on with:
 
 ```sh
-magpie plugin options @magpie-community/opencode-minimax-auth '{"compactTools": true}'
+magpie plugin options @jianmu-plugins/opencode-minimax-auth '{"compactTools": true}'
 ```
 
 Each named tool shows a schema bundled with the plugin, so loading it asks

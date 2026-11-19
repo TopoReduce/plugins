@@ -1,6 +1,6 @@
 {
   "name": "@jianmu-plugins/opencode-tabbit-auth",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Tabbit (web.tabbit.com and web.tabbit.ai) as a magpie / OpenCode provider: live model catalog, cookie sign-in, chat completions, cycle usage and the daily check-in",
   "type": "module",
   "main": "./opencode.mjs",
@@ -35,21 +35,17 @@
     "icon": "https://web.tabbit.com/favicon.ico",
     "maxConcurrency": 1
   },
-  "homepage": "https://github.com/TopoReduce/plugins/tree/main/packages/tabbit#readme",
+  "homepage": "https://github.com/magpie-community/plugins/tree/main/packages/tabbit#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/tabbit"
   },
   "bugs": {
-    "url": "https://github.com/TopoReduce/plugins/issues"
+    "url": "https://github.com/magpie-community/plugins/issues"
   },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
-  },
-  "jianmu": {
-    "icon": "https://web.tabbit.com/favicon.ico",
-    "maxConcurrency": 1
   }
 }

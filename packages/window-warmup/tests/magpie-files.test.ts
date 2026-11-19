@@ -34,7 +34,7 @@ describe("magpieDirs", () => {
   test("安装版（作用域包名）：按安装路径上溯到配置目录，缓存用安装版缓存目录", () => {
     const d = magpieDirs(
       { XDG_CONFIG_HOME: "/tmp/ww-cfg", XDG_CACHE_HOME: "/tmp/ww-cache" },
-      "/tmp/ww-cfg/magpie/plugins/node_modules/@magpie-community/page-window-warmup/dist",
+      "/tmp/ww-cfg/magpie/plugins/node_modules/@jianmu-plugins/page-window-warmup/dist",
       posix,
     );
     expect(d).toEqual({ config: "/tmp/ww-cfg/magpie", cache: "/tmp/ww-cache/magpie" });
@@ -44,7 +44,7 @@ describe("magpieDirs", () => {
     const home = homedir();
     const d = magpieDirs(
       {},
-      posix.join(home, ".config", "magpie", "plugins", "node_modules", "@magpie-community", "page-window-warmup", "dist"),
+      posix.join(home, ".config", "magpie", "plugins", "node_modules", "@jianmu-plugins", "page-window-warmup", "dist"),
       posix,
     );
     expect(d).toEqual({
@@ -56,7 +56,7 @@ describe("magpieDirs", () => {
   test("便携版：配置 = data 目录，缓存 = <data>/cache（XDG 不参与）", () => {
     const d = magpieDirs(
       { XDG_CONFIG_HOME: "/tmp/ww-cfg", XDG_CACHE_HOME: "/tmp/ww-cache" },
-      "/data/magpie-portable/plugins/node_modules/@magpie-community/page-window-warmup/dist",
+      "/data/magpie-portable/plugins/node_modules/@jianmu-plugins/page-window-warmup/dist",
       posix,
     );
     expect(d).toEqual({ config: "/data/magpie-portable", cache: "/data/magpie-portable/cache" });
@@ -66,13 +66,13 @@ describe("magpieDirs", () => {
     const env = { XDG_CONFIG_HOME: "C:\\Users\\me\\cfg", XDG_CACHE_HOME: "C:\\Users\\me\\cache" };
     const back = magpieDirs(
       env,
-      "C:\\Users\\me\\cfg\\magpie\\plugins\\node_modules\\@magpie-community\\page-window-warmup\\dist",
+      "C:\\Users\\me\\cfg\\magpie\\plugins\\node_modules\\@jianmu-plugins\\page-window-warmup\\dist",
       win32,
     );
     expect(back).toEqual({ config: "C:\\Users\\me\\cfg\\magpie", cache: "C:\\Users\\me\\cache\\magpie" });
     const mixed = magpieDirs(
       env,
-      "C:/Users/me/cfg/magpie/plugins\\node_modules\\@magpie-community\\page-window-warmup/dist",
+      "C:/Users/me/cfg/magpie/plugins\\node_modules\\@jianmu-plugins\\page-window-warmup/dist",
       win32,
     );
     expect(mixed).toEqual(back);
@@ -81,7 +81,7 @@ describe("magpieDirs", () => {
   test("便携版（win32）：缓存跟 data 目录走", () => {
     const d = magpieDirs(
       { XDG_CONFIG_HOME: "C:\\Users\\me\\cfg" },
-      "D:\\portable\\plugins\\node_modules\\@magpie-community\\page-window-warmup\\dist",
+      "D:\\portable\\plugins\\node_modules\\@jianmu-plugins\\page-window-warmup\\dist",
       win32,
     );
     expect(d).toEqual({ config: "D:\\portable", cache: "D:\\portable\\cache" });

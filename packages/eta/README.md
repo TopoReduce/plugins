@@ -16,7 +16,7 @@ Requires [Eta 0.1.164 or later](https://github.com/Lingwcy/eta/releases/tag/v0.1
 
    In a checkout of the community plugins repository, the folder is `packages/eta`. No Node runtime, build step, source patch or external setup tool is needed. Local plugins reference their files in place: do not delete or move the installed folder.
 
-   Once published and listed, the package is `@magpie-community/agent-eta`, displayed as **Eta** under Plugins → Discover → Agents. The community release workflow distributes it after review and merge.
+   Once published and listed, the package is `@jianmu-plugins/agent-eta`, displayed as **Eta** under Plugins → Discover → Agents. The community release workflow distributes it after review and merge.
 
    If you previously imported the standalone agent file alone, disconnect Eta and remove that single-file plugin entry before adding the package folder; do not install both at once. Standalone files still work, but the installed-plugin row cannot read their package name or summary and may show the filename instead.
 

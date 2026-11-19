@@ -18,7 +18,7 @@ A live activity dashboard for your coding agents inside [magpie](https://usemagp
 **magpie 插件（推荐）**
 
 ```sh
-magpie plugin add @magpie-community/page-agent-office
+magpie plugin add @jianmu-plugins/page-agent-office
 ```
 
 安装后打开 **插件 › Agent 办公室**。第一次没有会话时会看到空办公室；想预览完整效果，可在 **设置 › 示例 Agent** 临时打开示例。

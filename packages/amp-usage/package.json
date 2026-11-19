@@ -23,7 +23,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/amp-usage"
   },
   "keywords": [
@@ -33,29 +33,6 @@
     "usage"
   ],
   "magpie": {
-    "page": {
-      "title": "Amp usage",
-      "file": "page/index.html",
-      "icon": "page/icon.svg",
-      "service": {
-        "port": 3497,
-        "option": "port"
-      }
-    },
-    "permissions": [],
-    "options": {
-      "port": 3497,
-      "sync": true,
-      "gatewayURL": "http://127.0.0.1:3425",
-      "intervalSeconds": 300,
-      "settleSeconds": 120,
-      "ampPath": "",
-      "threadDirs": [],
-      "excludedThreadIds": [],
-      "excludedModels": []
-    }
-  },
-  "jianmu": {
     "page": {
       "title": "Amp usage",
       "file": "page/index.html",

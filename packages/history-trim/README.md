@@ -1,8 +1,8 @@
-# @magpie-community/middleware-history-trim
+# @jianmu-plugins/middleware-history-trim
 
 A request's history, sent smaller, as [magpie](https://usemagpie.ai) gateway middleware. It folds a run of blank lines, drops a system prompt written twice and a message repeated right after itself, and cuts a past tool result longer than `maxToolLength` at a word boundary.
 
-Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @magpie-community/middleware-history-trim`. Set its options under **Plugins › Installed › Options**, or with `magpie plugin options history-trim '<json>'`.
+Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @jianmu-plugins/middleware-history-trim`. Set its options under **Plugins › Installed › Options**, or with `magpie plugin options history-trim '<json>'`.
 
 ## Options
 

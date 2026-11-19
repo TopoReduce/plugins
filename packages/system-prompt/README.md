@@ -1,4 +1,4 @@
-# @magpie-community/middleware-system-prompt
+# @jianmu-plugins/middleware-system-prompt
 
 New API's **系统提示词** (a channel's `system_prompt` and its override switch) as [magpie](https://usemagpie.ai) gateway middleware. It gives the requests agents send a system prompt of yours, in each API's own place for one:
 
@@ -9,7 +9,7 @@ New API's **系统提示词** (a channel's `system_prompt` and its override swit
 | Responses | `instructions` |
 | Gemini | `systemInstruction` |
 
-Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @magpie-community/middleware-system-prompt`. Set its options under **Plugins › Installed › Options**, or with `magpie plugin options system-prompt '<json>'`.
+Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @jianmu-plugins/middleware-system-prompt`. Set its options under **Plugins › Installed › Options**, or with `magpie plugin options system-prompt '<json>'`.
 
 ## Options
 

@@ -1,23 +1,24 @@
 {
   "name": "@jianmu-plugins/agent-nowledge-mem",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Manage Nowledge Mem Default, AI Now and Background models from Magpie",
   "type": "module",
   "main": "./index.mjs",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/nowledge-mem-agent"
   },
-  "homepage": "https://github.com/TopoReduce/plugins/tree/main/packages/nowledge-mem-agent",
+  "homepage": "https://github.com/magpie-community/plugins/tree/main/packages/nowledge-mem-agent",
   "bugs": {
-    "url": "https://github.com/TopoReduce/plugins/issues"
+    "url": "https://github.com/magpie-community/plugins/issues"
   },
   "files": [
     "nowledge-mem.agent.js",
     "index.mjs",
     "cli.mjs",
     "lib/",
+    "lib/proc.mjs",
     "README.md",
     "VALIDATION.md",
     "LICENSE",
@@ -40,15 +41,6 @@
   ],
   "license": "MIT",
   "magpie": {
-    "agent": "./nowledge-mem.agent.js",
-    "name": "Nowledge Mem / AI Now",
-    "summary": {
-      "zh": "从 Magpie 管理 Nowledge Mem 的 Default、AI Now 和后台任务模型",
-      "en": "Manage Nowledge Mem Default, AI Now and Background models"
-    },
-    "icon": "https://mem.nowledge.co/favicon.png"
-  },
-  "jianmu": {
     "agent": "./nowledge-mem.agent.js",
     "name": "Nowledge Mem / AI Now",
     "summary": {

@@ -1,4 +1,4 @@
-# @magpie-community/opencode-factory-auth
+# @jianmu-plugins/opencode-factory-auth
 
 Signs in to a [Factory](https://factory.ai) (Droid) subscription and sends
 model requests to Factory's API the way `droid` sends them. Provider id:
@@ -142,7 +142,7 @@ Factory's byte limit: compact the conversation or start a new one.
 ## Use
 
 ```sh
-magpie plugin add @magpie-community/opencode-factory-auth
+magpie plugin add @jianmu-plugins/opencode-factory-auth
 magpie plugin login factory
 ```
 

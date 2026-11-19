@@ -1,4 +1,4 @@
-// @magpie-community/opencode-catpaw-auth — the 妙手 (CatPaw, Meituan)
+// @jianmu-plugins/opencode-catpaw-auth — the 妙手 (CatPaw, Meituan)
 // provider plugin for OpenCode and magpie.
 //
 // Signs in with a browser web login or the CatPaw desktop client's saved

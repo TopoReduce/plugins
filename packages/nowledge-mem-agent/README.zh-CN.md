@@ -4,13 +4,13 @@
 
 这是使用官方 Agent 扩展协议的第三方插件，不是 Nowledge 的 MCP 记忆插件。它不会把 Nowledge 变成 Magpie 的模型供应商。
 
-与社区现有的 `@magpie-community/gateway-nowledge-mem` 不同：本插件管理 **Nowledge 自己使用哪个模型**；现有 gateway 插件为其他 Agent 召回记忆、注入 Context Bundle，并按需导入对话。本插件不依赖该 gateway 插件，也不执行记忆召回或对话导入。
+与社区现有的 `@jianmu-plugins/gateway-nowledge-mem` 不同：本插件管理 **Nowledge 自己使用哪个模型**；现有 gateway 插件为其他 Agent 召回记忆、注入 Context Bundle，并按需导入对话。本插件不依赖该 gateway 插件，也不执行记忆召回或对话导入。
 
 ## 安装
 
 要求：已运行的 Magpie、Nowledge Mem 桌面版或自托管服务；Nowledge 需要支持 `magpie` 类型和独立 provider 实例。开发与验证版本见 [VALIDATION.md](VALIDATION.md)。Bun 由 Magpie 的插件宿主管理，没有 npm 依赖和安装脚本。独立诊断命令需要 Node.js 22+，或使用 `bun cli.mjs`。
 
-1. 在 Magpie 的 **插件 → 添加插件** 中填写 `@magpie-community/agent-nowledge-mem`，或选择下载解压后包含本文件和 `package.json` 的完整文件夹。
+1. 在 Magpie 的 **插件 → 添加插件** 中填写 `@jianmu-plugins/agent-nowledge-mem`，或选择下载解压后包含本文件和 `package.json` 的完整文件夹。
 2. 确认 Magpie 的上游 provider 已经登录并有可用模型。
 3. 打开 **Agent → Nowledge Mem / AI Now**，选择支持工具调用的模型或路由组。
 4. 保持 Magpie 和 Nowledge 运行，通常等待 2–4 秒。Nowledge 的 Providers 页面会出现独立的 **Magpie · Nowledge Agent**，三项用途会使用你刚选的模型。开始一个新对话验证实际回答。
@@ -18,7 +18,7 @@
 有 `magpie` 命令时可以安装社区包。使用版本号固定已测试版本：
 
 ```sh
-magpie plugin add @magpie-community/agent-nowledge-mem@0.1.0
+magpie plugin add @jianmu-plugins/agent-nowledge-mem@0.1.0
 ```
 
 也可在解压后的插件目录执行：

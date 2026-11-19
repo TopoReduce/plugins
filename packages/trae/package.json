@@ -1,6 +1,6 @@
 {
   "name": "@jianmu-plugins/opencode-trae-auth",
-  "version": "0.2.36",
+  "version": "0.2.42",
   "description": "OpenCode provider plugins for Trae: Trae CN (trae.cn) and Trae Global (trae.ai), free tier included, with Trae's own browser sign-in",
   "type": "module",
   "main": "./opencode.mjs",
@@ -25,7 +25,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/trae"
   }
 }

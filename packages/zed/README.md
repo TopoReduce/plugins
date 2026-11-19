@@ -1,4 +1,4 @@
-# @magpie-community/opencode-zed-auth
+# @jianmu-plugins/opencode-zed-auth
 
 Signs in to a **Zed** subscription (Zed Pro, its trial, a student or business
 plan) and calls the models Zed hosts: Anthropic's, OpenAI's, Google's and

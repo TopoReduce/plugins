@@ -248,7 +248,7 @@ test('the descriptor clamps its output limit to the context it reports', () => {
 test('declares the standard community Agent entry and ships every module it loads', () => {
   const dir = path.dirname(fileURLToPath(import.meta.url));
   const pkg = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
-  expect(pkg.name).toBe('@magpie-community/agent-nanobot');
+  expect(pkg.name).toBe('@jianmu-plugins/agent-nanobot');
   expect(pkg.type).toBe('module');
   expect(pkg.magpie.agent).toBe('./nanobot.agent.js');
   expect(pkg.magpie.icon).toBe(agent.icon);
@@ -271,7 +271,7 @@ test('declares the standard community Agent entry and ships every module it load
     if (!shipped.has(file)) continue;
     for (const match of fs.readFileSync(path.join(dir, file), 'utf8').matchAll(/from\s+["'](\.\/[^"']+)["']/g)) loaded.add(match[1].slice(2));
   }
-  expect([...loaded].sort()).toEqual(['bridge.mjs', 'runtime.mjs']);
+  expect([...loaded].sort()).toEqual(['bridge.mjs', 'proc.mjs', 'runtime.mjs']);
   expect([...loaded].every(file => shipped.has(file))).toBe(true);
   // Tests are development artifacts and are not published.
   expect(shipped.has('nanobot.test.mjs')).toBe(false);

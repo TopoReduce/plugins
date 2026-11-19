@@ -61,7 +61,7 @@ The catalog varies per account and plan — the live list wins after sign-in.
 ## Install
 
 ```bash
-magpie plugin add @magpie-community/opencode-atomcode-auth
+magpie plugin add @jianmu-plugins/opencode-atomcode-auth
 # Or load a checkout directly:
 magpie plugin add /path/to/plugins/packages/atomcode
 ```

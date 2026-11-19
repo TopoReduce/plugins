@@ -4,9 +4,7 @@
   "description": "Agnes AI international in OpenCode and magpie: Chrome browser sign-in, live text models, OpenAI-compatible chat, plan usage and USD balance",
   "type": "module",
   "main": "./opencode.mjs",
-  "exports": {
-    ".": "./opencode2.mjs"
-  },
+  "exports": { ".": "./opencode2.mjs" },
   "files": [
     "index.mjs",
     "opencode.mjs",
@@ -24,16 +22,13 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/TopoReduce/plugins",
+    "url": "https://github.com/magpie-community/plugins",
     "directory": "packages/agnes"
   },
   "scripts": {
     "test": "bun test"
   },
   "magpie": {
-    "icon": "https://www.agnes-ai.com/images/biglogo.png"
-  },
-  "jianmu": {
     "icon": "https://www.agnes-ai.com/images/biglogo.png"
   }
 }

@@ -1,4 +1,4 @@
-# @magpie-community/agent-type4me
+# @jianmu-plugins/agent-type4me
 
 [Type4Me](https://github.com/joewongjc/type4me), a macOS voice input app, as a
 magpie agent. With this plugin Type4Me is on magpie's Agents page like the
@@ -6,7 +6,7 @@ agents magpie ships with: pick one of magpie's models for its LLM
 post-processing in Type4Me's row.
 
 ```sh
-magpie plugin add @magpie-community/agent-type4me
+magpie plugin add @jianmu-plugins/agent-type4me
 ```
 
 Until it is on npm, install it from GitHub:

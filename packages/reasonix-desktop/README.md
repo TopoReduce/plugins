@@ -5,7 +5,7 @@ Adds Reasonix 1.x Desktop and CLI to Magpie's Agents page as
 `reasonix` adapter for Reasonix Studio 2.x.
 
 ```sh
-magpie plugin add @magpie-community/agent-reasonix-desktop
+magpie plugin add @jianmu-plugins/agent-reasonix-desktop
 ```
 
 Choose a model on its Agent row, wait about a second with Magpie running, then
@@ -37,7 +37,7 @@ finish restoration while the plugin is still enabled:
 magpie reasonix-desktop default
 magpie plugin list --json
 # Remove only after restoration completes:
-magpie plugin rm @magpie-community/agent-reasonix-desktop
+magpie plugin rm @jianmu-plugins/agent-reasonix-desktop
 ```
 
 The one-shot fallback is `node cli.mjs sync` from this package. After a forced

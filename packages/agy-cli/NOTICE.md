@@ -1,6 +1,6 @@
 # NOTICE：来源与合规说明
 
-本包（`@magpie-community/opencode-agy-cli-auth`，版本 0.1.0）源自 Antigravity 桥接插件
+本包（`@jianmu-plugins/opencode-agy-cli-auth`，版本 0.1.0）源自 Antigravity 桥接插件
 `opencode-antigravity-bridge`，由 gitxm 整理为 `gitxm/yce-magpie-agy` 后提交到
 magpie-community/plugins（plugins#785），以 MIT 协议发布。**与上游无隶属关系。** 上游版权声明原样保留在 [LICENSE](LICENSE)，
 本仓新增部分的版权归 gitxm 与 yce。
@@ -9,12 +9,12 @@ magpie-community/plugins（plugins#785），以 MIT 协议发布。**与上游�
 
 | 项目 | 取值 |
 |---|---|
-| npm 包名 | `@magpie-community/opencode-agy-cli-auth` |
+| npm 包名 | `@jianmu-plugins/opencode-agy-cli-auth` |
 | 版本 | `0.1.0` |
 | 仓库 | `https://github.com/magpie-community/plugins`（`packages/agy-cli`） |
 | Magpie provider ID | `agy-cli` |
-| 安装 | `magpie plugin add @magpie-community/opencode-agy-cli-auth` |
-| 原始仓库 | `https://github.com/gitxm/yce-magpie-agy`（包名 `@magpie-community/yce-magpie-agy`、provider ID `yce-magpie-agy`，均未发布到 npm） |
+| 安装 | `magpie plugin add @jianmu-plugins/opencode-agy-cli-auth` |
+| 原始仓库 | `https://github.com/gitxm/yce-magpie-agy`（包名 `@jianmu-plugins/yce-magpie-agy`、provider ID `yce-magpie-agy`，均未发布到 npm） |
 
 进程内部标识保持不变，以免影响已有的状态文件与日志：`AGY_BRIDGE_*` 环境变量、
 `magpie-agy-bridge/` 状态与临时目录、`[agy-bridge]` 日志前缀、导出名 `AntigravityBridgePlugin`。
@@ -67,7 +67,7 @@ A1–A16、U1–U6 逐项并入。两边都有、且 `acb8d84` 写法更新的�
 
 ## 5. 包与文档层改动
 
-- 包名改为 `@magpie-community/opencode-agy-cli-auth`，版本 `0.1.0`，`repository` 指向 magpie-community/plugins 的 `packages/agy-cli`。
+- 包名改为 `@jianmu-plugins/opencode-agy-cli-auth`，版本 `0.1.0`，`repository` 指向 magpie-community/plugins 的 `packages/agy-cli`。
 - `magpie.maxConcurrency` 与 `AGY_BRIDGE_MAX_PROCS` 默认值统一为 16。
 - `README.md`、`README.en.md` 整篇重写，`LICENSE` 追加本仓版权行。原仓库的 `HANDOFF.md` 不随包发布。
 - `NOTICE.md`（本文件）与 `LICENSE` 一并随包发布。

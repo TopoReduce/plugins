@@ -1,8 +1,8 @@
-# @magpie-community/opencode-cloudflare-workers-ai-auth
+# @jianmu-plugins/opencode-cloudflare-workers-ai-auth
 
 [English](README.md) | [简体中文](README.zh-CN.md) | 日本語
 
-[![npm version](https://img.shields.io/badge/npm%20version-0.0.4-EA4335.svg)](https://www.npmjs.com/package/@magpie-community/opencode-cloudflare-workers-ai-auth)
+[![npm version](https://img.shields.io/badge/npm%20version-0.0.4-EA4335.svg)](https://www.npmjs.com/package/@jianmu-plugins/opencode-cloudflare-workers-ai-auth)
 [![License: MIT](https://img.shields.io/badge/License-MIT-FBBC05.svg)](https://opensource.org/licenses/MIT)
 
 [OpenCode](https://opencode.ai) 1.x と [magpie](https://usemagpie.ai) 向けのプロバイダー
@@ -30,7 +30,7 @@ Paid または未確認のプランでは表示のみで、Free と確認でき�
 ## magpie へのインストール
 
 ```sh
-magpie plugin add @magpie-community/opencode-cloudflare-workers-ai-auth   # npm から
+magpie plugin add @jianmu-plugins/opencode-cloudflare-workers-ai-auth   # npm から
 magpie plugin add /path/to/folder                                        # ローカルコピー
 ```
 
@@ -71,7 +71,7 @@ magpie plugin logout cloudflare-workers-ai                           # サイン
 `opencode.json`：
 
 ```json
-{ "plugin": ["@magpie-community/opencode-cloudflare-workers-ai-auth"] }
+{ "plugin": ["@jianmu-plugins/opencode-cloudflare-workers-ai-auth"] }
 ```
 
 その後 `opencode auth login` → Cloudflare Workers AI（同じ 2 項目）。

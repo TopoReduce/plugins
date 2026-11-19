@@ -1,8 +1,8 @@
-# @magpie-community/middleware-block-patterns
+# @jianmu-plugins/middleware-block-patterns
 
 Rejects requests that contain text you list, as [magpie](https://usemagpie.ai) gateway middleware. A request with one of your words or patterns in it is turned away with a 400 before it reaches a model; everything else is sent on untouched.
 
-Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @magpie-community/middleware-block-patterns`. Set its options under **Plugins › Installed › Options**, or with `magpie plugin options block-patterns '<json>'`.
+Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @jianmu-plugins/middleware-block-patterns`. Set its options under **Plugins › Installed › Options**, or with `magpie plugin options block-patterns '<json>'`.
 
 ## Options
 

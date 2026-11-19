@@ -56,7 +56,7 @@ https://llm-api.atomgit.com/v1（OpenAI 兼容，SSE 原样流回）
 
 ```bash
 # 社区/npm 包
-magpie plugin add @magpie-community/opencode-atomcode-auth
+magpie plugin add @jianmu-plugins/opencode-atomcode-auth
 # 或直接加载仓库目录
 magpie plugin add /path/to/plugins/packages/atomcode
 ```

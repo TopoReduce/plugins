@@ -11,7 +11,7 @@ and calls Rhino's built-in MCP tools to inspect and create native geometry.
    run `install-panel.ps1`. Restart Rhino once. The plugin creates its detection
    directory on startup without writing connection credentials.
 3. Install from Magpie's Plugins page or run
-   `magpie plugin add @magpie-community/agent-rhino9-ai`.
+   `magpie plugin add @jianmu-plugins/agent-rhino9-ai`.
 4. Connect **Magpie-Rhino** in Magpie's Agents page and select a model or group.
 5. Open Rhino's AI panel normally and choose **Magpie** from its agent menu.
    No command is required.
@@ -36,7 +36,7 @@ to the distinct `rhino9-ai` gateway identity. Keep the local connection file pri
 
 先安装配套 `.yak` 包，或运行 ZIP 内的 `install-panel.ps1`，然后重启 Rhino。
 Rhino 插件会自动创建检测目录，无需先选择模型。再从 Magpie 的插件页安装，
-或运行 `magpie plugin add @magpie-community/agent-rhino9-ai` 并连接。
+或运行 `magpie plugin add @jianmu-plugins/agent-rhino9-ai` 并连接。
 正常打开 Rhino 的 AI 面板即可选择 **Magpie**，无需输入命令。每次发送都会读取 Magpie 当前的模型、
 自定义组和策略，组 ID 会原样传给 Magpie，由 Magpie 负责路由。
 

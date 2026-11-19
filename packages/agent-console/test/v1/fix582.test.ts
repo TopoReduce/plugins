@@ -115,7 +115,7 @@ describe("Magpie's gateway is never previewed (#582 finding 2)", () => {
       mkdirSync(d, { recursive: true });
       writeFileSync(join(d, "settings.json"), JSON.stringify({ theme: "dark", port }));
     }
-    const self = join(portable, "plugins", "node_modules", "@magpie-community", "page-agent-console", "daemon", "dist", "main.js");
+    const self = join(portable, "plugins", "node_modules", "@jianmu-plugins", "page-agent-console", "daemon", "dist", "main.js");
     const dirs = magpieConfigDirs({ HOME: home, XDG_CONFIG_HOME: xdg }, { self, cwd: join(portable, "plugin-work"), platform: "linux" });
     expect(dirs).toEqual([portable, join(xdg, "magpie"), join(home, ".config", "magpie")]);
     const denied = previewDeniedPorts({ port: 41000 }, {}, { configDirs: dirs });
@@ -123,7 +123,7 @@ describe("Magpie's gateway is never previewed (#582 finding 2)", () => {
     expect(deniedPort(5173, denied)).toBe(false);
     // Windows: the home folder is USERPROFILE; paths with backslashes
     expect(magpieConfigDirs({ USERPROFILE: "C:\\Users\\me" }, { self: "", cwd: "", platform: "win32" })).toEqual(process.platform === "win32" ? ["C:\\Users\\me\\.config\\magpie"] : []);
-    expect(magpieDirFromInstall("C:\\Magpie\\data\\plugins\\node_modules\\@magpie-community\\page-agent-console\\daemon\\dist\\main.js")).toBe("C:\\Magpie\\data");
+    expect(magpieDirFromInstall("C:\\Magpie\\data\\plugins\\node_modules\\@jianmu-plugins\\page-agent-console\\daemon\\dist\\main.js")).toBe("C:\\Magpie\\data");
     expect(magpieDirFromInstall("/opt/x/main.js")).toBeNull();
   });
 

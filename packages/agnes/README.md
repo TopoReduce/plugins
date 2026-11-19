@@ -119,7 +119,7 @@ Plan-key accounts do not show the wallet balance.
 ## Install
 
 ```sh
-magpie plugin add @magpie-community/opencode-agnes-auth
+magpie plugin add @jianmu-plugins/opencode-agnes-auth
 magpie plugin login agnes
 magpie provider test agnes
 ```

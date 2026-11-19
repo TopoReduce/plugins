@@ -7,7 +7,7 @@ A magpie page for comparing the agents behind your gateway: requests, input and 
 ## Install
 
 ```sh
-magpie plugin add @magpie-community/page-harnessweight
+magpie plugin add @jianmu-plugins/page-harnessweight
 ```
 
 Open **HarnessWeight** in magpie. Usage history is read from magpie's existing local ledger; tool-size samples accumulate after installation. The service listens on loopback, port **3496** by default. Change the `port` plugin option if that port is in use.

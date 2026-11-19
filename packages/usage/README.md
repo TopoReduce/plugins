@@ -1,8 +1,8 @@
-# @magpie-community/page-usage
+# @jianmu-plugins/page-usage
 
 A page in [magpie](https://usemagpie.ai)'s window with your usage at a glance. It shows calls, errors, tokens and cost for today, 7 days or 30 days, and the models that took them.
 
-Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @magpie-community/page-usage`. It then has a tab, **Usage glance** (titled in the window's language: 用量速览, 用量速覽, 使用量の概要, Nutzung im Überblick), under Plugins in the sidebar, in the app and in `magpie web`.
+Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @jianmu-plugins/page-usage`. It then has a tab, **Usage glance** (titled in the window's language: 用量速览, 用量速覽, 使用量の概要, Nutzung im Überblick), under Plugins in the sidebar, in the app and in `magpie web`.
 
 ## What it reads
 

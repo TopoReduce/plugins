@@ -1,4 +1,4 @@
-# @magpie-community/middleware-codex-history
+# @jianmu-plugins/middleware-codex-history
 
 **Magpie 原生历史过滤插件 / Native history compatibility middleware**
 
@@ -11,7 +11,7 @@
 在 Magpie 的 **Plugins → Discover → Gateway middleware** 中安装 **Codex History Filter**，或使用命令行：
 
 ```sh
-magpie plugin add @magpie-community/middleware-codex-history
+magpie plugin add @jianmu-plugins/middleware-codex-history
 ```
 
 社区版本只发布历史过滤中间件；模型工作台单独本地维护，不包含在本包中。无需启动 Codex Filter Manager，不要同时启用两份过滤插件。需要支持 gateway middleware 及 `onProvider` 钩子的 Magpie；v0.1.2 已在 0.1.2131 的隔离实例中验证，其他版本需核对插件加载状态。
@@ -73,7 +73,7 @@ magpie plugin add @magpie-community/middleware-codex-history
 
 Opt-in Magpie gateway middleware for Codex Responses history after switching providers or accounts. It strips old reasoning/encrypted items and optional server IDs from portable history, preserving readable content and tool-call pairing. **History filtering only: no model detector, guard, background server, credentials or extra upstream calls.**
 
-Install from **Plugins → Discover → Gateway middleware**, or run `magpie plugin add @magpie-community/middleware-codex-history`. In the plugin's **Options**, configure `providers["magpie:<provider-id>"]` as shown above. Every provider defaults to passthrough. A request to `provider/model` uses that prefix's rule. A request through a Magpie group or fallback is filtered on each provider try with the tried provider's rule, so a group needs no rule of its own. Requests from different sessions remain independent. `aliases` maps an old prefix or provider ID to a rule ID only. `preserveEncryptedInclude: true` keeps requests for new encrypted response content while still removing historical ciphertext.
+Install from **Plugins → Discover → Gateway middleware**, or run `magpie plugin add @jianmu-plugins/middleware-codex-history`. In the plugin's **Options**, configure `providers["magpie:<provider-id>"]` as shown above. Every provider defaults to passthrough. A request to `provider/model` uses that prefix's rule. A request through a Magpie group or fallback is filtered on each provider try with the tried provider's rule, so a group needs no rule of its own. Requests from different sessions remain independent. `aliases` maps an old prefix or provider ID to a rule ID only. `preserveEncryptedInclude: true` keeps requests for new encrypted response content while still removing historical ciphertext.
 
 Unsafe server-only references and encrypted compaction are rejected explicitly when a provider is chosen directly. A provider try can't be refused, so through a group they are sent as they were. Magpie may fail open on plugin errors/timeouts. The Plugins page counts every hook call, passed-through requests included, not filtered requests. Disable or remove it in Magpie; it never edits Codex configuration.
 

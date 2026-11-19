@@ -1,4 +1,4 @@
-# @magpie-community/opencode-commandcode-auth
+# @jianmu-plugins/opencode-commandcode-auth
 
 Signs in to a [Command Code](https://commandcode.ai) plan (Pro, GOAT, Max,
 Ultra, Go, Teams Pro) and makes its requests, in OpenCode and in magpie.

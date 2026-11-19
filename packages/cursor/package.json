@@ -1,29 +1,12 @@
 {
   "name": "@jianmu-plugins/opencode-cursor-auth",
-  "version": "0.2.46",
+  "version": "0.2.48",
   "description": "Cursor subscriptions (Pro, Pro+, Ultra, Teams) in OpenCode and magpie, through the API cursor-agent talks to",
   "type": "module",
   "main": "./opencode.mjs",
-  "exports": {
-    ".": "./opencode2.mjs"
-  },
-  "files": [
-    "index.mjs",
-    "opencode.mjs",
-    "opencode2.mjs",
-    "native-session.mjs",
-    "README.md"
-  ],
-  "keywords": [
-    "opencode",
-    "opencode-plugin",
-    "magpie",
-    "cursor"
-  ],
+  "exports": { ".": "./opencode2.mjs" },
+  "files": ["index.mjs", "opencode.mjs", "opencode2.mjs", "native-session.mjs", "README.md"],
+  "keywords": ["opencode", "opencode-plugin", "magpie", "cursor"],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
-    "directory": "packages/cursor"
-  }
+  "repository": { "type": "git", "url": "git+https://github.com/magpie-community/plugins.git", "directory": "packages/cursor" }
 }

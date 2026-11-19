@@ -1,8 +1,8 @@
-# @magpie-community/middleware-param-override
+# @jianmu-plugins/middleware-param-override
 
 New API's **参数覆盖** (a channel's `param_override`) as [magpie](https://usemagpie.ai) gateway middleware. It sets, deletes, moves and rewrites any field of the requests agents send through magpie, whichever provider serves them. The options are New API's JSON as it is, so you can paste a `param_override` from New API unchanged.
 
-Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @magpie-community/middleware-param-override`. Then set its options under **Plugins › Installed › Options**, or with `magpie plugin options param-override '<json>'`.
+Install it from magpie's **Plugins › Discover**, or with `magpie plugin add @jianmu-plugins/middleware-param-override`. Then set its options under **Plugins › Installed › Options**, or with `magpie plugin options param-override '<json>'`.
 
 ## Options
 

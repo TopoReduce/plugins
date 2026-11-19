@@ -1,9 +1,9 @@
-# @magpie-community/agent-minimax-design
+# @jianmu-plugins/agent-minimax-design
 
 [MiniMax Design](https://design.minimax.io) (the local multimodal creation studio, electron app id `@hilo`) as a magpie agent. MiniMax Design supports custom text models over the OpenAI-compatible, OpenAI Responses and Anthropic protocols; magpie's gateway translates all three, so one switch points Design at magpie.
 
 ```sh
-magpie plugin add @magpie-community/agent-minimax-design
+magpie plugin add @jianmu-plugins/agent-minimax-design
 ```
 
 **Windows only.** The paths below lean on `%APPDATA%` and `%LOCALAPPDATA%`, which other systems don't set. Quit MiniMax Design first, switch the agent on in magpie's Agents page, then start Design and pick a model under the **Magpie** entry in its model menu. Disconnecting in magpie removes the entry magpie wrote — the whole entry, not just its fields — and leaves the rest of Design's configuration untouched.

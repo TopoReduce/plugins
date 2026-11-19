@@ -1,8 +1,8 @@
-# @magpie-community/opencode-cloudflare-workers-ai-auth
+# @jianmu-plugins/opencode-cloudflare-workers-ai-auth
 
 [English](README.md) | 简体中文 | [日本語](README.ja.md)
 
-[![npm version](https://img.shields.io/badge/npm%20version-0.0.4-EA4335.svg)](https://www.npmjs.com/package/@magpie-community/opencode-cloudflare-workers-ai-auth)
+[![npm version](https://img.shields.io/badge/npm%20version-0.0.4-EA4335.svg)](https://www.npmjs.com/package/@jianmu-plugins/opencode-cloudflare-workers-ai-auth)
 [![License: MIT](https://img.shields.io/badge/License-MIT-FBBC05.svg)](https://opensource.org/licenses/MIT)
 
 面向 [OpenCode](https://opencode.ai) 1.x 和 [magpie](https://usemagpie.ai) 的供应商插件：
@@ -29,7 +29,7 @@ Token 不需要选择任何 Zone。Free 与 Paid 两个计划均含 **每日 10,
 ## 在 magpie 中安装
 
 ```sh
-magpie plugin add @magpie-community/opencode-cloudflare-workers-ai-auth   # 从 npm
+magpie plugin add @jianmu-plugins/opencode-cloudflare-workers-ai-auth   # 从 npm
 magpie plugin add /path/to/folder                                        # 本地副本
 ```
 
@@ -70,7 +70,7 @@ magpie plugin logout cloudflare-workers-ai                                # 删�
 `opencode.json`：
 
 ```json
-{ "plugin": ["@magpie-community/opencode-cloudflare-workers-ai-auth"] }
+{ "plugin": ["@jianmu-plugins/opencode-cloudflare-workers-ai-auth"] }
 ```
 
 然后 `opencode auth login` → Cloudflare Workers AI（同样的两个字段）。

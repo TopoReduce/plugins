@@ -1,11 +1,11 @@
-# @magpie-community/tools-calc
+# @jianmu-plugins/tools-calc
 
 Exact arithmetic, unit conversion and date math, as tools [magpie](https://usemagpie.ai) offers every agent it connects. Models get arithmetic wrong (`0.1 + 0.2`, big powers, days between two dates across a DST change), so this gives them a calculator. It needs no network, no key and no dependency.
 
 Install it from magpie's **Plugins › Discover**, or with:
 
 ```sh
-magpie plugin add @magpie-community/tools-calc
+magpie plugin add @jianmu-plugins/tools-calc
 magpie plugin            # lists its tools
 ```
 

@@ -1,4 +1,4 @@
-# @magpie-community/opencode-grok-auth
+# @jianmu-plugins/opencode-grok-auth
 
 Grok with a SuperGrok or X Premium+ subscription, through the sign-in of
 xAI's [Grok Build CLI](https://x.ai/cli). Provider id: `grok`.

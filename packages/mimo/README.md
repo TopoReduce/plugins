@@ -1,4 +1,4 @@
-# @magpie-community/opencode-mimo-auth
+# @jianmu-plugins/opencode-mimo-auth
 
 Signs in to **Xiaomi MiMo** with a Xiaomi account, the way the MiMo desktop
 app does, and makes its model requests. Provider id: `mimo-app`.

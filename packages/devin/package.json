@@ -1,37 +1,13 @@
 {
   "name": "@jianmu-plugins/opencode-devin-auth",
-  "version": "0.1.40",
+  "version": "0.1.45",
   "description": "Devin subscriptions (the devin CLI's account) in OpenCode and magpie",
   "type": "module",
   "main": "./index.mjs",
   "exports": "./index.mjs",
-  "files": [
-    "index.mjs",
-    "README.md"
-  ],
-  "keywords": [
-    "opencode",
-    "opencode-plugin",
-    "magpie",
-    "devin",
-    "windsurf"
-  ],
+  "files": ["index.mjs", "README.md"],
+  "keywords": ["opencode", "opencode-plugin", "magpie", "devin", "windsurf"],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
-    "directory": "packages/devin"
-  },
-  "magpie": {
-    "options": {
-      "cacheKeepaliveInterval": 285,
-      "cacheKeepaliveMaxPings": 6
-    }
-  },
-  "jianmu": {
-    "options": {
-      "cacheKeepaliveInterval": 285,
-      "cacheKeepaliveMaxPings": 6
-    }
-  }
+  "repository": { "type": "git", "url": "git+https://github.com/magpie-community/plugins.git", "directory": "packages/devin" },
+  "magpie": { "options": { "cacheKeepaliveInterval": 285, "cacheKeepaliveMaxPings": 6 } }
 }

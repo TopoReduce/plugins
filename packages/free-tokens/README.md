@@ -1,4 +1,4 @@
-# @magpie-community/page-free-tokens
+# @jianmu-plugins/page-free-tokens
 
 AIHOT「Token 羊毛」页面：在 magpie 窗口里分三档看各家大模型的免费额度——**已配置可用** / **有插件待配置** / **暂无插件**，并对每条给出该装的插件或登录路径。
 
@@ -6,4 +6,4 @@ AIHOT「Token 羊毛」页面：在 magpie 窗口里分三档看各家大模型�
 
 > 已取得 AIHOT 书面授权（2026-11-10）：免费、不接广告/赞助、每用户本机打开时读一次、不做代理/镜像/数据分发。
 
-安装：`magpie plugin add @magpie-community/page-free-tokens`。测试：`bun test`（100% 行覆盖）。
+安装：`magpie plugin add @jianmu-plugins/page-free-tokens`。测试：`bun test`（100% 行覆盖）。

@@ -141,11 +141,11 @@ monthly on the free plan), and any bonus credits left beside it.
 Once the package is published to npm:
 
 ```sh
-magpie plugin add @magpie-community/opencode-warp-auth
+magpie plugin add @jianmu-plugins/opencode-warp-auth
 magpie plugin login warp
 ```
 
-For OpenCode, add `@magpie-community/opencode-warp-auth` to the `plugin`
+For OpenCode, add `@jianmu-plugins/opencode-warp-auth` to the `plugin`
 array in `opencode.json`, then run `opencode auth login`.
 
 To try a checkout before publication: `magpie plugin add <this folder>`.

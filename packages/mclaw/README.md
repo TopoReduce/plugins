@@ -7,7 +7,7 @@
 ## 安装
 
 ```bash
-magpie plugin add @magpie-community/opencode-mclaw-auth
+magpie plugin add @jianmu-plugins/opencode-mclaw-auth
 magpie plugin login mclaw
 ```
 

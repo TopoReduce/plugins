@@ -35,7 +35,7 @@ test("plugin metadata speaks Chinese and English", () => {
   assert.match(pkg.magpie.summary.en, /quota window/);
   assert.match(pkg.description, /A page in Magpie's window/);
   const readme = read(dir, "README.md");
-  assert.match(readme, /magpie plugin add @magpie-community\/page-model-quota/);
+  assert.match(readme, /magpie plugin add @jianmu-plugins\/page-model-quota/);
   assert.match(readme, /## 中文说明/);
 });
 

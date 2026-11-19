@@ -1200,7 +1200,18 @@ function reasoningOf(m) {
 // thinking before the call said, and said it had none without it. A turn
 // with thinking and nothing else is still left out, as that client leaves
 // it.
-function qoderMessages(msgs) {
+// Kimi on QwenWork (kimi-k3.1-pro) answers 400 "Error in upstream response"
+// to an assistant turn with tool_calls and an empty content, which is how
+// every OpenAI client records a call-only turn (nanfei892, #1213: 9-token
+// bodies, DeepSeek, GLM and Qwen on the same account fine, " " served).
+// QwenWork's own client always writes text beside a call. A Kimi model's
+// call-only turn carries one space; other models get the turn as written.
+function kimiModel(m) {
+  const key = String(m?.key ?? "")
+  return /^kmodel/i.test(key) || /kimi/i.test(key + " " + (m?.config?.display_name ?? "") + " " + (m?.name ?? ""))
+}
+
+function qoderMessages(msgs, opts = {}) {
   const out = []
   const names = {}
   let seen = []
@@ -1259,7 +1270,7 @@ function qoderMessages(msgs) {
         return { id, type: "function", function: { name: c.function?.name, arguments: typeof args === "string" ? args : JSON.stringify(args ?? {}) } }
       })
       const think = reasoningOf(m)
-      out.push({ role: "assistant", content: textOf(m.content), ...(think ? { reasoning_content: think } : {}), tool_calls: calls })
+      out.push({ role: "assistant", content: textOf(m.content) || (opts.callText ?? ""), ...(think ? { reasoning_content: think } : {}), tool_calls: calls })
       const open = calls.map((c) => c.id)
       const kept = new Set()
       for (let j = i + 1; j < msgs.length && msgs[j].role === "tool"; j++) {
@@ -1522,7 +1533,7 @@ function qoderBody(chat, m, named = "", task, site) {
     session_type: site?.sessionType ?? "app",
     model_config: modelConfig(m, thinking),
     system: [sys],
-    messages: [{ role: "system", content: [sys] }, ...cacheMarked(qoderMessages(chat.messages ?? []))],
+    messages: [{ role: "system", content: [sys] }, ...cacheMarked(qoderMessages(chat.messages ?? [], { callText: kimiModel(m) ? " " : "" }))],
   }
   if (tools.length)
     body.tools = tools.map((t) => ({
@@ -1718,6 +1729,21 @@ const QUEUE = {
   recoveries: 10, // the queue waited out this many times, at most, for one request
   failures: 3, // status asks failing in a row that end the wait
   ask: 30_000, // the longest one status ask may take
+  // the longest a call waits for Qoder's first event (headers included).
+  // Qoder CN once held a call 15 minutes with nothing sent and nothing to
+  // log (#1204); after this it is a 504 that says so, which magpie can
+  // fail over from. A queued call answers its 10605 at once, and a
+  // thinking model streams its reasoning, so a real answer starts sooner.
+  silent: 120_000,
+  // the longest a wait goes on with nothing ahead of the request
+  // (queueCount 1 or none) and the queue's state the same at every ask.
+  // Qoder CN once held such a RESOURCE_LIMIT queue unchanged, 1 in p4,
+  // for every request from one hour on (plugins#1220): the hour's hold
+  // then left the agent with keepalives only. After this it is the
+  // queue's 503 with Retry-After, which magpie can rest the account on
+  // or fail over from. A queue with others ahead is waited out as
+  // Qoder's client waits it (#807).
+  stuck: 5 * 60 * 1000,
   now: () => Date.now(),
   // every calls fn each ms until the returned stop is called
   every: (fn, ms) => {
@@ -1771,7 +1797,7 @@ function queueState(text) {
     if (isQueued !== undefined || serviceAvailable !== undefined) {
       const num = (v) => (v == null || v === "" || !Number.isFinite(Number(v)) ? undefined : Number(v))
       const str = (v) => (typeof v === "string" && v ? v : undefined)
-      return { isQueued, serviceAvailable, modelKey: str(o.modelKey), queueType: str(o.queueType), retryAfterSeconds: num(o.retryAfterSeconds) }
+      return { isQueued, serviceAvailable, modelKey: str(o.modelKey), queueType: str(o.queueType), retryAfterSeconds: num(o.retryAfterSeconds), queueCount: num(o.queueCount), subCode: str(o.subCode) }
     }
     for (const k of ["data", "result", "message", "body"]) {
       const v = o[k]
@@ -1803,13 +1829,25 @@ async function queueStatus(api, cred, { requestSetId, modelKey, queueType, reque
   return st
 }
 
+// stuckKey is what a queue's state says of the request's place in it, or
+// "" when others are ahead of it (a queue that moves while they are
+// served is waited out, QUEUE.stuck never ends it).
+function stuckKey(st) {
+  const n = Number(st?.queueCount)
+  if (Number.isFinite(n) && n > 1) return ""
+  return JSON.stringify([st?.isQueued, st?.serviceAvailable, Number.isFinite(n) ? n : null, st?.queueType ?? null, st?.subCode ?? null, st?.retryAfterSeconds ?? null])
+}
+
 // queueWait waits in Qoder's queue for the request, from the state its
 // refusal gave, until the queue lets it through (true) or the wait ends
-// (false). A cancelled request throws.
+// (false). A wait ended by QUEUE.stuck sets ask.stuck. A cancelled request
+// throws.
 async function queueWait(api, cred, ask, first, signal, deadline, site) {
   let q = first ?? {}
   let asked = false
   let failed = 0
+  let same = stuckKey(q)
+  let since = QUEUE.now()
   for (;;) {
     if (signal?.aborted) throw signal.reason ?? new DOMException("aborted", "AbortError")
     if (QUEUE.now() >= deadline) return false
@@ -1828,6 +1866,14 @@ async function queueWait(api, cred, ask, first, signal, deadline, site) {
     }
     failed = 0
     q = { ...st, modelKey: st.modelKey ?? q.modelKey, queueType: st.queueType ?? q.queueType }
+    const key = stuckKey(q)
+    if (!key || key !== same) {
+      same = key
+      since = QUEUE.now()
+    } else if (QUEUE.now() - since >= QUEUE.stuck && st.isQueued !== false) {
+      ask.stuck = true
+      return false
+    }
     if (st.isQueued === false) {
       if (st.retryAfterSeconds > 0) await QUEUE.pause(Math.min(queuePause(st.retryAfterSeconds), Math.max(0, deadline - QUEUE.now())), signal)
       return QUEUE.now() < deadline
@@ -3781,11 +3827,22 @@ const makePlugin = (site) => async ({ client }) => {
         const call = new AbortController()
         const callSignal = signal ? AbortSignal.any([signal, call.signal]) : call.signal
         let res, open
+        let silent = false
+        const hush = setTimeout(() => {
+          silent = true
+          call.abort()
+        }, QUEUE.silent)
         try {
           res = await fetch(CHAT_URL, { method: "POST", headers, body: wire, signal: callSignal })
           if (res.ok) open = await opened(res, chat.tool_choice !== "none" ? (chat.tools ?? []).filter((t) => t?.type === "function") : [])
         } catch (e) {
+          if (silent) {
+            const who = siteOf(site, cred).name ?? "Qoder"
+            return errorResponse({ status: 504, message: `${who} sent nothing for ${Math.round(QUEUE.silent / 1000)}s after the request (${res ? "no first event" : "no reply headers"}); the call was dropped`, signIn: "" })
+          }
           return errorResponse({ status: 502, message: e.message })
+        } finally {
+          clearTimeout(hush)
         }
         const f = !res.ok ? failure(res.status, (await res.text()).slice(0, 1 << 20)) : open.first.value?.error
         if (f) call.abort()
@@ -3830,7 +3887,8 @@ const makePlugin = (site) => async ({ client }) => {
           onHeld(held.response)
         }
         try {
-          if (!(await queueWait(api, cred, ask, f.queue, signal, deadline, siteOf(site, cred)))) return errorResponse(f)
+          if (!(await queueWait(api, cred, ask, f.queue, signal, deadline, siteOf(site, cred))))
+            return errorResponse(ask.stuck ? { ...f, message: `${f.message} (the queue hasn't moved in ${Math.round(QUEUE.stuck / 60_000)} minutes with nothing ahead)` } : f)
         } catch (e) {
           return errorResponse({ status: 502, message: e?.message ?? String(e) })
         }
@@ -4216,4 +4274,4 @@ export async function QwenWorkEnterpriseAuthPlugin({ client }) {
 export const protocol = { makePlugin, deviceSignIn, openapi, siteOf }
 
 // for tests
-export const _internal = { spentOf, OUTPUT_CAPS, LEARNED_CAPS, outputCap, fetchListing, accountIdentity, deviceRefreshBody, qwenworkClientHeaders, freeView, maskPhone, phoneLabelOf, realEmailOf, chatHeaders, machineOS, machineHostname, cosyHeaders, typedUnions, Splitter, campaignRuntime, RUNTIMES, campaignPage, campaignTarget, vpcInstance, vpcSite, dedicatedOrigin, dedicatedHost, dedicatedSite, lingmaRoots, lingmaDecode, lingmaSite, lingmaHeaders, LINGMA_MODELS, parseUsage, gfmt, when, failure, modelInfo, qoderBody, qoderMessages, cacheMarked, sessionOf, namedSession, taskOf, TASKS, TASK_MAX, TASK_IDLE, SESSION, SITES, decodeBody, events, QUEUE, queueState }
+export const _internal = { spentOf, OUTPUT_CAPS, LEARNED_CAPS, outputCap, fetchListing, accountIdentity, deviceRefreshBody, qwenworkClientHeaders, freeView, maskPhone, phoneLabelOf, realEmailOf, chatHeaders, machineOS, machineHostname, cosyHeaders, typedUnions, Splitter, campaignRuntime, RUNTIMES, campaignPage, campaignTarget, vpcInstance, vpcSite, dedicatedOrigin, dedicatedHost, dedicatedSite, lingmaRoots, lingmaDecode, lingmaSite, lingmaHeaders, LINGMA_MODELS, parseUsage, gfmt, when, failure, modelInfo, qoderBody, qoderMessages, kimiModel, cacheMarked, sessionOf, namedSession, taskOf, TASKS, TASK_MAX, TASK_IDLE, SESSION, SITES, decodeBody, events, QUEUE, queueState }

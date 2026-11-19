@@ -4,28 +4,9 @@
   "description": "Sign in to a Factory (Droid) subscription from OpenCode or magpie",
   "type": "module",
   "main": "./opencode.mjs",
-  "exports": {
-    ".": "./opencode2.mjs"
-  },
-  "files": [
-    "index.mjs",
-    "opencode.mjs",
-    "opencode2.mjs",
-    "anthropic-tools.mjs",
-    "client-phrases.json",
-    "README.md"
-  ],
-  "keywords": [
-    "opencode",
-    "opencode-plugin",
-    "magpie",
-    "factory",
-    "droid"
-  ],
+  "exports": { ".": "./opencode2.mjs" },
+  "files": ["index.mjs", "opencode.mjs", "opencode2.mjs", "anthropic-tools.mjs", "client-phrases.json", "README.md"],
+  "keywords": ["opencode", "opencode-plugin", "magpie", "factory", "droid"],
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
-    "directory": "packages/factory"
-  }
+  "repository": { "type": "git", "url": "git+https://github.com/magpie-community/plugins.git", "directory": "packages/factory" }
 }

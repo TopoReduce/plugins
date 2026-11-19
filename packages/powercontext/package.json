@@ -19,7 +19,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TopoReduce/plugins.git",
+    "url": "git+https://github.com/magpie-community/plugins.git",
     "directory": "packages/powercontext"
   },
   "magpie": {
@@ -46,24 +46,5 @@
   },
   "engines": {
     "bun": ">=1.4.2"
-  },
-  "jianmu": {
-    "icon": "https://raw.githubusercontent.com/oceanbase/powercontext/master/src/powercontext/server/dashboard/static/brand/favicon-color.svg",
-    "hooks": "./powercontext.hooks.mjs",
-    "options": {
-      "authorizationEnv": "POWERCONTEXT_AUTHORIZATION",
-      "gatewayTimeoutMs": 5000,
-      "requestTimeoutMs": 1000,
-      "recallBackoffMs": 30000,
-      "maxBytes": 8000,
-      "capture": false,
-      "captureRemote": false,
-      "recallRemote": false
-    },
-    "page": {
-      "title": "PowerContext",
-      "file": "page/settings.html",
-      "icon": "page/powercontext-favicon-color.svg"
-    }
   }
 }

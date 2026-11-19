@@ -1,4 +1,4 @@
-# @magpie-community/opencode-agnes-code-auth
+# @jianmu-plugins/opencode-agnes-code-auth
 
 把 **Agnes Code 桌面端** 的账号额度接入 [magpie](https://usemagpie.ai/) 与 [OpenCode](https://opencode.ai/)：复用桌面端登录态（会话文件解密），直连云端 OpenAI 兼容网关，agent 以 `agnes-code/<model>` 使用它的模型；支持「每日登录送积分」自动观测与积分余额显示。
 
@@ -73,7 +73,7 @@ products: neither entry replaces the other.
 ## 安装与开发
 
 ```
-magpie plugin add @magpie-community/opencode-agnes-code-auth
+magpie plugin add @jianmu-plugins/opencode-agnes-code-auth
 magpie plugin login agnes-code              # 选「读取 Agnes Code 桌面端登录态」或「粘贴 accessToken」
 magpie provider test agnes-code agnes-3.0-flash
 ```

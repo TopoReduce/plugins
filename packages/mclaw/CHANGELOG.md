@@ -43,7 +43,7 @@
 - `normalizeChatResponse` 的 JSON 分支不再有 1MB 截断（大回复不再误报 502）。
 - usage 里明细查询失败不再让整张卡片报错（池窗口照常）。
 - vip Cookie 输入框改为密码型；去掉恒为 false 的 `free` 字段；`--crash-dumps-dir` 用 `os.tmpdir()`（Windows 上没有 `/tmp`）。
-- 包 README 安装改为市场方式（`magpie plugin add @magpie-community/opencode-mclaw-auth`）。
+- 包 README 安装改为市场方式（`magpie plugin add @jianmu-plugins/opencode-mclaw-auth`）。
 
 ## 0.4.3 — 2026-11-05
 
