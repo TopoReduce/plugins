@@ -96,7 +96,7 @@ const until = async (cond) => {
 test("trae loads on OpenCode 2.x: a default {id, setup} (plugins#657)", async () => {
   const mod = await import(entryOf("trae"))
   expect(typeof mod.default?.id).toBe("string")
-  expect(mod.default.id).toBe("@magpie-community/opencode-trae-auth")
+  expect(mod.default.id).toBe("@jianmu-plugins/opencode-trae-auth")
   expect(typeof mod.default.setup).toBe("function")
   // and 2.x gets both of its providers with their sign-ins, before any
   // account is signed in, without a request
